@@ -1,0 +1,203 @@
+/* Les jetons de la charte d'abord : les échelles de Tailwind sont ancrées
+   dessus, et le CSS écrit à la main y puise en `var(--…)`. */
+@import './styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply overflow-x-hidden;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:text-slate-100 overflow-x-hidden;
+    transition: background-color 300ms ease, color 300ms ease;
+  }
+
+  /* Light mode subtle background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(124, 45, 94, 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(63, 114, 147, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  html[data-theme='dark'] body::before {
+    background: none;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  html[data-theme='dark'] body {
+    background-color: #161015; /* --canvas (sombre) */
+    background-image:
+      radial-gradient(at 18% 8%, rgba(208, 107, 162, 0.1) 0, transparent 50%),
+      radial-gradient(at 85% 92%, rgba(63, 114, 147, 0.08) 0, transparent 55%),
+      radial-gradient(at 50% 40%, rgba(61, 48, 64, 0.25) 0, transparent 70%);
+    background-attachment: fixed;
+  }
+
+  /* Light mode custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  /* Teintes de la charte, en rgba parce qu'il faut de la transparence.
+     C'est précisément cette notation qui avait laissé passer du teal après le
+     remappage de la palette : une recherche d'hexadécimaux ne la voit pas. */
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(44, 35, 41, 0.12); /* --ink */
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 200ms ease;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(124, 45, 94, 0.4); /* --teal */
+    background-clip: content-box;
+  }
+
+  html[data-theme='dark'] ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  html[data-theme='dark'] ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  html[data-theme='dark'] ::-webkit-scrollbar-thumb {
+    background-color: rgba(243, 236, 240, 0.18); /* --ink (sombre) */
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 200ms ease;
+  }
+  html[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(208, 107, 162, 0.45); /* --teal (sombre) */
+    background-clip: content-box;
+  }
+
+  html[data-theme='dark'] *:focus-visible {
+    outline: 2px solid rgba(208, 107, 162, 0.6); /* --teal (sombre) */
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  *:focus-visible {
+    outline: 2px solid rgba(124, 45, 94, 0.55); /* --focus-ring */
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  html[data-theme='dark'] ::selection {
+    background: rgba(208, 107, 162, 0.35);
+    color: #f3ecf0; /* --ink (sombre) */
+  }
+
+  ::selection {
+    background: rgba(124, 45, 94, 0.15);
+    color: #2c2329; /* --ink */
+  }
+
+  html[data-theme='dark'] ::placeholder {
+    color: rgba(202, 191, 198, 0.55); /* --muted (sombre) */
+  }
+}
+
+@layer utilities {
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  .glass-panel {
+    @apply bg-white/90 backdrop-blur-lg border border-gray-200/60;
+  }
+  [data-theme='dark'] .glass-panel {
+    background-color: rgba(30, 22, 32, 0.72);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .surface-raised {
+    @apply bg-white shadow-card;
+  }
+  [data-theme='dark'] .surface-raised {
+    background-color: rgba(36, 27, 39, 0.85);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 20px 40px -24px rgba(0, 0, 0, 0.55);
+  }
+
+  .hairline {
+    @apply border-gray-200/80;
+  }
+  [data-theme='dark'] .hairline {
+    border-color: rgba(243, 236, 240, 0.12);
+  }
+
+  /* Micro-interaction utilities */
+  .hover-lift {
+    @apply transition-all duration-200 ease-out;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    @apply shadow-card-hover;
+  }
+  [data-theme='dark'] .hover-lift:hover {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 24px 48px -24px rgba(0, 0, 0, 0.7);
+  }
+
+  .press-scale {
+    @apply transition-transform duration-100;
+  }
+  .press-scale:active {
+    transform: scale(0.97);
+  }
+
+  .interactive-card {
+    @apply transition-all duration-200 ease-out cursor-pointer;
+  }
+  .interactive-card:hover {
+    transform: translateY(-1px);
+    @apply shadow-card-hover border-gray-300/80;
+  }
+  [data-theme='dark'] .interactive-card:hover {
+    border-color: rgba(208, 107, 162, 0.15);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 20px 48px -24px rgba(0, 0, 0, 0.7);
+  }
+}
+
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 320ms ease, border-color 320ms ease,
+    color 320ms ease, fill 320ms ease, stroke 320ms ease,
+    box-shadow 320ms ease !important;
+}

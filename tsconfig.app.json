@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  // `src` seul, et c'est un choix.
+  //
+  // J'ai essaye d'y ajouter `server/src/**/*.test.ts`, pour que les tests du
+  // serveur soient typecheckes quelque part : ils importent `vitest`, que seul
+  // ce projet-ci possede. La CI l'a refuse, et avait raison — un test tire le
+  // module qu'il teste, `limiteur.ts` importe `fastify`, et fastify est une
+  // dependance du SERVEUR. Le job `quality` n'installe que la racine.
+  //
+  // Les tests du serveur ne sont donc typecheckes nulle part, comme
+  // `tests/schema.test.ts` avant eux. Les couvrir demanderait `vitest` et
+  // `fastify` cote serveur, plus un tsconfig dedie : un chantier, pas une ligne.
+  "include": ["src"]
+}

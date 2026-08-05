@@ -1,0 +1,233 @@
+/**
+ * Connecteur MCP.
+ * ---------------------------------------------------------------------------
+ * Remplace l'Edge Function `mcp-connector`, en enlevant tout l'appareillage
+ * OAuth : enregistrement dynamique de client, écran d'autorisation, PKCE,
+ * échange de jeton, points `.well-known`. Environ 400 lignes disparaissent.
+ *
+ * Pourquoi : OAuth sert à ce qu'un utilisateur délègue à une application tierce
+ * l'accès à ses données chez un fournisseur. Ici l'administrateur du cabinet
+ * branche lui-même son propre client sur sa propre instance. Il n'y a personne à
+ * qui demander son consentement, et le parcours à trois acteurs n'ajoute qu'un
+ * enrôlement à faire et une surface à défendre.
+ *
+ * À la place : `Authorization: Bearer <client_id>:<client_secret>`, forme que
+ * l'Edge Function acceptait déjà en second recours. Les clés se créent dans
+ * Paramètres → Connecteur MCP.
+ *
+ * CONSÉQUENCE À CONNAÎTRE : un client MCP configuré en OAuth sur l'ancienne
+ * installation ne se connectera plus. Il faut le reconfigurer avec une clé.
+ *
+ * Le protocole est servi à la main plutôt qu'avec le SDK officiel : trois
+ * méthodes JSON-RPC — `initialize`, `tools/list`, `tools/call` — suffisent à un
+ * serveur en lecture seule, et cela évite d'embarquer le SDK et sa dépendance à
+ * zod dans l'image.
+ */
+
+import { createHash, timingSafeEqual } from 'node:crypto';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { requete, requeteUne } from '../db.js';
+import { OUTILS, OUTILS_PAR_NOM } from '../mcp/outils.js';
+import { acquitter, souscontrole } from '../limiteur.js';
+
+/** Version du protocole annoncée. Celle que les clients actuels demandent. */
+const VERSION_PROTOCOLE = '2024-11-05';
+
+/**
+ * Vingt cles refusees par quart d'heure et par adresse.
+ *
+ * Un client MCP legitime presente une cle valide, qui remet le compteur a zero :
+ * il ne rencontre jamais cette limite, quel que soit son debit d'appels. Seules
+ * les tentatives INFRUCTUEUSES sont comptees, ce qui est exactement la chose a
+ * ralentir.
+ */
+const BORNES_CLE_MCP = { max: 20, fenetreMs: 15 * 60_000 };
+
+interface RequeteRpc {
+  jsonrpc?: string;
+  id?: string | number | null;
+  method?: string;
+  params?: Record<string, unknown>;
+}
+
+function erreurRpc(id: RequeteRpc['id'], code: number, message: string) {
+  return { jsonrpc: '2.0', id: id ?? null, error: { code, message } };
+}
+
+function resultatRpc(id: RequeteRpc['id'], result: unknown) {
+  return { jsonrpc: '2.0', id: id ?? null, result };
+}
+
+/**
+ * Comparaison de hachés à temps constant.
+ *
+ * Une comparaison `===` sur des chaînes s'arrête au premier octet différent ; le
+ * temps de réponse renseigne alors sur le nombre d'octets corrects. Sur un
+ * secret devinable octet par octet, cela change tout.
+ */
+function memeHache(a: string, b: string): boolean {
+  const ta = Buffer.from(a, 'hex');
+  const tb = Buffer.from(b, 'hex');
+  return ta.length === tb.length && timingSafeEqual(ta, tb);
+}
+
+interface CleValide {
+  id: string;
+  nom: string;
+}
+
+/**
+ * Valide l'en-tête d'autorisation et rend la clé correspondante.
+ *
+ * Aucun message ne distingue « client_id inconnu » de « secret faux » : cela
+ * n'aide que celui qui essaie des identifiants.
+ */
+async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
+  const entete = request.headers.authorization;
+  if (!entete?.startsWith('Bearer ')) return null;
+
+  const valeur = entete.slice('Bearer '.length).trim();
+  const separateur = valeur.indexOf(':');
+  if (separateur <= 0) return null;
+
+  const clientId = valeur.slice(0, separateur);
+  const secret = valeur.slice(separateur + 1);
+  if (!secret) return null;
+
+  const ligne = await requeteUne<{ id: string; name: string; client_secret_hash: string }>(
+    `SELECT id, name, client_secret_hash
+       FROM mcp_api_keys
+      WHERE client_id = $1 AND is_active`,
+    [clientId]
+  );
+  if (!ligne) return null;
+
+  const hache = createHash('sha256').update(secret).digest('hex');
+  if (!memeHache(hache, ligne.client_secret_hash)) return null;
+
+  // Trace de dernière utilisation, sans attendre : elle sert au diagnostic, pas
+  // à la réponse, et une écriture ne doit pas ralentir chaque appel.
+  void requete('UPDATE mcp_api_keys SET last_used_at = now() WHERE id = $1', [ligne.id]).catch(
+    () => undefined
+  );
+
+  return { id: ligne.id, nom: ligne.name };
+}
+
+export function enregistrerRoutesMcp(app: FastifyInstance): void {
+  /**
+   * Point d'entrée du protocole.
+   *
+   * `/mcp` et `/api/mcp` répondent tous les deux : le premier est l'adresse
+   * publique donnée aux clients, le second suit la convention des autres routes.
+   */
+  const traiter = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!souscontrole(request, reply, 'mcp', BORNES_CLE_MCP)) return;
+
+    const cle = await validerCle(request);
+    if (!cle) {
+      return reply
+        .code(401)
+        .header('WWW-Authenticate', 'Bearer realm="CRM Cabinet"')
+        .send(erreurRpc(null, -32000, 'Cle MCP absente ou invalide.'));
+    }
+
+    acquitter(`mcp:${request.ip}`);
+
+    const corps = (request.body ?? {}) as RequeteRpc;
+    const { id, method, params } = corps;
+
+    switch (method) {
+      case 'initialize':
+        return resultatRpc(id, {
+          protocolVersion: VERSION_PROTOCOLE,
+          capabilities: { tools: {} },
+          serverInfo: { name: 'crm-cabinet', version: process.env.APP_VERSION ?? 'dev' },
+        });
+
+      // Notification d'initialisation terminée : le protocole n'attend pas de
+      // réponse, mais un corps vide vaut mieux qu'une erreur « méthode inconnue ».
+      case 'notifications/initialized':
+        return reply.code(204).send();
+
+      case 'ping':
+        return resultatRpc(id, {});
+
+      case 'tools/list':
+        return resultatRpc(id, {
+          tools: OUTILS.map((o) => ({
+            name: o.nom,
+            title: o.titre,
+            description: o.description,
+            inputSchema: o.parametres,
+          })),
+        });
+
+      case 'tools/call': {
+        const nom = typeof params?.name === 'string' ? params.name : '';
+        const outil = OUTILS_PAR_NOM.get(nom);
+        if (!outil) {
+          return erreurRpc(id, -32602, `Outil inconnu : ${nom}.`);
+        }
+
+        const args = (params?.arguments ?? {}) as Record<string, unknown>;
+        for (const requis of outil.parametres.required ?? []) {
+          if (args[requis] === undefined || args[requis] === null) {
+            return erreurRpc(id, -32602, `Parametre requis manquant : ${requis}.`);
+          }
+        }
+
+        try {
+          const donnees = await outil.executer(args);
+          return resultatRpc(id, {
+            content: [{ type: 'text', text: JSON.stringify(donnees, null, 2) }],
+          });
+        } catch (e) {
+          // L'erreur est rendue dans le contenu et non en erreur JSON-RPC : le
+          // client peut alors l'afficher à l'utilisateur au lieu d'interrompre
+          // la conversation. C'est ce que faisait l'original.
+          request.log.error(`[mcp] ${nom} : ${e instanceof Error ? e.message : String(e)}`);
+          return resultatRpc(id, {
+            content: [
+              {
+                type: 'text',
+                text: `Erreur lors de l'execution de ${nom} : ${
+                  e instanceof Error ? e.message : 'erreur interne'
+                }`,
+              },
+            ],
+            isError: true,
+          });
+        }
+      }
+
+      default:
+        return erreurRpc(id, -32601, `Methode non prise en charge : ${method ?? '(vide)'}.`);
+    }
+  };
+
+  app.post('/mcp', traiter);
+  app.post('/api/mcp', traiter);
+
+  /** Fiche de présentation, utile pour vérifier qu'une clé fonctionne. */
+  app.get('/mcp', async (request, reply) => {
+    if (!souscontrole(request, reply, 'mcp', BORNES_CLE_MCP)) return;
+
+    const cle = await validerCle(request);
+    if (!cle) {
+      return reply
+        .code(401)
+        .header('WWW-Authenticate', 'Bearer realm="CRM Cabinet"')
+        .send({ error: 'Cle MCP absente ou invalide.' });
+    }
+    acquitter(`mcp:${request.ip}`);
+    return {
+      name: 'crm-cabinet',
+      version: process.env.APP_VERSION ?? 'dev',
+      protocolVersion: VERSION_PROTOCOLE,
+      authentification: 'Bearer <client_id>:<client_secret>',
+      cle: cle.nom,
+      outils: OUTILS.map((o) => o.nom),
+    };
+  });
+}

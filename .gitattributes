@@ -1,0 +1,17 @@
+# Fins de ligne.
+#
+# Les scripts shell et les fichiers lus par un conteneur Linux doivent avoir des
+# fins de ligne LF, quelle que soit la machine qui les edite. Un poste Windows
+# avec core.autocrlf=true les convertit en CRLF a la sortie du depot, et `dash`
+# — le /bin/sh d'Alpine et de Debian — echoue alors sur « Syntax error:
+# "|" unexpected », sans dire un mot des fins de ligne.
+#
+# Le cas s'est produit le 2026-08-01 : maj.sh transfere depuis un poste Windows
+# refusait de s'executer sur le VPS, alors qu'il etait valide en local.
+*.sh            text eol=lf
+*.mjs           text eol=lf
+*.sql           text eol=lf
+Dockerfile      text eol=lf
+docker/*        text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf

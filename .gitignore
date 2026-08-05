@@ -1,0 +1,88 @@
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Exports du cabinet — JAMAIS versionnes.
+#
+# Le depot est destine a etre public et installe par d'autres cabinets. Un export
+# d'habilitations ou de clients est une liste nominative de societes : il n'a rien
+# a faire ici, meme le temps d'un essai. Un fichier supprime reste dans
+# l'historique, et un historique git est definitif.
+#
+# Constate le 2026-08-05 : `ServicesUsager.csv` versionne depuis des mois, 13 010
+# lignes et 713 SIREN, sans qu'aucun code ne l'importe. L'ecran des habilitations
+# lit ce que l'utilisateur depose, pas un fichier du depot.
+ServicesUsager*.csv
+habilitationsusager*
+src/data/
+/*.csv
+/*.xlsx
+
+node_modules
+dist
+dist-ssr
+*.local
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Secrets : on ignore .env et toutes ses variantes (.env.local, .env.production...)
+# et on ne garde suivi que le modele, qui ne doit contenir aucune valeur.
+.env
+.env.*
+# `*.env` en plus : un fichier de secrets recu par mail et enregistre tel quel
+# s'appelle « ATT12345.env », que les deux motifs ci-dessus ne couvrent PAS.
+# Le cas s'est produit le 2026-07-31 ; le fichier etait a un « git add -A » de
+# partir dans un historique public, et definitif.
+*.env
+!.env.exemple
+
+# Le volume d'execution de l'instance : fichiers deposes par les utilisateurs et
+# sauvegardes de la base. C'est le repertoire le plus sensible du serveur — sur
+# une instance en service il contient des centaines de pieces jointes de clients
+# reels, des dizaines de Mo de PDF — et il n'etait couvert par AUCUN motif :
+# « git status » sur le serveur le montrait en « ?? data/ », a un « git add -A »
+# d'un historique public et definitif. Le meme oubli que le fichier .env recu par
+# mail, en plus lourd.
+data/
+
+# Exports de sauvegarde de la base (contiennent des donnees clients reelles).
+# Le depot devient public : aucun de ces fichiers ne doit pouvoir etre commite,
+# meme par accident, car l'historique git est definitif.
+export-supabase-*/
+export-database.zip
+*.dump
+*.sql
+*.sql.gz
+*.zip
+# ... sauf le SQL du projet, qui ne contient aucune donnee
+!supabase/migrations/*.sql
+!scripts/*.sql
+# Le schema extrait de la base fait desormais autorite a la place des migrations.
+# Structure uniquement, aucune donnee.
+!schema/*.sql
+# `!schema/*.sql` ne descend PAS dans les sous-dossiers : sans cette ligne, les
+# increments etaient ignores en silence. Ils ne seraient partis ni dans le depot
+# ni dans l'image, et aucune instance deja installee n'aurait jamais recu les
+# tables ajoutees apres coup.
+!schema/increments/*.sql
+
+# Inventaire de la base (structure et volumes de la prod)
+inventaire-base.json
+export-cabinet-*/
+schema/actuel.json
+
+# Sorties d'analyse. `eslint -o /dev/null` sous Windows cree un vrai fichier au
+# nom court illisible : mieux vaut ecrire dans un fichier nomme et l'ignorer.
+eslint.json
+tsc.log

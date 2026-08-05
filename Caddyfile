@@ -1,0 +1,76 @@
+# ============================================================================
+# CRM Cabinet — HTTPS automatique (Let's Encrypt).
+#
+# Domaine et adresse ACME injectés par docker-compose depuis le .env.
+#
+# Caddy ne relaie que vers `app`. PostgREST n'est PAS exposé ici : le front y
+# accède par /rest/v1, que `app` relaie après contrôle de session. Ouvrir
+# PostgREST directement contournerait ce contrôle.
+# ============================================================================
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	# En-têtes de sécurité. Ils étaient auparavant dans public/_headers, une
+	# convention Netlify qui n'a aucun effet derrière Caddy — ils ne s'appliquaient
+	# donc déjà plus.
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), publickey-credentials-get=(self), publickey-credentials-create=(self)"
+
+		# La MÊME politique que celle du <meta> d'index.html, servie en en-tête.
+		#
+		# Le doublon est voulu, et ce n'est pas une redite inutile : trois
+		# directives — `frame-ancestors`, `sandbox` et `report-uri` — sont
+		# IGNORÉES par les navigateurs quand la politique arrive par un `<meta>`.
+		# Le `frame-ancestors 'none'` d'index.html ne protégeait donc rien ; seul
+		# `X-Frame-Options` tenait, et lui ne connaît pas les origines multiples.
+		#
+		# Le `<meta>` reste en place : il couvre le développement, où l'on attaque
+		# le serveur Node directement, sans Caddy devant. Deux politiques
+		# identiques s'appliquent par intersection — donc sans changement d'effet.
+		#
+		# Elle couvre aussi, au passage, tout ce que sert l'application, pièces
+		# jointes comprises : `object-src 'none'` et `script-src 'self'` valent
+		# alors filet supplémentaire sur un fichier déposé.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+		# Le serveur n'a pas à annoncer ce qu'il est.
+		-Server
+	}
+
+	# Les fichiers déposés peuvent atteindre 10 Mo ; la limite par défaut les
+	# refuserait avant même d'atteindre l'application.
+	request_body {
+		max_size 20MB
+	}
+
+	# Les réponses de l'API ne doivent jamais être mises en cache par un
+	# intermédiaire : elles dépendent de la session.
+	@api path /api/* /rest/* /mcp*
+	header @api Cache-Control "no-store"
+
+	encode gzip zstd
+	reverse_proxy app:3000
+
+	log {
+		output file /data/acces.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+		# Les adresses IP sont des données personnelles : on ne les conserve pas
+		# dans les journaux d'accès d'un outil interne, où elles n'apportent rien.
+		format filter {
+			wrap console
+			fields {
+				request>remote_ip delete
+				request>client_ip delete
+				request>headers delete
+			}
+		}
+	}
+}

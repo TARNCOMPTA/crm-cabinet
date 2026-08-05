@@ -1,0 +1,177 @@
+/**
+ * Serveur de l'instance.
+ *
+ * Une instance = un cabinet. Ce processus sert :
+ *   - le front statique ;
+ *   - /api/auth/*     l'authentification par passkey ;
+ *   - /api/config     la configuration publique, au runtime ;
+ *   - /rest/v1/*      un proxy vers PostgREST, apres controle de session ;
+ *   - /api/*          les routes reprises des Edge Functions (phase 3).
+ *
+ * PostgREST est garde parce que le front repose sur sa semantique : sélections
+ * imbriquees, filtres `or`, comptages exacts. Le proxy ajoute ce qui manque —
+ * session obligatoire et droits applicatifs — et donne un point d'ancrage pour
+ * migrer plus tard, table par table, vers de vraies routes Node.
+ */
+
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
+import statique from '@fastify/static';
+import { config, configPublique } from './config.js';
+import { verifierConnexion as verifierBase } from './db.js';
+import { enregistrerProxyRest } from './rest-proxy.js';
+import { enregistrerRoutesAuth } from './routes/auth.js';
+import { enregistrerRoutesStorage, preparerStockage } from './routes/storage.js';
+import { enregistrerRoutesUtilisateurs } from './routes/utilisateurs.js';
+import { enregistrerRoutesEmails } from './routes/emails.js';
+import { enregistrerRoutesInpi } from './routes/inpi.js';
+import { enregistrerRoutesJedeclare } from './routes/jedeclare.js';
+import { enregistrerRoutesTva } from './routes/tva.js';
+import { enregistrerRoutesPdf } from './routes/pdf.js';
+import { enregistrerRoutesMcpCles } from './routes/mcp-cles.js';
+import { enregistrerRoutesMcp } from './routes/mcp.js';
+import { demarrerPlanificateur, arreterPlanificateur, listerTaches, declencher } from './planificateur.js';
+import { etatVersion } from './version.js';
+import { exigerAdmin } from './gardes.js';
+import { fermer as fermerSmtp } from './mail.js';
+
+const ICI = dirname(fileURLToPath(import.meta.url));
+
+async function demarrer() {
+  const app = Fastify({
+    logger: {
+      level: config.env === 'production' ? 'info' : 'debug',
+      transport: config.env === 'production' ? undefined : { target: 'pino-pretty' },
+    },
+    // Le front peut deposer des fichiers de 10 Mo : la limite par defaut de
+    // Fastify (1 Mo) les refuserait.
+    bodyLimit: config.storage.tailleMaxOctets + 1024 * 1024,
+    trustProxy: true,
+  });
+
+  // Un corps vide annonce comme du JSON est legitime.
+  // ---------------------------------------------------------------------------
+  // Le parseur par defaut de Fastify repond 400 « Body cannot be empty when
+  // content-type is set to 'application/json' » des que l'en-tete annonce du
+  // JSON sans corps. Or `postgrest-js` pose `Content-Type: application/json` sur
+  // TOUTES ses requetes, y compris les DELETE, qui n'ont evidemment pas de corps.
+  // Tous les `.delete()` du front partaient donc en 400, refuses par le proxy
+  // avant meme d'atteindre PostgREST.
+  //
+  // Constate le 2026-08-01 sur l'ecran des declarations de revenus : le PATCH de
+  // la declaration passait en 204, puis la suppression des collaborateurs
+  // echouait en 400. L'ecriture etait donc bien enregistree, mais l'erreur
+  // laissait la modale ouverte — l'utilisateur en concluait, raisonnablement,
+  // que rien ne s'etait enregistre.
+  //
+  // Un corps vide devient `undefined` ; le proxy sait deja ne rien transmettre
+  // dans ce cas. Un corps present reste parse comme avant.
+  app.addContentTypeParser<string>(
+    'application/json',
+    { parseAs: 'string' },
+    (_requete, corps, fait) => {
+      if (corps.length === 0) return fait(null, undefined);
+      try {
+        fait(null, JSON.parse(corps));
+      } catch {
+        const erreur = Object.assign(new Error('Corps JSON invalide.'), { statusCode: 400 });
+        fait(erreur, undefined);
+      }
+    }
+  );
+
+  await app.register(cookie);
+
+  app.get('/api/config', async () => configPublique());
+
+  app.get('/api/sante', async () => ({
+    ok: true,
+    version: process.env.APP_VERSION ?? 'dev',
+  }));
+
+  // Etat de version : une mise a jour existe-t-elle ? Reserve aux
+  // administrateurs, ce sont eux qui decident de l'appliquer.
+  app.get<{ Querystring: { forcer?: string } }>('/api/version', async (request, reply) => {
+    const session = await exigerAdmin(request, reply);
+    if (!session) return;
+    return etatVersion(request.query.forcer === '1');
+  });
+
+  // Taches planifiees : etat et declenchement manuel. Utile pour verifier un
+  // reglage SMTP ou relancer une synchronisation sans attendre l'heure.
+  app.get('/api/taches', async (request, reply) => {
+    const session = await exigerAdmin(request, reply);
+    if (!session) return;
+    return { taches: listerTaches() };
+  });
+
+  app.post<{ Params: { nom: string } }>('/api/taches/:nom', async (request, reply) => {
+    const session = await exigerAdmin(request, reply);
+    if (!session) return;
+    const fait = await declencher(request.params.nom, app.log);
+    if (!fait) return reply.code(404).send({ message: 'Tache inconnue.' });
+    return { ok: true };
+  });
+
+  enregistrerRoutesAuth(app);
+  enregistrerRoutesUtilisateurs(app);
+  enregistrerRoutesEmails(app);
+  enregistrerRoutesInpi(app);
+  enregistrerRoutesJedeclare(app);
+  enregistrerRoutesTva(app);
+  enregistrerRoutesPdf(app);
+  enregistrerRoutesMcpCles(app);
+  enregistrerRoutesMcp(app);
+  await enregistrerRoutesStorage(app);
+  enregistrerProxyRest(app);
+
+  // Le front construit est servi par le meme processus : une seule origine, donc
+  // pas de CORS, et le cookie de session est naturellement transmis.
+  //
+  // FRONT_DIR est pose par l'image Docker, ou le front est copie dans ./public.
+  // Sans cette variable on retombe sur la disposition de developpement, ou
+  // `npm run build` ecrit dans ../dist depuis server/.
+  const front = process.env.FRONT_DIR ?? resolve(ICI, '../../dist');
+  if (existsSync(front)) {
+    await app.register(statique, { root: front, prefix: '/' });
+    // Repli SPA : toute route inconnue rend index.html, sauf sous /api et /rest
+    // ou une 404 doit rester une 404.
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith('/api') || request.url.startsWith('/rest')) {
+        return reply.code(404).send({ message: 'Route inconnue.' });
+      }
+      return reply.sendFile('index.html');
+    });
+  } else {
+    app.log.warn(`Front introuvable dans ${front} — seule l'API est servie.`);
+  }
+
+  await verifierBase();
+  await preparerStockage();
+
+  demarrerPlanificateur(app.log);
+
+  await app.listen({ port: config.port, host: '0.0.0.0' });
+  app.log.info(`CRM Cabinet — ${config.publicUrl}`);
+  app.log.info(`RP ID WebAuthn : ${config.webauthn.rpId}`);
+  if (!config.smtp.configure) app.log.warn('SMTP non configure : aucun email ne sera envoye.');
+  if (!config.inpi.configure) app.log.warn('INPI non configure : les synchronisations sont inactives.');
+  if (config.vies.desactivee) app.log.warn('VIES desactive : les numeros de TVA ne seront pas verifies.');
+
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () => {
+      app.log.info(`${signal} recu, arret.`);
+      arreterPlanificateur();
+      fermerSmtp();
+      void app.close().then(() => process.exit(0));
+    });
+  }
+}
+
+demarrer().catch((e) => {
+  console.error('Demarrage impossible :', e instanceof Error ? e.message : e);
+  process.exit(1);
+});

@@ -1,0 +1,118 @@
+/* =====================================================================
+   TARN COMPTA — jetons de la charte, communs aux outils du cabinet
+   (Portail Cabinet, TNS Pilot, et désormais le CRM).
+
+   Repris de `tns-pilot-cabinet/public/tokens.css`, qui en est la source.
+   Toute divergence est un bug : ces valeurs doivent rester identiques d'un
+   outil à l'autre, c'est tout l'objet d'une charte.
+
+   Le CRM les utilise de deux façons :
+     · directement, en `var(--…)`, pour le CSS écrit à la main ;
+     · indirectement, par les échelles de `tailwind.config.js`, qui sont
+       ancrées sur ces valeurs — c'est ce qui fait rendre la charte aux
+       9 463 utilitaires de couleur déjà présents dans les composants,
+       sans en réécrire un seul.
+
+   Curiosité assumée : la variable s'appelle `--teal` mais contient du
+   bordeaux. C'est le vestige d'une charte antérieure, conservé pour rester
+   aligné avec les autres outils plutôt que de renommer d'un seul côté.
+   ===================================================================== */
+:root {
+  color-scheme: light;
+  --ink: #2c2329;
+  --muted: #5c5258;
+  --faint: #9a8d92;
+  --paper: #ffffff;
+  --card-soft: #faf7f5;
+  --canvas: #f7f3f0;
+  --line: #ece5e0;
+  --border-strong: #ddd3cd;
+  --teal: #7c2d5e;
+  --teal-dark: #63244b;
+  --teal-soft: color-mix(in srgb, var(--teal) 11%, #fff);
+  --on-accent: #ffffff;
+  --ok: #3f7d54;
+  --ok-bg: #e7f1ea;
+  --red: #b3402f;
+  --red-soft: #f8e6e2;
+  --gold: #b5781f;
+  --gold-soft: #faf0dd;
+  --neutral: #7a6f74;
+  --neutral-bg: #f0ebe8;
+  --navy: #3f7293;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --radius-xs: 8px;
+  --pill: 999px;
+  --shadow: 0 1px 2px rgba(44, 35, 41, 0.04), 0 8px 24px rgba(44, 35, 41, 0.06);
+  --shadow-accent: 0 4px 14px color-mix(in srgb, var(--teal) 30%, transparent);
+  --focus-ring: color-mix(in srgb, var(--teal) 55%, transparent);
+  --mono: 'Consolas', ui-monospace, monospace;
+}
+
+/* La bascule est manuelle (`data-theme`), jamais dictée par le système : c'est
+   ce qui permet au verrou d'impression ci-dessous de la neutraliser. */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #f3ecf0;
+  --muted: #cabfc6;
+  --faint: #7c6f76;
+  --paper: #1e1620;
+  --card-soft: #241b27;
+  --canvas: #161015;
+  --line: #2e2430;
+  --border-strong: #3d3040;
+  --teal: #d06ba2;
+  --teal-dark: #e58ebc;
+  --teal-soft: color-mix(in srgb, var(--teal) 16%, #1e1620);
+  --on-accent: #22111b;
+  --ok: #6fd29a;
+  --ok-bg: #16291f;
+  --red: #f08a78;
+  --red-soft: #351a16;
+  --gold: #e3b15e;
+  --gold-soft: #2e240f;
+  --neutral: #b3a6ab;
+  --neutral-bg: #241b27;
+  --navy: #86aed3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* Verrou papier : on imprime toujours en clair, même si l'écran est en thème
+   sombre. Un navigateur n'imprime pas les fonds, et un texte clair y
+   deviendrait invisible. Les gris sont assombris pour rester lisibles à
+   l'encre.
+
+   La règle `[data-theme='dark']` est répétée ici à dessein : c'est elle qui
+   écrase le thème sombre à l'impression, et elle ne peut le faire qu'en
+   redéclarant les mêmes variables. */
+@media print {
+  :root,
+  [data-theme='dark'] {
+    color-scheme: light;
+    --ink: #2c2329;
+    --muted: #4a4249;
+    --faint: #6b6167;
+    --paper: #ffffff;
+    --card-soft: #ffffff;
+    --canvas: #ffffff;
+    --line: #d7cfca;
+    --border-strong: #b9aeb4;
+    --teal: #7c2d5e;
+    --teal-dark: #63244b;
+    --teal-soft: #f3e9ef;
+    --on-accent: #2c2329;
+    --ok: #2f6440;
+    --ok-bg: #ffffff;
+    --red: #8f3325;
+    --red-soft: #ffffff;
+    --gold: #7d5313;
+    --gold-soft: #ffffff;
+    --neutral: #5b5257;
+    --neutral-bg: #ffffff;
+    --navy: #2f5674;
+    --shadow: none;
+    --shadow-accent: none;
+    --focus-ring: transparent;
+  }
+}

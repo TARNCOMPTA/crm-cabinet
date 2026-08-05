@@ -1,0 +1,36 @@
+# Ce qui n'a rien à faire dans le contexte de construction.
+#
+# L'enjeu n'est pas seulement la taille : `docker build` envoie tout le contexte
+# au démon, et un `.env` ou une archive d'export s'y retrouverait. Le `.env`
+# arrive par docker-compose, pas par l'image.
+
+node_modules
+server/node_modules
+dist
+server/dist
+data
+
+# Secrets et données réelles : jamais dans une image.
+.env
+.env.*
+!.env.exemple
+export-cabinet-*/
+*.zip
+inventaire-base.json
+
+.git
+.github
+.vscode
+.idea
+
+# Documents de travail : sans intérêt à l'exécution.
+MIGRATION.md
+schema/actuel.sql
+schema/actuel.json
+schema/transformation.md
+scripts
+supabase
+
+*.log
+.DS_Store
+Thumbs.db

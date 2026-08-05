@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["src/**/*.ts"],
+
+  // Les tests sont ecartes du projet du serveur pour deux raisons distinctes,
+  // toutes deux constatees a la premiere execution de la CI :
+  //
+  //   · ils importent `vitest`, qui est une dependance du FRONT. En local la
+  //     resolution remontait au node_modules parent et masquait le probleme ;
+  //     le job `serveur` n'installe que server/, et echouait donc en TS2307 ;
+  //
+  //   · `npm run build` les emettait dans dist/, donc dans l'image Docker
+  //     expediee aux cabinets. Un fichier de test important vitest n'a rien a
+  //     y faire.
+  //
+  // Ils restent typecheckes par le front (tsconfig.app.json), la ou vitest est
+  // disponible, et executes par lui (vitest.config.ts).
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
+}

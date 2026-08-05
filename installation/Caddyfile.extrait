@@ -1,0 +1,50 @@
+# >>> À AJOUTER dans le Caddyfile du Caddy déjà en place <<<
+#
+# Ne concerne que le déploiement derrière un Caddy partagé, avec
+# `docker-compose.partage.yml`. Sur un VPS dédié, le `Caddyfile` du dépôt fait
+# déjà tout et il n'y a rien à recopier.
+#
+# Le conteneur applicatif rejoint le réseau du Caddy sous l'alias `crmcabinet` :
+# c'est ce nom que `reverse_proxy` doit viser, pas une adresse IP — elle change à
+# chaque redémarrage.
+#
+# PRÉALABLE : l'enregistrement DNS A doit pointer vers ce serveur, sinon
+# Let's Encrypt ne pourra pas valider le domaine.
+#   crm.moncabinet.fr  ->  <adresse IP de ce serveur>
+#
+# Un joker *.moncabinet.fr ne suffit PAS s'il pointe ailleurs : il faut un
+# enregistrement explicite, qui prime sur le joker.
+#
+# Après modification :
+#   docker exec <conteneur-caddy> caddy validate --config /etc/caddy/Caddyfile
+#   docker exec <conteneur-caddy> caddy reload  --config /etc/caddy/Caddyfile
+#
+# `validate` avant `reload` n'est pas une précaution de principe : un Caddyfile
+# mal formé fait échouer le rechargement, et ce Caddy sert aussi les autres
+# applications du serveur.
+
+crm.moncabinet.fr {
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# publickey-credentials-* est indispensable : sans ces directives,
+		# certains navigateurs refusent WebAuthn, donc la connexion.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), publickey-credentials-get=(self), publickey-credentials-create=(self)"
+		-Server
+	}
+
+	# Les fichiers déposés vont jusqu'à 10 Mo.
+	request_body {
+		max_size 20MB
+	}
+
+	# Les réponses de l'API dépendent de la session : aucun intermédiaire ne doit
+	# les mettre en cache.
+	@api path /api/* /rest/* /mcp*
+	header @api Cache-Control "no-store"
+
+	encode gzip zstd
+	reverse_proxy crmcabinet:3000
+}

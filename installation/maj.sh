@@ -1,0 +1,141 @@
+#!/bin/sh
+# ============================================================================
+# CRM Cabinet — mise à jour d'une instance.
+#
+#   cd /opt/crmcabinet && sh installation/maj.sh
+#
+# L'ordre compte : la base est sauvegardée AVANT toute modification. Une mise à
+# jour qui casse quelque chose se rattrape alors avec le fichier de sauvegarde ;
+# sans lui, il n'y a rien à faire.
+#
+# Le retour en arrière est possible : voir la fin de ce fichier.
+# ============================================================================
+set -e
+
+DIR=$(cd "$(dirname "$0")/.." && pwd)
+cd "$DIR"
+
+[ -f .env ] || {
+  echo "Aucun .env dans $DIR : cette instance n'est pas installée ici." >&2
+  exit 1
+}
+
+# Le `.env` n'est PAS sourcé.
+#
+# Un `.env` est un format Docker Compose, pas un script shell : rien n'y oblige
+# les valeurs à être valides pour le shell. Un mot de passe contenant une
+# espace, une parenthèse ou un caractère de contrôle est parfaitement légitime,
+# Compose le lit sans broncher — et `. ./.env` s'y casse.
+#
+# C'est arrivé le 2026-08-01, à la toute première exécution de ce script :
+# `INPI_PASSWORD` contient un caractère non imprimable, et la mise à jour
+# s'arrêtait sur « ./.env: d^V: not found », avant même la sauvegarde. Un script
+# de mise à jour qui refuse de démarrer à cause d'un mot de passe légal est un
+# script qu'on n'utilise pas.
+#
+# Seule `PUBLIC_URL` est nécessaire ici, pour le message final. On la lit donc
+# sans interpréter quoi que ce soit. Les guillemets éventuels sont retirés :
+# Compose les enlève, l'affichage doit faire de même.
+lire_env() {
+  sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env \
+    | head -n 1 \
+    | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"
+}
+
+PUBLIC_URL=$(lire_env PUBLIC_URL)
+DOMAIN=$(lire_env DOMAIN)
+
+SAUVEGARDES="$DIR/data/sauvegardes"
+mkdir -p "$SAUVEGARDES"
+HORODATAGE=$(date +%Y-%m-%d_%H-%M-%S)
+FICHIER="$SAUVEGARDES/base_$HORODATAGE.sql.gz"
+
+echo ""
+echo "=== CRM Cabinet — mise à jour ==="
+echo ""
+
+echo "--- 1/5 Version actuelle ---"
+AVANT=$(git rev-parse --short HEAD)
+echo "Révision : $AVANT"
+
+echo ""
+echo "--- 2/5 Sauvegarde de la base ---"
+# pg_dump depuis le conteneur applicatif : postgresql-client y est installé, et
+# la base n'est joignable que depuis le réseau interne de compose.
+docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > "$FICHIER"
+
+TAILLE=$(du -h "$FICHIER" | cut -f1)
+# Une sauvegarde vide ou minuscule signale un pg_dump qui a échoué en silence.
+# Continuer serait exactement le cas où l'on regretterait de ne pas s'être
+# arrêté.
+OCTETS=$(wc -c < "$FICHIER")
+[ "$OCTETS" -gt 2048 ] || {
+  echo "Sauvegarde suspecte ($OCTETS octets) : mise à jour interrompue." >&2
+  echo "Vérifiez : docker compose exec app sh -c 'pg_dump \"\$DATABASE_URL\" | head'" >&2
+  exit 1
+}
+echo "Sauvegarde : $FICHIER ($TAILLE)"
+
+echo ""
+echo "--- 3/5 Récupération du code ---"
+git pull
+
+APRES=$(git rev-parse --short HEAD)
+if [ "$AVANT" = "$APRES" ]; then
+  echo ""
+  echo "Déjà à jour ($AVANT). Rien à faire."
+  echo "La sauvegarde de la base a tout de même été conservée."
+  exit 0
+fi
+echo "Révision : $AVANT → $APRES"
+
+echo ""
+echo "--- 4/5 Reconstruction et redémarrage ---"
+docker compose up -d --build
+
+echo ""
+echo "--- 5/5 Vérification ---"
+i=0
+until docker compose exec -T app node -e \
+  "fetch('http://localhost:3000/api/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
+  >/dev/null 2>&1; do
+  i=$((i + 1))
+  if [ "$i" -gt 40 ]; then
+    echo ""
+    echo "L'application ne répond pas après 2 minutes." >&2
+    echo "Journaux : docker compose logs --tail=50 app" >&2
+    echo "" >&2
+    echo "Pour revenir en arrière :" >&2
+    echo "  cd $DIR" >&2
+    echo "  git checkout $AVANT" >&2
+    echo "  docker compose up -d --build" >&2
+    echo "  gunzip -c $FICHIER | docker compose exec -T app sh -c 'psql \"\$DATABASE_URL\"'" >&2
+    echo "" >&2
+    echo "  Cette restauration-la vise la base EXISTANTE : les roles y sont deja." >&2
+    echo "  Sur un serveur NEUF il faut les creer AVANT, sinon elle s'arrete sur" >&2
+    echo "  « role ... does not exist » : pg_dump ne les emporte pas, ils" >&2
+    echo "  appartiennent au serveur et non a la base. Verifie le 2026-08-01 :" >&2
+    echo "    CREATE ROLE crm LOGIN SUPERUSER; CREATE ROLE authenticated NOLOGIN;" >&2
+    exit 1
+  fi
+  sleep 3
+done
+
+# Les sauvegardes s'accumulent sinon : une par mise à jour, indéfiniment. Dix
+# couvrent largement le besoin — au-delà, la plus récente est de toute façon la
+# seule pertinente.
+ls -1t "$SAUVEGARDES"/base_*.sql.gz 2>/dev/null | tail -n +11 | while read -r vieux; do
+  rm -f "$vieux"
+done
+
+echo ""
+echo "============================================================"
+echo "  Mise à jour terminée : $AVANT → $APRES"
+echo ""
+echo "  Adresse    : ${PUBLIC_URL:-https://$DOMAIN}"
+echo "  Sauvegarde : $FICHIER"
+echo ""
+echo "  Retour en arrière si nécessaire :"
+echo "    git checkout $AVANT && docker compose up -d --build"
+echo "============================================================"
+echo ""

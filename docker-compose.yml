@@ -1,0 +1,131 @@
+# ============================================================================
+# CRM Cabinet — déploiement d'une instance (un cabinet = une instance).
+#
+# Quatre services :
+#   db        PostgreSQL 17. Les données du cabinet, dans un volume nommé.
+#   postgrest Traduit les requêtes du front en SQL. Jamais exposé au réseau.
+#   app       Node : authentification, routes métier, ordonnanceur, front statique.
+#   caddy     HTTPS automatique (Let's Encrypt). Seul service publié.
+#
+# Pourquoi PostgREST est conservé : le front compte 70 requêtes qui reposent sur
+# sa sémantique — sélections imbriquées, filtres `or`, comptages exacts. Le
+# remplacer aurait voulu dire réécrire ces 70 requêtes, sans rien y gagner.
+# Il ne parle qu'à `app`, qui contrôle la session avant de relayer.
+#
+# Configuration : un fichier .env à côté de celui-ci (voir .env.exemple).
+# ============================================================================
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crmcabinet}
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
+      # fr_FR n'est pas dans l'image Alpine ; C.UTF-8 trie correctement l'UTF-8
+      # sans dépendre d'une locale absente.
+      POSTGRES_INITDB_ARGS: '--locale=C.UTF-8 --encoding=UTF8'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-crm} -d ${POSTGRES_DB:-crmcabinet}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Aucun port publié : la base n'est joignable que depuis le réseau interne.
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crmcabinet}
+      PGRST_DB_SCHEMAS: public
+      # Rôle endossé par les requêtes authentifiées. Il n'y a PAS de rôle
+      # anonyme : sans jeton valide, PostgREST doit refuser, et `app` refuse déjà
+      # en amont.
+      PGRST_DB_ANON_ROLE: ''
+      # Même secret que celui dont `app` signe les sessions : c'est ce qui
+      # permet de transmettre le jeton tel quel au lieu d'en forger un second.
+      PGRST_JWT_SECRET: ${SESSION_SECRET:?SESSION_SECRET est obligatoire}
+      PGRST_SERVER_PORT: 3001
+      # Le front demande des comptages exacts (`count=exact`) : sans cette
+      # limite haute, une requête sans filtre pourrait ramener toute une table.
+      PGRST_DB_MAX_ROWS: 10000
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - '3001'
+
+  app:
+    build: .
+    image: ghcr.io/tarncompta/crm-cabinet:${VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL est obligatoire}
+      DATABASE_URL: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crmcabinet}
+      POSTGREST_URL: http://postgrest:3001
+      SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_TTL: ${SESSION_TTL:-604800}
+      # WebAuthn : le RP ID est le domaine. LE CHANGER INVALIDE TOUTES LES
+      # PASSKEYS DÉJÀ ENRÔLÉES. Laissé vide, il est déduit de PUBLIC_URL.
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-CRM Cabinet}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      INPI_USERNAME: ${INPI_USERNAME:-}
+      INPI_PASSWORD: ${INPI_PASSWORD:-}
+      JEDECLARE_LOGIN: ${JEDECLARE_LOGIN:-}
+      JEDECLARE_MDP: ${JEDECLARE_MDP:-}
+      JEDECLARE_EDITEUR: ${JEDECLARE_EDITEUR:-}
+      JEDECLARE_LOGICIEL: ${JEDECLARE_LOGICIEL:-crmcabinet}
+      JEDECLARE_VERSION: ${JEDECLARE_VERSION:-1.0.0}
+      JEDECLARE_ID_COMPTE: ${JEDECLARE_ID_COMPTE:-}
+      # Comptes de flux supplementaires. Un cabinet qui depose sous deux comptes
+      # ne voyait que la moitie de ses teletransmissions : une requete jedeclare
+      # ne voit que le compte qu'elle authentifie.
+      JEDECLARE_LOGIN_2: ${JEDECLARE_LOGIN_2:-}
+      JEDECLARE_MDP_2: ${JEDECLARE_MDP_2:-}
+      JEDECLARE_ID_COMPTE_2: ${JEDECLARE_ID_COMPTE_2:-}
+      JEDECLARE_LOGIN_3: ${JEDECLARE_LOGIN_3:-}
+      JEDECLARE_MDP_3: ${JEDECLARE_MDP_3:-}
+      JEDECLARE_ID_COMPTE_3: ${JEDECLARE_ID_COMPTE_3:-}
+      VIES_DISABLED: ${VIES_DISABLED:-0}
+      APP_VERSION: ${VERSION:-dev}
+      UPDATE_DISABLED: ${UPDATE_DISABLED:-0}
+    volumes:
+      # Fichiers déposés dans l'application, et sauvegardes de maj.sh.
+      # À CONSERVER : ce volume n'est pas reconstructible.
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN est obligatoire}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL est obligatoire}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificats Let's Encrypt : à conserver
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
