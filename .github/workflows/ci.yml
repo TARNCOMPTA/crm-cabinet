@@ -1,0 +1,481 @@
+name: CI
+
+# Toutes les branches, sans exception.
+#
+# La liste nominative qui figurait ici — main, refactor/**, feat/**, fix/** —
+# omettait `refonte`, c'est-a-dire la branche ou s'est fait TOUT le chantier.
+# La CI n'y a donc jamais tourne une seule fois : ni le cliquet, ni les tests,
+# ni le garde-fou de secrets. Une CI qui ne s'execute pas sur la branche de
+# travail ne protege rien, et son silence se lit comme un feu vert.
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  # Le build est bloquant : c'est le seul indicateur qui passe au vert aujourd'hui,
+  # et c'est lui qui conditionne le deploiement.
+  #
+  # Aucun secret n'est necessaire, et ce n'est plus une chance : il n'existe plus
+  # aucune variable VITE_* dans le projet. Le front ne lit rien de
+  # l'environnement de compilation, il demande sa configuration au serveur.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # L'IMAGE SE CONSTRUIT A CHAQUE POUSSEE, sans etre publiee.
+  #
+  # Le job `build` ci-dessus compile le front dans le depot COMPLET : tout ce qui
+  # traine a la racine y est lisible. Le Dockerfile, lui, ne copie qu'une liste
+  # nommee de fichiers — et c'est cette liste qui se perime en silence.
+  #
+  # Le defaut qui a impose ce job : `vite.config.ts` a commence a lire
+  # `version.json` pour figer la version dans le bundle, et ce fichier n'etait pas
+  # dans la liste. Les six jobs etaient verts, le premier deploiement a echoue sur
+  # « ENOENT: open './version.json' ». La construction n'etait exercee que par le
+  # job `image`, declenche uniquement par un tag : le trou se decouvrait donc au
+  # moment de publier, c'est-a-dire au pire moment.
+  #
+  # Ce job ne pousse RIEN — `push: false`. Il ne remplace pas `image`, il en fait
+  # la repetition.
+  image-construction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Les tests sont bloquants des maintenant : la suite demarre a zero, donc
+  # elle doit rester verte.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # Cliquet qualite.
+  #
+  # Le depot heritait de 388 erreurs tsc a l'audit du 2026-07-29. Rendre ces
+  # controles bloquants d'emblee aurait bloque tout le chantier ; les ignorer
+  # aurait laisse la derive s'installer. D'ou ce compromis : les compteurs sont
+  # des PLAFONDS, la CI echoue si le nombre AUGMENTE, et on les abaisse a mesure.
+  #
+  # Ce que ce cliquet ne sait pas faire, et qu'il faut avoir en tete : il compte,
+  # il ne compare pas. Corriger cinq erreurs et en introduire cinq laisse le
+  # total inchange, donc passe. Il protege de la derive en volume, pas de
+  # l'echange. Sur tsc, la question ne se pose plus : le plafond est a zero.
+  #
+  # Ce qu'il valait a ete demontre le 2026-08-01 : quatre defauts de la mise en
+  # production dormaient dans ces erreurs, dont le plantage de la fiche client —
+  # un « TS2554: Expected 4 arguments, but got 2 » signale depuis des semaines,
+  # invisible au milieu du bruit. La resorption complete en a sorti dix autres,
+  # tous des defauts d'execution que rien d'autre ne voyait : une prop `text`
+  # passee a un composant qui attend `value` (bouton copier inerte), un
+  # `onClick` sur `Card` que React ne transmettait pas (cartes du kanban muettes),
+  # un filtre sur une colonne `status` qui n'existe sur aucune des trois tables
+  # visees (reattribution des dossiers d'un partant sans effet), une modale
+  # `size="large"` inconnue du composant, un `Bearer undefined` envoye a l'API
+  # des cles MCP, et un `profile?.loadLegalActs` qui ne designait rien.
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      # tsc : ZERO, atteint le 2026-08-02 depuis 136.
+      #
+      # Le plafond n'est plus un plafond mais une exigence : toute erreur
+      # introduite fait echouer la CI. C'est le seul reglage qui rende le
+      # signal utilisable — un compteur a 136 noie ce qu'il devrait montrer.
+      #
+      # Chemin : 388 (2026-07-29) -> 254 (07-31) -> 207 -> 188 (types regeneres
+      # depuis la base) -> 136 (declarations inutilisees retirees) -> 0.
+      #
+      # eslint ignore `server`, qui a son propre job exigeant zero erreur. Sans
+      # cela le compteur valait 195 ou 198 selon que `server/dist` existait ou
+      # non — un plafond ne peut pas dependre de ce qui traine sur le disque de
+      # l'executeur. Il reste 191 erreurs de style a resorber, sans rapport avec
+      # les types.
+      MAX_TSC_ERRORS: 0
+      MAX_ESLINT_ERRORS: 189
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck (cliquet)
+        run: |
+          npx tsc --noEmit -p tsconfig.app.json > tsc.log 2>&1 || true
+          COUNT=$(grep -cE "error TS" tsc.log || true)
+          COUNT=${COUNT:-0}
+          echo "Erreurs tsc : $COUNT (plafond $MAX_TSC_ERRORS)"
+          if [ "$COUNT" -gt "$MAX_TSC_ERRORS" ]; then
+            echo "::error::Regression : $COUNT erreurs tsc pour un plafond de $MAX_TSC_ERRORS."
+            grep -E "error TS" tsc.log | head -40
+            exit 1
+          fi
+          if [ "$COUNT" -lt "$MAX_TSC_ERRORS" ]; then
+            echo "::notice::$((MAX_TSC_ERRORS - COUNT)) erreurs tsc en moins. Abaisse MAX_TSC_ERRORS a $COUNT."
+          fi
+
+      - name: ESLint (cliquet)
+        run: |
+          npx eslint . -f json -o eslint.json || true
+          COUNT=$(node -e "const r=require('./eslint.json');console.log(r.reduce((n,f)=>n+f.errorCount,0))")
+          echo "Erreurs eslint : $COUNT (plafond $MAX_ESLINT_ERRORS)"
+          if [ "$COUNT" -gt "$MAX_ESLINT_ERRORS" ]; then
+            echo "::error::Regression : $COUNT erreurs eslint pour un plafond de $MAX_ESLINT_ERRORS."
+            npx eslint . || true
+            exit 1
+          fi
+          if [ "$COUNT" -lt "$MAX_ESLINT_ERRORS" ]; then
+            echo "::notice::$((MAX_ESLINT_ERRORS - COUNT)) erreurs eslint en moins. Abaisse MAX_ESLINT_ERRORS a $COUNT."
+          fi
+
+      # Garde-fou de securite : aucune cle en dur ne doit reapparaitre dans le
+      # code. Ce depot est PUBLIC, et un secret pousse ici reste dans
+      # l'historique — un historique git est definitif.
+      #
+      # Les classes de caracteres (sk[-]ant-) evitent que ce fichier ne se detecte
+      # lui-meme : le motif ne correspond pas a sa propre ecriture.
+      #
+      # Chaque motif exige de la SUBSTANCE apres le prefixe, et pas seulement le
+      # prefixe. Sans cela l'etape echouait sur de la DOCUMENTATION citant une cle
+      # sous sa forme abregee : une phrase qui PARLE d'une cle n'est pas une cle.
+      # Le garde-fou etait rouge en permanence — et un garde-fou toujours rouge
+      # finit par etre ignore, ce qu'on lui demande precisement de ne pas devenir.
+      - name: Aucun secret en dur
+        run: |
+          if grep -rnE "eyJ[A-Za-z0-9_-]{30,}|sk[-]ant-[A-Za-z0-9_-]{20,}|sk[-]proj-[A-Za-z0-9_-]{20,}|sk[_]live[_-][A-Za-z0-9]{16,}|re[_][A-Za-z0-9]{24,}" \
+               --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist . ; then
+            echo "::error::Secret potentiellement en dur detecte."
+            exit 1
+          fi
+          echo "Aucun secret en dur."
+
+  # ---------------------------------------------------------------------------
+  # Le schema, applique a un vrai PostgreSQL.
+  #
+  # Deux des quatre defauts BLOQUANTS de la mise en production vivaient ici, et
+  # aucun test de la suite front ne pouvait les voir : une fonction en
+  # `LANGUAGE sql` lisant `auth.users`, dont le corps est resolu des la creation
+  # et qui faisait donc echouer l'application entiere ; et une colonne generee
+  # declaree en `DEFAULT`, ce que PostgreSQL refuse.
+  #
+  # Le job est separe parce qu'il demande un service. La meme suite s'ignore
+  # d'elle-meme dans le job `test`, ou aucune base n'est fournie.
+  # ---------------------------------------------------------------------------
+  schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Meme version majeure que la production, sans quoi le test validerait
+        # un dialecte que l'instance ne parle pas.
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: schema_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Le schema doit s'appliquer et tenir ses invariants
+        run: npx vitest run tests/schema.test.ts --reporter=basic
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/schema_test
+
+  # ---------------------------------------------------------------------------
+  # L'application, pilotee dans un vrai navigateur.
+  #
+  # Ce job monte la pile entiere — PostgreSQL, PostgREST, le serveur Node, le
+  # front construit — puis lance Chromium dessus. C'est lourd, et c'est le prix
+  # du seul parcours que rien d'autre ne peut atteindre : l'authentification.
+  # Elle se fait par passkey, donc par `navigator.credentials`, donc par un
+  # authentificateur. Chromium en expose un VIRTUEL par le protocole DevTools ;
+  # sans lui, aucun test ne peut ouvrir une session.
+  #
+  # Ce qu'il a trouve le jour de son ecriture, et que ni tsc, ni les tests
+  # unitaires, ni les autres jobs ne voyaient : aucun `<label>` du produit
+  # n'etait lie a son champ (255 `<Input>`, 101 `<Select>`), et la limitation de
+  # debit comptait les enrolements REUSSIS — de quoi bloquer un cabinet qui
+  # accueille plusieurs collaborateurs le meme matin depuis une seule adresse.
+  #
+  # La meme suite s'ignore d'elle-meme dans le job `test`, ou aucune instance
+  # n'est fournie : `npm test` reste executable sans rien installer.
+  # ---------------------------------------------------------------------------
+  navigateur:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: crm
+          POSTGRES_PASSWORD: crm
+          POSTGRES_DB: crmcabinet
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Secret d'essai, jamais celui d'une instance. Le serveur ET PostgREST le
+      # partagent : c'est ce qui rend le jeton de session valide des deux cotes.
+      SESSION_SECRET: secret-de-ci-sans-valeur-hors-de-ce-job-32c
+      DATABASE_URL: postgres://crm:crm@localhost:5432/crmcabinet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependances
+        run: |
+          npm ci
+          npm ci --prefix server
+
+      - name: Le schema, puis les tables d'authentification
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f schema/cible.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f schema/auth-interne.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c             "INSERT INTO cabinets (nom) VALUES ('Cabinet de recette');"
+
+      - name: Construction
+        run: |
+          npm run build
+          npm run build --prefix server
+
+      - name: PostgREST
+        run: |
+          curl -fsSL -o postgrest.tar.xz             https://github.com/PostgREST/postgrest/releases/download/v14.16/postgrest-v14.16-linux-static-x86-64.tar.xz
+          tar -xJf postgrest.tar.xz
+          PGRST_DB_URI="$DATABASE_URL"           PGRST_DB_SCHEMAS=public           PGRST_DB_ANON_ROLE=           PGRST_JWT_SECRET="$SESSION_SECRET"           PGRST_SERVER_PORT=3001           ./postgrest > postgrest.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null "http://127.0.0.1:3001/" && break
+            # 401 sans jeton vaut « en ecoute » : c'est la reponse attendue.
+            curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3001/" | grep -q 401 && break
+            sleep 1
+          done
+
+      - name: Le serveur
+        run: |
+          POSTGREST_URL=http://127.0.0.1:3001           PORT=3100           PUBLIC_URL=http://localhost:3100           STORAGE_DIR=./data/storage           FRONT_DIR="$PWD/dist"           UPDATE_DISABLED=1           node server/dist/index.js > serveur.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:3100/api/sante && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3100/api/sante
+
+      - name: Un compte et son code d'enrolement
+        id: enrolement
+        working-directory: server
+        run: |
+          CODE=$(npx tsx src/cli/enrolement.ts --creer recette@example.invalid Recette Auto admin                  | grep -oE '[A-Z0-9]{5}-[A-Z0-9]{5}' | head -1)
+          test -n "$CODE" || { echo "::error::Aucun code d'enrolement obtenu."; exit 1; }
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Parcours de bout en bout
+        env:
+          E2E_BASE_URL: http://localhost:3100
+          E2E_CODE_ENROLEMENT: ${{ steps.enrolement.outputs.code }}
+        run: npm run test:e2e
+
+      - name: Journaux en cas d'echec
+        if: failure()
+        run: |
+          echo '--- serveur ---'; tail -80 serveur.log || true
+          echo '--- postgrest ---'; tail -40 postgrest.log || true
+
+  # ---------------------------------------------------------------------------
+  # Verification du serveur. Separee du front : deux package.json distincts, et
+  # le serveur n'a pas de cliquet — il part de zero erreur et doit y rester.
+  # ---------------------------------------------------------------------------
+  serveur:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Dependances
+        working-directory: server
+        run: npm ci
+      - name: Typecheck (zero erreur exigee)
+        working-directory: server
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Build
+        working-directory: server
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Publication de l'image sur GHCR, uniquement sur tag de version.
+  #
+  # Pourquoi une image publiee plutot qu'un `docker compose build` chez chaque
+  # cabinet : construire l'image demande ~5 minutes de CPU et plusieurs centaines
+  # de megaoctets de dependances telechargees. Une image tiree en 30 secondes est
+  # aussi ce qui rend le retour arriere immediat — il suffit de changer le tag.
+  #
+  # `docker compose` continue de savoir construire localement (cle `build:`) :
+  # c'est ce qui permet a install.sh de fonctionner avant la premiere image
+  # publiee, et de deboguer une modification sans passer par la CI.
+  #
+  # LES PREREQUIS. Ils etaient `[build, test, serveur]` — la compilation et les
+  # tests unitaires. Ni `schema`, ni `navigateur`, ni `quality`. Une image
+  # pouvait donc partir alors que le schema ne s'applique pas, que personne ne
+  # peut se connecter, ou qu'un secret est en dur.
+  #
+  # Ce n'etait pas theorique. Le 2026-08-03, la premiere execution du job
+  # `navigateur` a trouve que `profiles.id` n'avait pas de valeur par defaut :
+  # `install.sh` echouait a sa derniere etape, et toute installation neuve
+  # rendait une instance sans le moindre compte. Avec les anciens prerequis, ce
+  # defaut avait sa voie libre jusqu'a GHCR — les trois jobs exiges passaient au
+  # vert.
+  #
+  # Les six sont donc requis. Chacun ferme une porte que les autres laissent
+  # ouverte :
+  #
+  #   build              le front compile
+  #   image-construction l'image Docker se construit — la liste de COPY du
+  #                      Dockerfile ne se perime plus en silence
+  #   test               les tests unitaires
+  #   quality            zero erreur de types, cliquet eslint, aucun secret en dur
+  #   schema             le schema s'applique a un vrai PostgreSQL — sans quoi
+  #                      le conteneur boucle sans jamais servir une page
+  #   serveur            le serveur compile, sans plafond
+  #   navigateur         on peut enroler une passkey et ouvrir une session
+  #
+  # Le cout : une publication attend le plus lent des six, et un seul rouge la
+  # bloque. C'est exactement ce qu'on lui demande. Retaguer coute une minute ;
+  # retirer une image deja tiree par un cabinet, non.
+  # ---------------------------------------------------------------------------
+  image:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, image-construction, test, quality, schema, serveur, navigateur]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: La version du tag doit correspondre a version.json
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          FICHIER=$(node -e "console.log(require('./version.json').version)")
+          echo "tag : $TAG · version.json : $FICHIER"
+          if [ "$TAG" != "$FICHIER" ]; then
+            echo "::error::Le tag v$TAG ne correspond pas a version.json ($FICHIER)."
+            echo "Une image publiee sous un numero que le manifeste ignore est invisible pour les instances."
+            exit 1
+          fi
+
+      - name: update/version.json doit annoncer la meme version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFESTE=$(node -e "console.log(require('./update/version.json').version)")
+          if [ "$TAG" != "$MANIFESTE" ]; then
+            echo "::error::update/version.json annonce $MANIFESTE, pas $TAG. Les instances ne verraient pas la mise a jour."
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # `latest` ne bouge que sur une version stable : une prerelease ne doit
+          # pas devenir la version par defaut des nouvelles installations.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Derniere etape, APRES la publication, et volontairement : l'image est
+      # utilisable meme si ce controle echoue. Ce qu'il verifie est la seule
+      # chose qui se passe en dehors de ce depot — l'adresse que les instances
+      # interrogent VRAIMENT, celle codee dans server/src/config.ts.
+      #
+      # Le mode de defaillance est silencieux et total : si le manifeste n'est
+      # pas la, ou s'il annonce encore la version precedente, AUCUNE instance ne
+      # voit la mise a jour. Rien ne casse, personne ne se plaint, les cabinets
+      # restent sur une version perimee. Le manifeste est servi depuis la
+      # branche PAR DEFAUT : la publier suppose donc de l'y avoir amenee.
+      - name: Le manifeste public doit annoncer cette version
+        run: |
+          URL="https://raw.githubusercontent.com/${{ github.repository }}/main/update/version.json"
+          TAG="${GITHUB_REF_NAME#v}"
+          CODE=$(curl -s -o manifeste.json -w '%{http_code}' "$URL")
+          if [ "$CODE" != "200" ]; then
+            echo "::error::$URL repond $CODE."
+            echo "L'image v$TAG est publiee, mais AUCUNE instance ne la verra : elles"
+            echo "interrogent cette adresse sans jeton."
+            echo
+            echo "Deux causes possibles, et il faut les deux pour que cela marche :"
+            echo "  · le depot est PRIVE. raw.githubusercontent.com ne sert que le"
+            echo "    public : tant que le depot n'est pas publie, tout y repond 404,"
+            echo "    y compris README.md ;"
+            echo "  · update/version.json n'est pas sur la branche par defaut."
+            exit 1
+          fi
+          PUBLIE=$(node -e "console.log(require('./manifeste.json').version)")
+          echo "manifeste en ligne : $PUBLIE · tag : $TAG"
+          if [ "$PUBLIE" != "$TAG" ]; then
+            echo "::error::Le manifeste en ligne annonce $PUBLIE, pas $TAG."
+            echo "L'image est publiee mais invisible pour les instances : amenez"
+            echo "update/version.json sur la branche par defaut."
+            exit 1
+          fi

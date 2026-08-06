@@ -128,6 +128,20 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
     const tables = pivot.tables.map((table) => ({
       typeDeclaration: table.typeDeclaration,
       libelle: table.libelle,
+      // ⚠️ RECOPIER `nbLignes` ET `destinataires`, sous peine d'ecran blanc.
+      //
+      // Cette projection ne garde que ce qu'elle nomme. Les deux champs y
+      // manquaient, alors que le front les declare OBLIGATOIRES dans son propre
+      // type `TableSuivi` : `MatriceSuivi` faisait `liste.length` sur un
+      // `destinataires` absent, levait un TypeError, et l'ecran de suivi
+      // s'affichait en « Une erreur est survenue » — pour une reponse HTTP 200.
+      //
+      // Rien ne l'a rattrape : le type du front et celui du serveur sont
+      // declares separement, et cette route ne declare pas son type de retour.
+      // tsc validait donc les deux cotes d'un contrat qu'aucun des deux ne
+      // faisait respecter. Constate en production le 2026-08-05.
+      nbLignes: table.nbLignes,
+      destinataires: table.destinataires,
       societes: table.societes.map((s) => {
         const auto = rapprocher(s, index);
         // Un rattachement fait à la main l'emporte sur la règle automatique :

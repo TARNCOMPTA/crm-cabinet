@@ -306,6 +306,28 @@ export async function construireSuivi(opts: {
   const axe = opts.axe === 'depot' ? 'depot' : 'periode';
   const lignes = await lireTeletransmissions(opts);
 
+  /**
+   * LA COUPE QUE LA REQUÊTE SQL NE FAIT PAS.
+   *
+   * Le filtre en base est volontairement large : `(periode_fin >= debut OR
+   * date_avis >= debut) AND (periode_fin <= fin OR date_avis <= fin)`. Une
+   * déclaration déposée en mars 2026 pour une période close en 2022 satisfait
+   * les deux conditions — par `date_avis` pour l'une, par `periode_fin` pour
+   * l'autre. C'est délibéré : l'axe demandé n'est connu qu'ici.
+   *
+   * Mais le pivot ne tranchait pas, alors que le commentaire de la requête
+   * annonce qu'il le fait. Chaque mois rencontré devenait une colonne : une
+   * fenêtre de huit mois en produisait SEIZE, de 2022-12 à 2027-03. Demander
+   * une fenêtre plus courte l'élargissait même, en laissant entrer plus de
+   * dépôts récents portant sur des périodes lointaines.
+   *
+   * Constaté le 2026-08-05, sur une fenêtre 2026-02 → 2026-10.
+   */
+  const borneBasse = opts.debut?.slice(0, 7);
+  const borneHaute = opts.fin?.slice(0, 7);
+  const dansLaFenetre = (cleMois: string) =>
+    (!borneBasse || cleMois >= borneBasse) && (!borneHaute || cleMois <= borneHaute);
+
   const mois = new Set<string>();
   const parType = new Map<
     string,
@@ -322,6 +344,11 @@ export async function construireSuivi(opts: {
   for (const ligne of lignes) {
     const cleMois = String(axe === 'depot' ? ligne.date_avis : ligne.periode_fin).slice(0, 7);
     if (!/^\d{4}-\d{2}$/.test(cleMois)) continue;
+    // La coupe porte sur la ligne entiere, et pas seulement sur la liste des
+    // colonnes : ecarter le mois sans ecarter la ligne laisserait des societes
+    // presentes dans le tableau avec une rangee entierement vide, et un
+    // `nbLignes` comptant des declarations qu'on n'affiche pas.
+    if (!dansLaFenetre(cleMois)) continue;
     mois.add(cleMois);
 
     // Regroupement sur le CODE technique, stable entre ACS et ARS ; le libellé,
