@@ -469,7 +469,7 @@ export function ARDCalculator() {
           )}
 
           <Card>
-            <CardContent className="py-0">
+            <CardContent className="py-0 overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800">

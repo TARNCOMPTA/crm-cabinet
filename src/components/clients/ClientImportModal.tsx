@@ -368,7 +368,7 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
         )}
 
         <div className="border border-gray-200 rounded-lg">
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>

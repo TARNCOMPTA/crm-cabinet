@@ -30,6 +30,7 @@ import {
   Wrench,
   BookUser,
   Target,
+  Mail,
   Receipt,
   CalendarClock,
   FileSpreadsheet,
@@ -54,6 +55,7 @@ const navSections = [
       { to: '/tasks', icon: CheckSquare, label: 'Tâches' },
       { to: '/checklists', icon: ClipboardList, label: 'Checklists' },
       { to: '/relances', icon: Receipt, label: 'Relances' },
+      { to: '/campagnes', icon: Mail, label: 'Campagnes' },
     ],
   },
   {

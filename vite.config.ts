@@ -39,13 +39,39 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg'],
       workbox: {
         navigateFallback: '/index.html',
-        // Ces préfixes sont servis par le serveur Node : le service worker ne
-        // doit jamais les intercepter ni leur substituer index.html.
+        /**
+         * Ces préfixes sont servis par le serveur Node : le service worker ne
+         * doit jamais les intercepter ni leur substituer index.html.
+         *
+         * ⚠️ CETTE LISTE EST LA RAISON POUR LAQUELLE LES POINTS OAUTH VIVENT SOUS
+         * `/oauth/`. Ils ont d'abord été écrits à la racine — `/authorize`,
+         * `/token`, `/register` — et le serveur répondait correctement : mesuré au
+         * curl. Mais dans un navigateur, `navigateFallback` rabat TOUTE navigation
+         * non exclue sur index.html, sans même joindre le réseau. L'utilisateur
+         * arrivait donc sur le 404 de l'application, alors que la route existait.
+         *
+         * Constaté le 2026-08-06 en branchant claude.ai. Deux enseignements :
+         * un `curl` ne prouve rien sur ce qu'un navigateur reçoit tant qu'un
+         * service worker est en place, et le préfixe `/oauth/` était déjà là —
+         * vestige de l'implémentation d'avant la refonte, qui avait fait le même
+         * choix pour la même raison.
+         *
+         * Avantage inattendu : les navigateurs porteurs de l'ANCIEN service worker
+         * excluent déjà `/oauth/`. Le correctif prend effet sans attendre leur
+         * mise à jour.
+         */
         navigateFallbackDenylist: [
           /^\/api\//,
           /^\/rest\//,
+          /^\/mcp$/,
           /^\/oauth\//,
           /^\/\.well-known\//,
+          // La désinscription d'une campagne : page rendue par le serveur, ouverte
+          // depuis un logiciel de messagerie, donc sans session. Si le service
+          // worker la rabattait sur index.html, le client cliquant depuis son
+          // courriel verrait « Page introuvable » — et conclurait que le cabinet
+          // ne respecte pas sa demande.
+          /^\/desinscription/,
         ],
       },
       manifest: {

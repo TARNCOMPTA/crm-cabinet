@@ -30,6 +30,7 @@ const Outils = lazyRetryNamed(() => import('./pages/Outils'), 'Outils');
 const ContactsDirectory = lazyRetryNamed(() => import('./pages/ContactsDirectory'), 'ContactsDirectory');
 const Opportunities = lazyRetryNamed(() => import('./pages/Opportunities'), 'Opportunities');
 const Relances = lazyRetryNamed(() => import('./pages/Relances'), 'Relances');
+const Campagnes = lazyRetryNamed(() => import('./pages/Campagnes'), 'Campagnes');
 const RevenueDeclarations = lazyRetryNamed(() => import('./pages/RevenueDeclarations'), 'RevenueDeclarations');
 const SuiviEcheances = lazyRetryNamed(() => import('./pages/SuiviEcheances'), 'SuiviEcheances');
 const Checklists = lazyRetryNamed(() => import('./pages/Checklists'), 'Checklists');
@@ -61,6 +62,7 @@ function App() {
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="balance-sheets" element={<BalanceSheets />} />
                 <Route path="relances" element={<Relances />} />
+                <Route path="campagnes" element={<Campagnes />} />
                 <Route path="revenue-declarations" element={<RevenueDeclarations />} />
                 <Route path="suivi-echeances" element={<SuiviEcheances />} />
                 <Route path="tax-authorizations" element={<TaxAuthorizations />} />
@@ -74,6 +76,7 @@ function App() {
 
                 {/* French URL redirects */}
                 <Route path="bilans" element={<Navigate to="/balance-sheets" replace />} />
+                <Route path="mailings" element={<Navigate to="/campagnes" replace />} />
                 <Route path="declarations-ca" element={<Navigate to="/revenue-declarations" replace />} />
                 <Route path="autorisations-fiscales" element={<Navigate to="/tax-authorizations" replace />} />
                 <Route path="exonerations" element={<Navigate to="/exemptions" replace />} />

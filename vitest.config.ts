@@ -5,9 +5,8 @@ import react from '@vitejs/plugin-react';
 // Deux raisons :
 //  - les tests n'ont aucun besoin du plugin PWA ni du decoupage manuel des chunks ;
 //  - vite.config.ts charge vite-plugin-pwa, que le resolveur d'esbuild n'arrive pas a
-//    resoudre depuis un lecteur reseau monte sous Windows. S'en passer ici garde
-//    `npm test` executable partout ; `vite build` reste a lancer depuis un disque
-//    local ou en CI.
+//    resoudre sur le lecteur X: (voir MIGRATION.md §8). S'en passer ici rend les tests
+//    executables en local sur X:, alors que `vite build` doit tourner depuis C: ou en CI.
 export default defineConfig({
   plugins: [react()],
   test: {

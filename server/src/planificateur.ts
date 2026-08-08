@@ -81,7 +81,12 @@ const TACHES: Tache[] = [
     quand: 'tous les jours a 6h',
     estDue: chaqueJourA(6),
     executer: async () => {
-      await requete('SELECT process_email_digest()');
+      // L'URL publique est passee en parametre, et non ecrite dans la fonction
+      // SQL : PostgreSQL ne peut pas la deviner, et un courriel n'a pas
+      // d'origine — ses liens doivent etre absolus. Elle etait figee sur le
+      // domaine de l'ancienne plateforme, donc chaque digest partait avec des
+      // liens morts (voir schema/increments/004-liens-absolus-des-emails.sql).
+      await requete('SELECT process_email_digest($1)', [config.publicUrl]);
     },
   },
   {

@@ -76,8 +76,8 @@ export interface EtatCellule {
  *
  * Volontairement SANS taxonomie : on ne cherche pas à deviner si le
  * destinataire est une banque ou une administration. Le nom brut de jedeclare
- * suffit à lever l'ambiguïté, et il reste juste quel que soit le cabinet : une
- * taxonomie calée sur les destinataires d'un seul se tromperait chez les autres.
+ * suffit à lever l'ambiguïté, et il reste juste pour un cabinet dont les
+ * destinataires ne ressembleraient pas à ceux de TARN COMPTA.
  */
 function nommer(noms: string[]): string {
   const distincts = [...new Set(noms.filter(Boolean))];

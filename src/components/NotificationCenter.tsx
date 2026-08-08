@@ -83,11 +83,50 @@ export function NotificationCenter() {
     [user]
   );
 
+  /**
+   * Le sondage du badge : cinq minutes, et seulement onglet visible.
+   *
+   * ⚠️ CE SONDAGE ETAIT 96 % DU TRAFIC DE L'APPLICATION. Mesure du 2026-08-07 sur
+   * les journaux du serveur : 318 requêtes sur 332, toutes des
+   * `HEAD /rest/v1/notifications`, à 92 ms de moyenne — pour un compteur qui vaut
+   * presque toujours zéro. Tout le reste de l'usage réel du CRM tenait dans les
+   * 14 requêtes restantes.
+   *
+   * Trois changements, du plus rentable au moins visible :
+   *
+   *   · SOIXANTE SECONDES → CINQ MINUTES. Une notification qui arrive avec quatre
+   *     minutes de retard sur un badge ne change rien au travail d'un cabinet ;
+   *     douze requêtes par heure au lieu de soixante, si.
+   *   · RIEN QUAND L'ONGLET EST CACHE. C'est le gain le plus important en
+   *     pratique : un onglet du CRM laissé ouvert toute la journée derrière
+   *     d'autres fenêtres interrogeait le serveur sans que personne ne regarde.
+   *   · RAFRAICHISSEMENT AU RETOUR. Compense la fenêtre plus longue là où elle se
+   *     verrait : en revenant sur l'onglet, le compte est à jour immédiatement.
+   *
+   * Le temps réel n'est pas une option : `supabase.channel()` est un leurre depuis
+   * la refonte (voir src/lib/supabase.ts) — plus de websocket, la méthode ne fait
+   * rien. Le sondage est donc le seul mécanisme, ce qui rend sa cadence d'autant
+   * plus importante.
+   */
   useEffect(() => {
     if (!user) return;
-    load(false);
-    const interval = setInterval(() => load(false), 60000);
-    return () => clearInterval(interval);
+
+    const visible = () => document.visibilityState === 'visible';
+    if (visible()) load(false);
+
+    const interval = setInterval(() => {
+      if (visible()) load(false);
+    }, 5 * 60_000);
+
+    const auRetour = () => {
+      if (visible()) load(false);
+    };
+    document.addEventListener('visibilitychange', auRetour);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', auRetour);
+    };
   }, [user, load]);
 
   useEffect(() => {

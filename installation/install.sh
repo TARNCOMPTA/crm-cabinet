@@ -2,7 +2,7 @@
 # ============================================================================
 # CRM Cabinet — installation sur un VPS Ubuntu (22.04 / 24.04 / 26.04)
 #
-#   curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/installation/install.sh -o install.sh
+#   curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crmcabinet/main/installation/install.sh -o install.sh
 #   sudo sh install.sh
 #
 # Le script installe Docker si besoin, ouvre le pare-feu (80/443/SSH), récupère
@@ -17,7 +17,7 @@
 # ============================================================================
 set -e
 
-REPO="https://github.com/TARNCOMPTA/crm-cabinet.git"
+REPO="https://github.com/TARNCOMPTA/crmcabinet.git"
 DIR="/opt/crmcabinet"
 
 echo ""

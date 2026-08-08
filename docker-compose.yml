@@ -59,7 +59,7 @@ services:
 
   app:
     build: .
-    image: ghcr.io/tarncompta/crm-cabinet:${VERSION:-latest}
+    image: ghcr.io/tarncompta/crmcabinet:${VERSION:-latest}
     restart: unless-stopped
     environment:
       PORT: 3000

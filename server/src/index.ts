@@ -33,6 +33,8 @@ import { enregistrerRoutesTva } from './routes/tva.js';
 import { enregistrerRoutesPdf } from './routes/pdf.js';
 import { enregistrerRoutesMcpCles } from './routes/mcp-cles.js';
 import { enregistrerRoutesMcp } from './routes/mcp.js';
+import { enregistrerRoutesMcpOauth } from './routes/mcp-oauth.js';
+import { enregistrerRoutesCampagnes } from './routes/campagnes.js';
 import { demarrerPlanificateur, arreterPlanificateur, listerTaches, declencher } from './planificateur.js';
 import { etatVersion } from './version.js';
 import { exigerAdmin } from './gardes.js';
@@ -125,6 +127,13 @@ async function demarrer() {
   enregistrerRoutesPdf(app);
   enregistrerRoutesMcpCles(app);
   enregistrerRoutesMcp(app);
+  // Avant le service des fichiers statiques : ces routes ont des chemins racine
+  // (`/authorize`, `/token`, `/register`, `/.well-known/…`) et doivent primer sur
+  // le repli SPA, qui rendrait index.html a leur place.
+  enregistrerRoutesMcpOauth(app);
+  // Avant le service statique : /desinscription est un chemin racine, il doit
+  // primer sur le repli SPA.
+  enregistrerRoutesCampagnes(app);
   await enregistrerRoutesStorage(app);
   enregistrerProxyRest(app);
 
@@ -137,10 +146,39 @@ async function demarrer() {
   const front = process.env.FRONT_DIR ?? resolve(ICI, '../../dist');
   if (existsSync(front)) {
     await app.register(statique, { root: front, prefix: '/' });
-    // Repli SPA : toute route inconnue rend index.html, sauf sous /api et /rest
-    // ou une 404 doit rester une 404.
+    /**
+     * Repli SPA : toute route inconnue rend index.html — sauf celles où une 404
+     * doit rester une 404.
+     *
+     * `/api` et `/rest` étaient exclus depuis le début. Les chemins OAuth le sont
+     * désormais aussi, et pour une raison mesurée : ce serveur N'IMPLÉMENTE PAS
+     * OAuth (voir l'en-tête de routes/mcp.ts, l'authentification MCP se fait par
+     * clé). Or le repli répondait **200 avec du HTML** à
+     * `/.well-known/oauth-authorization-server`, `/register`, `/authorize` et
+     * `/token`.
+     *
+     * Un client MCP qui tente la découverte OAuth — claude.ai le fait dès qu'il
+     * reçoit notre 401 sur `/mcp` — lisait donc une page HTML là où il attendait
+     * du JSON, sans jamais apprendre que le service n'existe pas. Il poursuivait
+     * le parcours jusqu'à envoyer l'utilisateur sur `/authorize`, qui affichait
+     * l'application au lieu d'un écran de consentement. Constaté le 2026-08-06.
+     *
+     * Répondre 404 ne rétablit pas OAuth : cela rend son absence LISIBLE, au
+     * premier appel, au lieu de la déguiser en succès.
+     */
+    const CHEMINS_NON_SPA = [
+      '/api',
+      '/rest',
+      '/.well-known',
+      '/authorize',
+      '/token',
+      '/register',
+      '/oauth',
+      '/desinscription',
+    ];
     app.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith('/api') || request.url.startsWith('/rest')) {
+      const chemin = request.url.split('?')[0] ?? '';
+      if (CHEMINS_NON_SPA.some((p) => chemin === p || chemin.startsWith(`${p}/`))) {
         return reply.code(404).send({ message: 'Route inconnue.' });
       }
       return reply.sendFile('index.html');

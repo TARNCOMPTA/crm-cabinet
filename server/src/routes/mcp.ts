@@ -26,9 +26,11 @@
 
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { config } from '../config.js';
 import { requete, requeteUne } from '../db.js';
 import { OUTILS, OUTILS_PAR_NOM } from '../mcp/outils.js';
 import { acquitter, souscontrole } from '../limiteur.js';
+import { validerJetonAcces } from './mcp-oauth.js';
 
 /** Version du protocole annoncée. Celle que les clients actuels demandent. */
 const VERSION_PROTOCOLE = '2024-11-05';
@@ -42,6 +44,19 @@ const VERSION_PROTOCOLE = '2024-11-05';
  * ralentir.
  */
 const BORNES_CLE_MCP = { max: 20, fenetreMs: 15 * 60_000 };
+
+/**
+ * Le défi renvoyé avec chaque 401.
+ *
+ * Le pointeur `resource_metadata` est ce qui permet à un client MCP de DÉCOUVRIR
+ * OAuth (RFC 9728) : il y lit quel serveur d'autorisation interroger. Sans lui,
+ * un client qui exige OAuth — le connecteur de claude.ai, par exemple — ne sait
+ * pas où chercher. Il devine, échoue, et l'utilisateur n'a qu'« erreur » pour
+ * seule explication.
+ */
+const DEFI_AUTH =
+  `Bearer realm="CRM Cabinet", ` +
+  `resource_metadata="${config.publicUrl.replace(/\/$/, '')}/.well-known/oauth-protected-resource"`;
 
 interface RequeteRpc {
   jsonrpc?: string;
@@ -87,8 +102,23 @@ async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
   if (!entete?.startsWith('Bearer ')) return null;
 
   const valeur = entete.slice('Bearer '.length).trim();
+
+  /**
+   * DEUX FORMES, ET LE SEPARATEUR LES DISTINGUE.
+   *
+   * `client_id:client_secret` est la cle du cabinet, creee dans les Parametres :
+   * c'est la voie des clients qui acceptent un en-tete fixe (Claude Code, Cursor).
+   * Un jeton OAuth opaque, lui, ne contient pas de deux-points — il est en
+   * base64url. L'absence de separateur suffit donc a router, sans champ
+   * supplementaire ni ambiguite : aucune des deux formes ne peut se faire passer
+   * pour l'autre.
+   */
   const separateur = valeur.indexOf(':');
-  if (separateur <= 0) return null;
+  if (separateur < 0) {
+    const jeton = await validerJetonAcces(valeur);
+    return jeton ? { id: jeton.tokenId, nom: `OAuth ${jeton.clientId}` } : null;
+  }
+  if (separateur === 0) return null;
 
   const clientId = valeur.slice(0, separateur);
   const secret = valeur.slice(separateur + 1);
@@ -128,7 +158,7 @@ export function enregistrerRoutesMcp(app: FastifyInstance): void {
     if (!cle) {
       return reply
         .code(401)
-        .header('WWW-Authenticate', 'Bearer realm="CRM Cabinet"')
+        .header('WWW-Authenticate', DEFI_AUTH)
         .send(erreurRpc(null, -32000, 'Cle MCP absente ou invalide.'));
     }
 
@@ -217,7 +247,7 @@ export function enregistrerRoutesMcp(app: FastifyInstance): void {
     if (!cle) {
       return reply
         .code(401)
-        .header('WWW-Authenticate', 'Bearer realm="CRM Cabinet"')
+        .header('WWW-Authenticate', DEFI_AUTH)
         .send({ error: 'Cle MCP absente ou invalide.' });
     }
     acquitter(`mcp:${request.ip}`);

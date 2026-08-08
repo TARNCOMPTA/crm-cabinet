@@ -41,9 +41,15 @@ interface DataTableProps {
   editMode?: boolean;
 }
 
+/**
+ * `overflow-x-auto` et non `overflow-hidden` : la table est en `min-w-full`, donc
+ * elle a le droit de depasser son conteneur. « hidden » COUPAIT le debordement
+ * au lieu de le faire defiler — sur un telephone, les colonnes de droite
+ * devenaient inatteignables, sans rien pour le signaler.
+ */
 export function DataTable({ rows, editMode = false }: DataTableProps) {
   return (
-    <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
           {rows.map((row, index) => (

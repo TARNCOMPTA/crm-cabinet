@@ -55,10 +55,35 @@ export function SettingsMCPConnector() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
 
-  const mcpEndpoint = 'https://crmcabinet.com/mcp';
+  interface Autorisation {
+    clientId: string;
+    nom: string;
+    creeLe: string;
+    dernierAcces: string | null;
+    jetonsActifs: number;
+  }
+  const [autorisations, setAutorisations] = useState<Autorisation[]>([]);
+  const [revocationEnCours, setRevocationEnCours] = useState<string | null>(null);
+
+  /**
+   * L'adresse du connecteur se DEDUIT, elle ne se demande pas.
+   *
+   * Elle etait ecrite en dur sur « https://crmcabinet.com », le domaine de
+   * l'ancienne plateforme : l'ecran affichait donc, en invitant a la copier, une
+   * adresse qui ne repond pas — et chaque cabinet qui installe le produit aurait
+   * lu la meme.
+   *
+   * `window.location.origin` est la bonne source, et pas un pis-aller : le
+   * serveur sert le front ET l'API sur une seule origine, precisement pour qu'il
+   * n'y ait ni CORS ni configuration a tenir a jour (voir server/src/index.ts).
+   * Le MCP est monte sur `/mcp` de ce meme serveur, donc l'origine du navigateur
+   * EST celle du connecteur, par construction.
+   */
+  const mcpEndpoint = `${window.location.origin}/mcp`;
 
   useEffect(() => {
     loadKeys();
+    void chargerAutorisations();
   }, [profile]);
 
   /**
@@ -78,6 +103,47 @@ export function SettingsMCPConnector() {
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
   };
+
+  /**
+   * Les autorisations OAuth accordees.
+   *
+   * Passe par `/api/mcp/autorisations` et non par PostgREST : les tables OAuth
+   * sont volontairement hors de portee du navigateur, le serveur choisit donc
+   * ligne par ligne ce qui sort — jamais un hache, jamais un jeton.
+   */
+  async function chargerAutorisations() {
+    try {
+      const r = await fetch('/api/mcp/autorisations', { method: 'GET', ...OPTIONS_API });
+      if (!r.ok) throw new Error('Chargement des autorisations impossible');
+      const d = await r.json();
+      setAutorisations(d.autorisations ?? []);
+    } catch {
+      // Silence volontaire : l'absence de cette liste ne doit pas masquer le
+      // reste de l'ecran, qui reste utilisable pour creer une cle.
+      setAutorisations([]);
+    }
+  }
+
+  async function revoquerAutorisation(clientId: string, nom: string) {
+    setRevocationEnCours(clientId);
+    try {
+      const r = await fetch(`/api/mcp/autorisations/${encodeURIComponent(clientId)}`, {
+        method: 'DELETE',
+        ...OPTIONS_API,
+      });
+      if (!r.ok) throw new Error('Revocation impossible');
+      const d = await r.json();
+      showToast(
+        `Autorisation « ${nom} » revoquee${d.jetonsRevoques ? `, ${d.jetonsRevoques} jeton(s) coupe(s)` : ''}.`,
+        'success'
+      );
+      await chargerAutorisations();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Revocation impossible', 'error');
+    } finally {
+      setRevocationEnCours(null);
+    }
+  }
 
   async function loadKeys() {
     if (!profile) {
@@ -174,13 +240,19 @@ export function SettingsMCPConnector() {
     });
   }
 
-  const mcpConfigOAuth = JSON.stringify({
-    mcpServers: {
-      'mon-cabinet': {
-        url: mcpEndpoint,
-      },
-    },
-  }, null, 2);
+  /**
+   * La commande de Claude Code, avec la cle si l'on vient d'en creer une.
+   *
+   * Les valeurs reelles plutot que des marqueurs quand elles existent : une
+   * commande a recopier en remplacant deux champs se recopie de travers.
+   */
+  const commandeClaudeCode = [
+    'claude mcp add --transport http mon-cabinet',
+    mcpEndpoint,
+    `--header "Authorization: Bearer ${
+      newKeyData ? `${newKeyData.client_id}:${newKeyData.client_secret}` : '<client_id>:<client_secret>'
+    }"`,
+  ].join(' \\\n  ');
 
   const mcpConfigDirect = newKeyData
     ? JSON.stringify({
@@ -336,6 +408,59 @@ export function SettingsMCPConnector() {
       </div>
 
       {/* Configuration section */}
+      {/* Les autorisations OAuth. Absente si personne n'a encore connecte
+          claude.ai : une carte vide n'apprendrait rien. */}
+      {autorisations.length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+              <Plug className="w-4 h-4 text-teal-600" />
+              Autorisations accordees
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Les assistants qui se sont connectes par OAuth. Revoquer coupe l'acces
+              immediatement — les jetons en cours sont invalides, pas seulement les prochains.
+            </p>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {autorisations.map((a) => (
+                <div
+                  key={a.clientId}
+                  className="py-3 flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {a.nom}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Autorise le {formatDate(a.creeLe)}
+                      {a.dernierAcces ? ` — dernier appel le ${formatDate(a.dernierAcces)}` : ' — jamais utilise'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        a.jetonsActifs > 0
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                    >
+                      {a.jetonsActifs > 0 ? 'actif' : 'en sommeil'}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => void revoquerAutorisation(a.clientId, a.nom)}
+                      disabled={revocationEnCours === a.clientId}
+                    >
+                      {revocationEnCours === a.clientId ? 'Revocation...' : 'Revoquer'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
@@ -359,36 +484,53 @@ export function SettingsMCPConnector() {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Methode 1 : OAuth (Claude.ai, Claude Desktop)
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Collez uniquement l'URL. L'application vous demandera vos identifiants MCP via un formulaire de connexion.
+            {/* Deux voies, et le critère qui les sépare n'est pas le confort :
+                c'est que certains clients n'offrent aucun champ pour un en-tête. */}
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                Voie 1 — claude.ai (OAuth), sans aucune cle a copier
               </p>
-              <div className="relative mt-1">
-                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-4 rounded-lg overflow-x-auto border border-gray-700">
-                  {mcpConfigOAuth}
+              <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
+                <li>
+                  Restez connecte au CRM <strong>dans ce navigateur</strong> : c'est votre session qui
+                  autorise l'acces.
+                </li>
+                <li>Dans claude.ai, ajoutez un connecteur avec l'URL ci-dessus.</li>
+                <li>
+                  <strong>Laissez les champs « Client ID » et « Client Secret » vides.</strong> Claude
+                  s'enregistre tout seul ; y coller une cle du tableau ci-dessous ferait echouer la
+                  connexion.
+                </li>
+                <li>Un ecran « Autoriser Claude ? » s'affiche. Vous acceptez, et c'est fini.</li>
+              </ol>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                L'autorisation se renouvelle d'elle-meme tant qu'elle sert. Inutilisee trente jours,
+                elle se referme et un clic la retablit. Elle apparait plus bas, revocable a tout moment.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                Voie 2 — Claude Code, Cursor, VS Code : une cle dans un en-tete
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Ces clients acceptent un en-tete fixe. Creez une cle ci-dessous, puis :
+              </p>
+              <div className="relative">
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
+                  {commandeClaudeCode}
                 </pre>
                 <button
-                  onClick={() => copyToClipboard(mcpConfigOAuth, 'config-oauth')}
+                  onClick={() => copyToClipboard(commandeClaudeCode, 'cmd-code')}
                   className="absolute top-2 right-2 p-1.5 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
                   title="Copier"
                 >
-                  {copiedField === 'config-oauth' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
+                  {copiedField === 'cmd-code' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
                 </button>
               </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Methode 2 : Headers directs (Cursor, VS Code, Claude Code)
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Pour les clients supportant les headers personnalises.
-              </p>
-              <div className="relative mt-1">
-                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-4 rounded-lg overflow-x-auto border border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Ou, par fichier de configuration :</p>
+              <div className="relative">
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
                   {mcpConfigDirect}
                 </pre>
                 <button

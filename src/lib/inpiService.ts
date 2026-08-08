@@ -832,28 +832,89 @@ export async function syncLegalActsToDatabase(clientId: string): Promise<{
   success: boolean;
   message: string;
   insertedCount?: number;
+  /**
+   * Le registre a répondu, et il ne porte aucune pièce pour ce SIREN.
+   *
+   * DISTINCT D'UN ÉCHEC, et il faut pouvoir les distinguer : l'appelant qui
+   * masque son affichage quand il n'y a rien ferait autrement passer une panne
+   * de l'INPI pour une société sans acte déposé. `success` reste `false` — il
+   * signifie « des actes ont été enregistrés », et il n'y en a pas.
+   */
+  registreVide?: boolean;
 }> {
   try {
     const result = await fetchLegalActsForClient(clientId);
 
-    if (!result.success || !result.acts || result.acts.length === 0) {
+    if (!result.success) {
+      return { success: false, message: result.message || 'Erreur lors de la synchronisation' };
+    }
+
+    if (!result.acts || result.acts.length === 0) {
+      /**
+       * ⚠️ ON DATE MÊME UNE RECHERCHE INFRUCTUEUSE.
+       *
+       * `last_legal_sync` répond à « quand a-t-on interrogé le registre ? », pas
+       * à « quand a-t-on trouvé quelque chose ? ». Sans cette écriture, une
+       * société sans acte déposé n'en garde aucune trace, et tout appelant qui
+       * consulte l'INPI « seulement si on ne sait rien » le réinterroge à chaque
+       * fois, indéfiniment — pour redécouvrir chaque fois qu'il n'y a rien.
+       */
+      await supabase
+        .from('clients')
+        .update({ last_legal_sync: new Date().toISOString() })
+        .eq('id', clientId);
+
       return {
         success: false,
-        message: result.message || 'Aucun acte à synchroniser'
+        registreVide: true,
+        message: 'Aucun acte depose au registre',
+        insertedCount: 0,
       };
     }
 
-    const actsToInsert = result.acts.map(act => ({
-      client_id: clientId,
-      act_type: act.type,
-      act_category: act.category,
-      act_date: act.date,
-      deposit_date: act.depositDate || null,
-      inpi_reference: act.reference,
-      document_url: act.documentUrl || null,
-      download_status: 'pending' as const,
-      metadata: { description: act.description }
-    }));
+    /**
+     * ⚠️ `legal_acts.act_date` est NOT NULL, et `listerPieces` rend `null` quand
+     * aucun des trois champs de date de l'INPI n'est renseigné.
+     *
+     * L'insertion se fait en UN SEUL LOT : une pièce sans date faisait échouer
+     * les vingt autres. `last_legal_sync` restait alors vide, et tout appelant
+     * qui n'interroge le registre que « si on ne sait rien » y retournait à
+     * chaque fois — pour rééchouer à l'identique.
+     *
+     * La date de dépôt sert de repli avant d'écarter la pièce : au greffe, c'est
+     * elle qui fait foi.
+     */
+    // `flatMap` plutot qu'un `filter` puis un `map` : c'est le meme test qui
+    // ecarte la piece et qui prouve au compilateur que la date existe.
+    const actsToInsert = result.acts.flatMap(act => {
+      const acteDate = act.date || act.depositDate;
+      if (!acteDate) return [];
+      return [{
+        client_id: clientId,
+        act_type: act.type,
+        act_category: act.category,
+        act_date: acteDate,
+        deposit_date: act.depositDate || null,
+        inpi_reference: act.reference,
+        document_url: act.documentUrl || null,
+        download_status: 'pending' as const,
+        metadata: { description: act.description }
+      }];
+    });
+
+    if (actsToInsert.length === 0) {
+      await supabase
+        .from('clients')
+        .update({ last_legal_sync: new Date().toISOString() })
+        .eq('id', clientId);
+
+      return {
+        success: false,
+        registreVide: true,
+        message: 'Aucun acte datable au registre',
+        insertedCount: 0,
+      };
+    }
 
 
     const { data, error } = await supabase

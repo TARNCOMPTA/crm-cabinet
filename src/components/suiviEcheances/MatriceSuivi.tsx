@@ -270,8 +270,8 @@ function aUnProbleme(s: SocieteSuivie): boolean {
  * n'existe pas.
  *
  * Aucun classement « banque / administration » n'est tenté : on affiche le nom
- * brut. Deviner la nature du destinataire marcherait dans le cabinet où la règle
- * a été écrite, et se tromperait chez le suivant.
+ * brut. Deviner la nature du destinataire marcherait pour TARN COMPTA et se
+ * tromperait chez le cabinet suivant.
  */
 function Destinataires({ liste }: { liste: { nom: string; lignes: number }[] }) {
   if (!liste.length) return null;

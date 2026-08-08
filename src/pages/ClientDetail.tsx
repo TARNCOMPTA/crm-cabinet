@@ -31,6 +31,7 @@ import {
   Plus, Calculator, FileDown, Loader2, Package,
 } from 'lucide-react';
 import { ClientDirectoryContacts } from '../components/clients/ClientDirectoryContacts';
+import { ClientStatutsCard } from '../components/clients/ClientStatutsCard';
 import { ClientSynthesisTab } from '../components/clients/ClientSynthesisTab';
 import { ClientMeetingNotesTab } from '../components/clients/ClientMeetingNotesTab';
 import { ClientARDTab } from '../components/clients/ClientARDTab';
@@ -782,6 +783,9 @@ export function ClientDetail() {
                 onAdd={() => setShowCollabModal(true)}
               />
               <ClientDirectoryContacts clientId={client.id} siren={client.siren} siret={client.siret} nomEntreprise={client.nom_entreprise} formeJuridique={client.forme_juridique} adresseLigne1={client.adresse_ligne1} codePostal={client.code_postal} ville={client.ville} email={client.email} telephone={client.telephone} />
+              {/* Ne s'affiche que si des statuts sont deposes au registre — ou si
+                  on n'a pas pu le savoir, ce qui n'est pas la meme chose. */}
+              <ClientStatutsCard client={client} />
               <SyncHistoryCard syncHistory={syncHistory} />
             </div>
           </div>
@@ -851,7 +855,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: { collaborator
           </button>
         </div>
         {collaborators.length > 0 ? (
-          <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>

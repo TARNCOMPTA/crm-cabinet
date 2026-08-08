@@ -19,6 +19,7 @@ import { requete, requeteUne } from '../db.js';
 import { exigerSession, exigerAdmin } from '../gardes.js';
 import { ErreurInpi, tester as testerInpi } from '../inpi/client.js';
 import { convertirJJMMEnDate } from '../inpi/dates.js';
+import { choisirStatuts } from '../inpi/statuts.js';
 import {
   chercherParNom,
   chercherParSiren,
@@ -292,11 +293,13 @@ export function enregistrerRoutesInpi(app: FastifyInstance): void {
             return reply.code(400).send({ success: false, message: 'siren manquant.' });
           }
           // Sans identifiant de pièce, on prend les statuts : c'est ce que fait
-          // le bouton « Télécharger les statuts » du front.
+          // le bouton « Télécharger les statuts » de la fiche client.
+          //
+          // Le choix vit dans `inpi/statuts.ts`, jumeau de `src/lib/statuts.ts`
+          // côté front : l'un décide de ce qui est AFFICHÉ, l'autre de ce qui est
+          // TÉLÉCHARGÉ, et les deux doivent désigner les mêmes pièces.
           const pieces = await listerPieces(siren.replace(/\s/g, ''));
-          const statuts =
-            pieces.find((p) => /statuts/i.test(p.type)) ??
-            pieces.find((p) => p.category === 'creation');
+          const statuts = choisirStatuts(pieces);
           if (!statuts?.id) {
             return reply.code(404).send({
               success: false,

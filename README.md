@@ -11,7 +11,7 @@ Personne d'autre n'y accède.
 Un VPS Ubuntu, un nom de domaine, une commande :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/installation/install.sh -o install.sh && sudo sh install.sh
+curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crmcabinet/main/installation/install.sh -o install.sh && sudo sh install.sh
 ```
 
 Le script installe Docker, ouvre le pare-feu, génère les secrets, démarre
@@ -164,6 +164,57 @@ L'instance signale qu'une version existe dans **Paramètres ▸ Version et mise 
 jour**, réservé aux administrateurs. Elle lit pour cela un fichier statique
 public sur GitHub — seul flux sortant du produit lui-même, sans rien envoyer, et
 coupé par `UPDATE_DISABLED=1`.
+
+### Depuis GitHub, sans ouvrir de session sur le serveur
+
+Le workflow **Deploiement** (`Actions ▸ Deploiement ▸ Run workflow`) lance
+exactement la commande ci-dessus, sur le serveur, depuis un *runner*
+auto-hébergé portant le label `vps-crm`. Il n'y a rien de plus : le travail est
+fait par `maj.sh`, sauvegarde comprise.
+
+Il se déclenche **à la main, et seulement à la main** — aucun `push`, aucune
+`pull_request`. Deux raisons :
+
+1. le produit tient que chaque cabinet décide quand il met à jour ; un merge ne
+   doit pas toucher la production ;
+2. un runner auto-hébergé exécute le code du workflow **sur le serveur du
+   cabinet**. Le déclencher sur `pull_request` ferait tourner le code de
+   n'importe quelle proposition de modification sur la machine qui porte la
+   comptabilité des clients.
+
+Pour exiger une approbation avant chaque exécution : **Settings ▸ Environments ▸
+production ▸ Required reviewers**.
+
+Le runner doit tourner sous un utilisateur qui **possède le répertoire de
+l'instance** (pour le `git pull`) et **appartient au groupe `docker`**. Le
+workflow le vérifie avant de toucher à quoi que ce soit, et s'arrête avec le
+motif exact plutôt qu'au milieu de la mise à jour.
+
+---
+
+## Publier le code
+
+Le code vit dans deux dépôts, et ce n'est pas un doublon :
+
+| Dépôt | Rôle |
+|---|---|
+| `TARNCOMPTA/crmcabinet` — **privé** | on y travaille. Son historique porte un export de la base de production : il ne doit **jamais** devenir public |
+| `TARNCOMPTA/crm-cabinet` — **public** | ce que les cabinets installent, et d'où les instances lisent le manifeste de mise à jour |
+
+```bash
+npm run publier                 # répétition : montre ce qui partirait
+npm run publier -- --pousser    # publie
+```
+
+Le script **recopie l'arbre courant** dans le dépôt public et y fait un commit
+unique. Il ne pousse jamais de branche, et c'est la seule chose qui compte :
+supprimer des fichiers ne les retire pas de l'historique, un `git push` les
+publierait tous. Ici l'historique privé ne *peut* pas fuir.
+
+Il refuse de partir si l'arbre de travail est modifié, ou s'il détecte un secret
+dans ce qu'il s'apprête à publier — dernière barrière avant une mise en ligne
+irréversible. Restent privés : `supabase/`, `MIGRATION.md` et les scripts de
+reprise depuis la 1.x.
 
 ---
 

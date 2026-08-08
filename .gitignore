@@ -49,11 +49,10 @@ dist-ssr
 
 # Le volume d'execution de l'instance : fichiers deposes par les utilisateurs et
 # sauvegardes de la base. C'est le repertoire le plus sensible du serveur — sur
-# une instance en service il contient des centaines de pieces jointes de clients
-# reels, des dizaines de Mo de PDF — et il n'etait couvert par AUCUN motif :
-# « git status » sur le serveur le montrait en « ?? data/ », a un « git add -A »
-# d'un historique public et definitif. Le meme oubli que le fichier .env recu par
-# mail, en plus lourd.
+# l'instance de TARN COMPTA il contient 168 pieces jointes de clients reels,
+# 43 Mo de PDF — et il n'etait couvert par AUCUN motif : « git status » sur le
+# VPS le montrait en « ?? data/ », a un « git add -A » d'un historique public et
+# definitif. Le meme oubli que le fichier .env recu par mail, en plus lourd.
 data/
 
 # Exports de sauvegarde de la base (contiennent des donnees clients reelles).

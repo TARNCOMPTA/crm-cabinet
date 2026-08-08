@@ -51,6 +51,13 @@ export const TABLES_ADMIN = new Set([
   'legal_forms',
   'mcp_api_keys',
   'sync_settings',
+  // Les campagnes : la lecture reste ouverte — savoir qui a recu quel rappel fait
+  // partie du travail d'un collaborateur — mais ecrire dans ces tables, c'est
+  // ecrire aux clients du cabinet. L'envoi lui-meme passe de toute facon par
+  // `/api/campagnes`, qui exige un administrateur ; cette entree ferme la porte
+  // laterale du proxy PostgREST.
+  'mailing_campagnes',
+  'mailing_destinataires',
 ]);
 
 /**

@@ -37,6 +37,24 @@ const URL_TEST = process.env.DATABASE_URL_TEST;
 
 const suite = URL_TEST ? describe : describe.skip;
 
+/**
+ * Les tables attendues dans `public` : 81 metier, plus `passkeys` et
+ * `enrolment_codes` que `auth-interne.sql` ajoute.
+ *
+ * DEUX ASSERTIONS S'EN SERVENT, et le nombre etait ecrit deux fois. L'une compte
+ * `cible.sql` seul, l'autre la meme base une fois les increments rejoues : elles
+ * doivent donner le MEME nombre, c'est tout leur objet. Deux litteraux a tenir
+ * ensemble ne le garantissent pas — ils ont d'ailleurs derive ensemble, restes
+ * a 78 quand l'OAuth du connecteur MCP (`mcp_oauth_clients`, `mcp_oauth_codes`,
+ * `mcp_oauth_tokens`) et les campagnes (`mailing_campagnes`,
+ * `mailing_destinataires`) ont porte le total a 83.
+ *
+ * Ce qu'un ecart signale, et qui reste la raison d'etre du controle : un
+ * increment qui cree une table absente de `cible.sql`, donc une installation
+ * neuve qui ne l'aurait jamais.
+ */
+const TABLES_ATTENDUES = 83;
+
 suite('schema appliqué à PostgreSQL', () => {
   const client = new pg.Client({ connectionString: URL_TEST });
   let erreurApplication: Error | null = null;
@@ -89,10 +107,7 @@ suite('schema appliqué à PostgreSQL', () => {
       `SELECT count(*)::int AS n FROM information_schema.tables
         WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`
     );
-    // 76 tables metier + passkeys + enrolment_codes.
-    // Les deux dernieres arrivees : jedeclare_teletransmissions (cache des
-    // accuses) et jedeclare_suivi_interne (le suivi propre au cabinet).
-    expect(rows[0].n).toBe(78);
+    expect(rows[0].n).toBe(TABLES_ATTENDUES);
   });
 
   it('donne une cle primaire a chaque table', async () => {
@@ -157,18 +172,25 @@ suite('schema appliqué à PostgreSQL', () => {
    * collaborateur. Une instance migree depuis une 1.x ou la cle avait ete
    * saisie l'exposait encore, alors que le journal affirmait le contraire.
    *
-   * Deux colonnes restent legitimes, et seulement elles :
+   * Trois colonnes restent legitimes, et seulement elles :
    *
    *   · `cabinet_smtp_config.smtp_password` — il faut le mot de passe en clair
    *     pour ouvrir la session SMTP, aucune empreinte ne s'authentifie ;
    *   · `mcp_api_keys.client_secret_hash` — hache, precisement pour n'etre pas
-   *     un secret en clair.
+   *     un secret en clair ;
+   *   · `mcp_oauth_clients.client_secret_hash` — hache lui aussi, arrive avec
+   *     l'increment 005. Il est NUL en pratique : les clients OAuth du
+   *     connecteur MCP s'enregistrent en clients PUBLICS (PKCE seul, ce qu'est
+   *     claude.ai), et `/register` n'ecrit que `client_id`, `client_name` et
+   *     `redirect_uris` — verifie dans `mcp-oauth.ts`. La colonne est
+   *     l'emplacement prevu pour un futur client confidentiel ; le jour ou elle
+   *     sera alimentee, ce devra rester une empreinte.
    *
    * Toute autre colonne au nom de secret doit etre justifiee ici, ou n'exister
    * pas. C'est la contrepartie de la promesse du produit : aucun service tiers,
    * donc aucune raison de stocker la cle d'un tiers.
    */
-  it('ne garde aucun secret en clair hors des deux colonnes prevues', async () => {
+  it('ne garde aucun secret en clair hors des trois colonnes prevues', async () => {
     const { rows } = await client.query(
       `SELECT c.relname || '.' || a.attname AS colonne
          FROM pg_attribute a
@@ -179,7 +201,11 @@ suite('schema appliqué à PostgreSQL', () => {
           AND a.attname ~ '(api_key|secret|token|password|passwd)'
         ORDER BY 1`
     );
-    const attendues = ['cabinet_smtp_config.smtp_password', 'mcp_api_keys.client_secret_hash'];
+    const attendues = [
+      'cabinet_smtp_config.smtp_password',
+      'mcp_api_keys.client_secret_hash',
+      'mcp_oauth_clients.client_secret_hash',
+    ];
     const inattendues = rows.map((r) => r.colonne).filter((c) => !attendues.includes(c));
     expect(inattendues, `secrets non justifies : ${inattendues.join(', ')}`).toEqual([]);
   });
@@ -691,8 +717,9 @@ suite('increments rejoues sur une base a jour', () => {
       `SELECT count(*)::int AS n FROM information_schema.tables
         WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`
     );
-    // Le meme 78 que plus haut. Un ecart signifie qu'un increment cree une table
-    // que cible.sql ignore : une installation neuve ne l'aurait jamais.
-    expect(rows[0].n).toBe(78);
+    // Le meme nombre que plus haut, et c'est le meme symbole : un ecart signifie
+    // qu'un increment cree une table que cible.sql ignore, donc qu'une
+    // installation neuve ne l'aurait jamais.
+    expect(rows[0].n).toBe(TABLES_ATTENDUES);
   });
 });

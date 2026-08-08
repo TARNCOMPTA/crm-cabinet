@@ -3,8 +3,9 @@
 #
 #   docker compose -f docker-compose.partage.yml up -d --build
 #
-# À utiliser quand le serveur héberge déjà plusieurs applications derrière un
-# seul Caddy, qui tient les ports 80 et 443 pour tout le monde.
+# À utiliser quand le serveur héberge plusieurs applications derrière un seul
+# Caddy — le cas du VPS de TARN COMPTA, où le Caddy du portail sert aussi n8n,
+# factursci, cottns et portailrecup.
 #
 # La différence avec `docker-compose.yml` tient en deux points :
 #   · aucun service `caddy`, et AUCUN port publié sur l'hôte. Un second Caddy

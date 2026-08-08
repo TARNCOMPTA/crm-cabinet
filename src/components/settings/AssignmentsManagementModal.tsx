@@ -264,7 +264,7 @@ export function AssignmentsManagementModal({
             <Loader className="w-8 h-8 animate-spin text-blue-600" />
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+          <div className="max-h-96 overflow-auto border border-gray-200 rounded-lg">
             <SortableTableWrapper ids={dndOrderedIds} onDragEnd={handleDragEnd}>
             <table className="w-full">
               <thead className="sticky top-0 bg-gray-50 z-10">

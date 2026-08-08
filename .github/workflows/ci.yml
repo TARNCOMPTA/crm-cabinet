@@ -155,18 +155,18 @@ jobs:
             echo "::notice::$((MAX_ESLINT_ERRORS - COUNT)) erreurs eslint en moins. Abaisse MAX_ESLINT_ERRORS a $COUNT."
           fi
 
-      # Garde-fou de securite : aucune cle en dur ne doit reapparaitre dans le
-      # code. Ce depot est PUBLIC, et un secret pousse ici reste dans
-      # l'historique — un historique git est definitif.
+      # Garde-fou de securite : aucune cle en dur ne doit reapparaitre dans le code,
+      # d'autant que le depot est destine a devenir public (cf. MIGRATION.md §3).
       #
       # Les classes de caracteres (sk[-]ant-) evitent que ce fichier ne se detecte
       # lui-meme : le motif ne correspond pas a sa propre ecriture.
       #
       # Chaque motif exige de la SUBSTANCE apres le prefixe, et pas seulement le
-      # prefixe. Sans cela l'etape echouait sur de la DOCUMENTATION citant une cle
-      # sous sa forme abregee : une phrase qui PARLE d'une cle n'est pas une cle.
-      # Le garde-fou etait rouge en permanence — et un garde-fou toujours rouge
-      # finit par etre ignore, ce qu'on lui demande precisement de ne pas devenir.
+      # prefixe. Sans cela l'etape echouait sur MIGRATION.md, qui documente la cle
+      # OpenAI a revoquer en la citant sous sa forme abregee : une phrase qui
+      # PARLE d'une cle n'est pas une cle. Le garde-fou etait donc rouge depuis son
+      # ecriture — et un garde-fou toujours rouge finit par etre ignore, ce qu'on
+      # lui demande precisement de ne pas devenir.
       - name: Aucun secret en dur
         run: |
           if grep -rnE "eyJ[A-Za-z0-9_-]{30,}|sk[-]ant-[A-Za-z0-9_-]{20,}|sk[-]proj-[A-Za-z0-9_-]{20,}|sk[_]live[_-][A-Za-z0-9]{16,}|re[_][A-Za-z0-9]{24,}" \
@@ -452,11 +452,17 @@ jobs:
       # Le mode de defaillance est silencieux et total : si le manifeste n'est
       # pas la, ou s'il annonce encore la version precedente, AUCUNE instance ne
       # voit la mise a jour. Rien ne casse, personne ne se plaint, les cabinets
-      # restent sur une version perimee. Le manifeste est servi depuis la
-      # branche PAR DEFAUT : la publier suppose donc de l'y avoir amenee.
+      # restent sur une version perimee.
+      #
+      # ⚠️ L'ADRESSE EST CELLE DU DEPOT PUBLIC, PAS DE CELUI-CI. Elle valait
+      # `github.repository` — donc ce depot, qui est PRIVE : le controle echouait
+      # a tous les coups, et pour la mauvaise raison. Le manifeste vit dans le
+      # miroir public, ou `npm run publier` l'amene. C'est la meme adresse que
+      # `server/src/config.ts`, et les deux doivent le rester : c'est celle que
+      # les instances interrogent VRAIMENT.
       - name: Le manifeste public doit annoncer cette version
         run: |
-          URL="https://raw.githubusercontent.com/${{ github.repository }}/main/update/version.json"
+          URL="https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/update/version.json"
           TAG="${GITHUB_REF_NAME#v}"
           CODE=$(curl -s -o manifeste.json -w '%{http_code}' "$URL")
           if [ "$CODE" != "200" ]; then
@@ -464,18 +470,15 @@ jobs:
             echo "L'image v$TAG est publiee, mais AUCUNE instance ne la verra : elles"
             echo "interrogent cette adresse sans jeton."
             echo
-            echo "Deux causes possibles, et il faut les deux pour que cela marche :"
-            echo "  · le depot est PRIVE. raw.githubusercontent.com ne sert que le"
-            echo "    public : tant que le depot n'est pas publie, tout y repond 404,"
-            echo "    y compris README.md ;"
-            echo "  · update/version.json n'est pas sur la branche par defaut."
+            echo "Cause la plus probable : l'instantane public n'a pas ete pousse."
+            echo "Depuis ce depot :  npm run publier -- --pousser"
             exit 1
           fi
           PUBLIE=$(node -e "console.log(require('./manifeste.json').version)")
           echo "manifeste en ligne : $PUBLIE · tag : $TAG"
           if [ "$PUBLIE" != "$TAG" ]; then
             echo "::error::Le manifeste en ligne annonce $PUBLIE, pas $TAG."
-            echo "L'image est publiee mais invisible pour les instances : amenez"
-            echo "update/version.json sur la branche par defaut."
+            echo "L'image est publiee mais invisible pour les instances :"
+            echo "publiez l'instantane —  npm run publier -- --pousser"
             exit 1
           fi

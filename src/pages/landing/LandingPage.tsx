@@ -124,7 +124,11 @@ export function LandingPage() {
                   setAfficherCode(true);
                   setErreur(null);
                 }}
-                className="w-full text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-medium transition-colors flex items-center justify-center gap-1.5 pt-2"
+                /* `min-h-[44px]` et non un simple `pt-2` : mesure a 375 px, ce
+                   bouton ne faisait que 28 px de haut. C'est le seul chemin
+                   d'enrolement d'un nouvel appareil — donc, sur telephone, la
+                   premiere chose qu'un utilisateur doit reussir a viser. */
+                className="w-full min-h-[44px] py-2 text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 font-medium transition-colors flex items-center justify-center gap-1.5"
               >
                 <KeyRound className="w-4 h-4" />
                 Premier appareil ou nouvel appareil ?

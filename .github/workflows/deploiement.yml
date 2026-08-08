@@ -1,0 +1,123 @@
+name: Deploiement
+
+# ============================================================================
+# Mise a jour de l'instance depuis GitHub, sur le runner du serveur.
+#
+# CE QUE CE WORKFLOW N'EST PAS : un deploiement continu. Il n'existe aucun
+# declencheur `push` ni `pull_request` ici, et c'est deliberé. Le produit tient
+# que « rien n'est jamais applique automatiquement : chaque cabinet decide quand
+# il met a jour, et peut rester sur une version aussi longtemps qu'il le
+# souhaite » (README). Un merge ne doit donc pas toucher la production.
+#
+# ⚠️ LA RAISON DE SECURITE, QUI EST LA PLUS IMPORTANTE. Un runner AUTO-HEBERGE
+# execute le code du workflow SUR LE SERVEUR DU CABINET. Le declencher sur
+# `pull_request` est la faille classique de ce montage : n'importe quelle
+# proposition de modification ferait tourner son propre code sur la machine qui
+# porte la comptabilite des clients. En `workflow_dispatch` seul, le declenchement
+# est reserve a qui a les droits sur le depot.
+#
+# CE QU'IL FAIT, ET CE QU'IL NE REECRIT PAS. Tout le travail est fait par
+# `installation/maj.sh`, tel quel : sauvegarde de la base AVANT toute
+# modification, `git pull`, reconstruction, controle de `/api/sante`, purge des
+# vieilles sauvegardes. Reecrire ces etapes ici en donnerait deux versions, et
+# c'est celle qu'on lance moins souvent qui finirait par diverger — pour se
+# reveler fausse le jour d'une restauration.
+# ============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance:
+        description: "Repertoire de l'instance sur le serveur"
+        default: /opt/crmcabinet
+        required: false
+
+# Deux mises a jour en meme temps, ce sont deux `docker compose up` concurrents
+# sur la meme instance. `cancel-in-progress: false` : une mise a jour deja lancee
+# se termine — l'interrompre entre la sauvegarde et le redemarrage laisserait
+# l'instance dans un etat que personne n'a choisi.
+concurrency:
+  group: deploiement
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deployer:
+    runs-on: [self-hosted, vps-crm]
+    # L'environnement `production` est cree au premier lancement. Il n'impose
+    # rien par defaut : c'est l'endroit ou ajouter une approbation obligatoire
+    # (Settings ▸ Environments ▸ production ▸ Required reviewers) si le cabinet
+    # veut garder la main sur chaque mise a jour, y compris declenchee a distance.
+    environment: production
+    timeout-minutes: 20
+
+    steps:
+      # Aucun `actions/checkout` : le depot a deja son exemplaire sur le serveur,
+      # dans le repertoire de l'instance, avec son `.env` et ses donnees. C'est
+      # CELUI-LA qu'il faut mettre a jour — l'espace de travail du runner est un
+      # autre dossier, et y faire un `git pull` ne toucherait rien de ce qui tourne.
+      - name: Controles prealables
+        env:
+          INSTANCE: ${{ inputs.instance }}
+        run: |
+          set -e
+          if [ ! -d "$INSTANCE" ]; then
+            echo "::error::$INSTANCE n'existe pas sur ce serveur."
+            exit 1
+          fi
+          if [ ! -f "$INSTANCE/.env" ]; then
+            echo "::error::Aucun .env dans $INSTANCE : l'instance n'est pas installee la."
+            exit 1
+          fi
+          # Un runner hors du groupe `docker` echouerait plus loin, au milieu de
+          # maj.sh, avec « permission denied » sur la socket — message exact mais
+          # trouve apres la sauvegarde. Autant le dire tout de suite.
+          if ! docker compose version >/dev/null 2>&1; then
+            echo "::error::docker compose inutilisable par $(id -un). Ajoutez cet utilisateur au groupe docker."
+            exit 1
+          fi
+          cd "$INSTANCE"
+          echo "Instance   : $INSTANCE"
+          echo "Branche    : $(git rev-parse --abbrev-ref HEAD)"
+          echo "Revision   : $(git rev-parse --short HEAD)"
+          echo "Utilisateur: $(id -un)"
+
+      # maj.sh s'arrete de lui-meme si la sauvegarde est suspecte, et affiche la
+      # marche a suivre pour revenir en arriere si l'application ne repond pas.
+      - name: Mise a jour de l'instance
+        env:
+          INSTANCE: ${{ inputs.instance }}
+        run: |
+          set -e
+          cd "$INSTANCE"
+          sh installation/maj.sh
+
+      # Le compte rendu, sur la page de l'execution : ce qui tourne VRAIMENT
+      # apres coup, lu depuis l'application elle-meme et non deduit du depot.
+      #
+      # Il ne fait pas echouer le deploiement : maj.sh a deja verifie /api/sante
+      # et sait revenir en arriere. Un compte rendu muet ne doit pas faire passer
+      # pour rate ce qui a reussi.
+      - name: Compte rendu
+        if: always()
+        env:
+          INSTANCE: ${{ inputs.instance }}
+        run: |
+          cd "$INSTANCE" || exit 0
+          REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo '?')
+          BRANCHE=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
+          SANTE=$(docker compose exec -T app node -e \
+            "fetch('http://localhost:3000/api/sante').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))" \
+            2>/dev/null || echo 'injoignable')
+          {
+            echo "### Instance"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Repertoire | \`$INSTANCE\` |"
+            echo "| Branche | \`$BRANCHE\` |"
+            echo "| Revision | \`$REVISION\` |"
+            echo "| /api/sante | \`$SANTE\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

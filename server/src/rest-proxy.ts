@@ -74,6 +74,26 @@ export function enregistrerProxyRest(app: FastifyInstance): void {
         entetes['content-type'] ??= 'application/json';
       }
 
+      /**
+       * On chronomètre l'appel à PostgREST, et on le journalise.
+       *
+       * ⚠️ POURQUOI CETTE LIGNE EXISTE. Un audit de performance du 2026-08-07 a
+       * mesuré `HEAD /rest/v1/notifications` à 92 ms côté Fastify. Or, mesuré
+       * séparément : le SQL prend 0,3 ms, PostgREST 2,6 ms, et le trajet vers lui
+       * 4,3 ms — sept millisecondes en tout. La boucle d'événements n'est pas
+       * contendue (5 ms médian, plancher de la mesure) et la machine est à 0,17 de
+       * charge sur six cœurs.
+       *
+       * Les 85 ms restantes n'ont donc PAS pu être attribuées, et aucune
+       * optimisation ne se décide sur une hypothèse. Ce chronomètre rend la
+       * question mesurable en production : `amontMs` face au `responseTime` de
+       * Fastify sépare définitivement ce qui vient de PostgREST de ce qui vient
+       * d'ici.
+       *
+       * Coût : deux appels à `hrtime` et un champ de journal. À supprimer si
+       * l'écart s'explique et disparaît.
+       */
+      const debutAmont = process.hrtime.bigint();
       let amont: Response;
       try {
         amont = await fetch(cible, { method: request.method, headers: entetes, body: corps });
@@ -98,6 +118,31 @@ export function enregistrerProxyRest(app: FastifyInstance): void {
       });
 
       const texte = await amont.text();
+
+      /**
+       * Journalisé en `info`, pour TOUTES les requêtes, et c'est délibéré.
+       *
+       * La première version mettait le cas courant en `debug` — invisible, puisque
+       * le serveur tourne au niveau `info` en production. Seules les lenteurs
+       * au-delà de 50 ms sortaient, alors que l'objet de la mesure est justement
+       * de comparer `amontMs` au `responseTime` de Fastify SUR LE CAS ORDINAIRE.
+       * Un instrument qui ne mesure que les anomalies ne répond pas à la question
+       * posée.
+       *
+       * Le coût est devenu négligeable dans le même temps : le sondage des
+       * notifications, qui faisait 96 % du trafic, est passé de soixante à douze
+       * requêtes par heure et s'arrête onglet caché. Une ligne de journal par
+       * requête reste donc de l'ordre de la dizaine par heure.
+       *
+       * À retirer quand l'écart de 85 ms sera expliqué : c'est un instrument, pas
+       * une fonctionnalité.
+       */
+      const amontMs = Number(process.hrtime.bigint() - debutAmont) / 1e6;
+      request.log.info(
+        { amontMs: Math.round(amontMs), table: nomTable(request.url), statut: amont.status },
+        '[rest] amont'
+      );
+
       return reply.code(amont.status).send(texte);
     },
   });

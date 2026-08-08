@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e.test.ts",
-    "version:definir": "node scripts/version.mjs"
+    "version:definir": "node scripts/version.mjs",
+    "publier": "node scripts/publier.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

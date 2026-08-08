@@ -216,7 +216,20 @@ export const config = {
     desactivee: booleen('VIES_DISABLED', false),
   },
 
-  /** Manifeste de version lu sur GitHub, seul flux sortant du produit. */
+  /**
+   * Manifeste de version lu sur GitHub, seul flux sortant du produit.
+   *
+   * ⚠️ L'ADRESSE VISE LE DÉPÔT PUBLIC, ET ELLE NE PEUT PAS VISER AUTRE CHOSE.
+   * Elle pointait sur `TARNCOMPTA/crmcabinet`, qui est privé :
+   * `raw.githubusercontent.com` ne sert pas les dépôts privés, et l'instance
+   * interroge sans jeton — c'est tout l'intérêt, elle n'envoie rien, pas même
+   * une identité. L'adresse répondait donc 404 pour tout le monde, et AUCUNE
+   * instance ne pouvait voir une mise à jour.
+   *
+   * Le mode de défaillance est silencieux et total : rien ne casse, personne ne
+   * se plaint, les cabinets restent sur une version périmée. Un tiret séparait
+   * les deux dépôts.
+   */
   maj: {
     manifesteUrl: optionnel(
       'UPDATE_MANIFEST_URL',

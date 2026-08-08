@@ -1920,7 +1920,7 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.process_email_digest()
+CREATE OR REPLACE FUNCTION public.process_email_digest(p_base_url text)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -1935,7 +1935,7 @@ notif_rows text;
 next_send timestamptz;
 type_label text;
 type_color text;
-base_url text := 'https://crmcabinet.com';
+base_url text := p_base_url;
 BEGIN
 FOR digest_record IN
 SELECT ed.id, ed.user_id, ed.digest_type, ed.last_sent_at,
@@ -2443,3 +2443,219 @@ result := jsonb_build_object(
 RETURN result;
 END;
 $function$;
+
+
+-- ===========================================================================
+-- OAuth du connecteur MCP. Repris de schema/increments/005-oauth-mcp.sql, qui
+-- porte le raisonnement complet.
+--
+-- ⚠️ Les droits de ces trois tables sont retires dans schema/auth-interne.sql,
+-- et non ici : ce fichier est suivi d'un « GRANT ON ALL TABLES TO authenticated »
+-- qui annulerait tout REVOKE ecrit a cet endroit.
+-- ===========================================================================
+-- OAuth pour le connecteur MCP.
+-- ===========================================================================
+-- POURQUOI CELA REVIENT, APRES AVOIR ETE RETIRE.
+--
+-- La refonte avait supprime tout l'appareillage OAuth du connecteur MCP, avec
+-- un raisonnement juste : OAuth sert a ce qu'un utilisateur delegue l'acces a
+-- une application tierce, alors qu'ici l'administrateur branche son propre
+-- client sur sa propre instance. Une cle suffisait, et suffit toujours pour
+-- Claude Code ou Cursor, qui acceptent un en-tete `Authorization` fixe.
+--
+-- Mais le connecteur de claude.ai n'offre aucun champ pour un en-tete : il fait
+-- OAuth ou rien. Constate le 2026-08-06 — il lit notre 401 sur `/mcp`, lance la
+-- decouverte, et echoue. Ces tables sont le prix d'entree de ce client-la.
+--
+-- `mcp_api_keys` reste en place et inchangee. Les deux voies coexistent : la
+-- cle pour ce qui accepte un en-tete, OAuth pour ce qui l'exige.
+--
+-- CE QUI N'EST JAMAIS STOCKE EN CLAIR : ni les secrets de client, ni les
+-- jetons, ni les codes. Seuls leurs haches SHA-256, comme pour `mcp_api_keys`.
+-- Une lecture de la base ne donne donc aucun acces.
+
+-- ---------------------------------------------------------------------------
+-- Les clients enregistres dynamiquement (RFC 7591).
+--
+-- `/register` est public par specification : c'est la seule porte non
+-- authentifiee de l'ensemble. Elle est donc bornee en debit cote serveur, et
+-- chaque ligne reste revocable depuis les Parametres.
+--
+-- `redirect_uris` est un TABLEAU et la comparaison sera EXACTE. Une correspondance
+-- par prefixe ou par jokers est le defaut classique de ces implementations : elle
+-- transforme le point d'autorisation en redirection ouverte, donc en vol de code.
+CREATE TABLE IF NOT EXISTS "mcp_oauth_clients" (
+  "id"                  uuid DEFAULT gen_random_uuid() NOT NULL,
+  "client_id"           text NOT NULL,
+  -- Nul pour un client public (PKCE seul), ce qu'est claude.ai.
+  "client_secret_hash"  text,
+  "client_name"         text DEFAULT ''::text NOT NULL,
+  "redirect_uris"       text[] DEFAULT '{}'::text[] NOT NULL,
+  "is_active"           boolean DEFAULT true NOT NULL,
+  "created_at"          timestamp with time zone DEFAULT now() NOT NULL,
+  "last_used_at"        timestamp with time zone,
+  "revoked_at"          timestamp with time zone,
+  CONSTRAINT "mcp_oauth_clients_pkey" PRIMARY KEY (id),
+  CONSTRAINT "mcp_oauth_clients_client_id_key" UNIQUE (client_id)
+);
+
+-- ---------------------------------------------------------------------------
+-- Les codes d'autorisation : une minute de vie, un seul usage.
+--
+-- Le code est lie au client, a l'URI de redirection ET au defi PKCE. Les trois
+-- sont re-verifies a l'echange : un code intercepte ne sert a rien sans le
+-- verifieur, qui n'a jamais transite.
+--
+-- `utilise_le` plutot qu'un DELETE : rejouer un code doit etre DETECTABLE, pas
+-- seulement impossible. Un code presente deux fois est le signe d'une
+-- interception, et le serveur revoque alors ce qui en decoule.
+CREATE TABLE IF NOT EXISTS "mcp_oauth_codes" (
+  "id"                    uuid DEFAULT gen_random_uuid() NOT NULL,
+  "code_hash"             text NOT NULL,
+  "client_id"             text NOT NULL,
+  "redirect_uri"          text NOT NULL,
+  "code_challenge"        text NOT NULL,
+  "code_challenge_method" text DEFAULT 'S256'::text NOT NULL,
+  "scope"                 text DEFAULT 'mcp:read'::text NOT NULL,
+  -- L'administrateur qui a consenti. Le jeton emis agira en son nom.
+  "user_id"               uuid NOT NULL,
+  "expire_le"             timestamp with time zone NOT NULL,
+  "utilise_le"            timestamp with time zone,
+  "created_at"            timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "mcp_oauth_codes_pkey" PRIMARY KEY (id),
+  CONSTRAINT "mcp_oauth_codes_code_hash_key" UNIQUE (code_hash),
+  CONSTRAINT "mcp_oauth_codes_user_id_fkey"
+    FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+-- ---------------------------------------------------------------------------
+-- Les jetons : acces d'une heure, rafraichissement a fenetre glissante.
+--
+-- LE RAFRAICHISSEMENT TOURNE. Chaque usage emet un jeton neuf et invalide
+-- l'ancien, avec trente jours devant lui. Tant que le connecteur sert, la
+-- connexion ne s'interrompt jamais et l'utilisateur n'a rien a faire ; un acces
+-- oublie pendant trente jours se referme de lui-meme.
+--
+-- La rotation n'est pas qu'un confort : elle rend une fuite DETECTABLE. Deux
+-- parties ne peuvent pas se servir du meme jeton, la seconde echoue — et cet
+-- echec-la est un signal, sur lequel on revoque toute la chaine.
+--
+-- `chaine` porte cette chaine : tous les jetons issus d'un meme consentement la
+-- partagent, ce qui permet de les revoquer d'un coup.
+CREATE TABLE IF NOT EXISTS "mcp_oauth_tokens" (
+  "id"                 uuid DEFAULT gen_random_uuid() NOT NULL,
+  "chaine"             uuid NOT NULL,
+  "acces_hash"         text NOT NULL,
+  "rafraichir_hash"    text,
+  "client_id"          text NOT NULL,
+  "user_id"            uuid NOT NULL,
+  "scope"              text DEFAULT 'mcp:read'::text NOT NULL,
+  -- L'audience : le jeton ne vaut que pour CETTE ressource (RFC 8707).
+  "resource"           text DEFAULT ''::text NOT NULL,
+  "acces_expire_le"    timestamp with time zone NOT NULL,
+  "rafraichir_expire_le" timestamp with time zone,
+  -- Pose des que le jeton de rafraichissement est echange : il ne resservira pas.
+  "remplace_le"        timestamp with time zone,
+  "revoque_le"         timestamp with time zone,
+  "created_at"         timestamp with time zone DEFAULT now() NOT NULL,
+  "last_used_at"       timestamp with time zone,
+  CONSTRAINT "mcp_oauth_tokens_pkey" PRIMARY KEY (id),
+  CONSTRAINT "mcp_oauth_tokens_acces_hash_key" UNIQUE (acces_hash),
+  CONSTRAINT "mcp_oauth_tokens_rafraichir_hash_key" UNIQUE (rafraichir_hash),
+  CONSTRAINT "mcp_oauth_tokens_user_id_fkey"
+    FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+);
+
+-- Les deux lectures du chemin chaud : valider un jeton d'acces a chaque appel
+-- MCP, et retrouver une chaine pour la revoquer.
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_tokens_acces" ON "mcp_oauth_tokens" (acces_hash);
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_tokens_chaine" ON "mcp_oauth_tokens" (chaine);
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_codes_expire" ON "mcp_oauth_codes" (expire_le);
+
+
+-- ===========================================================================
+-- Campagnes. Repris de schema/increments/006-campagnes.sql, qui porte le
+-- raisonnement complet. Tout y est idempotent (IF NOT EXISTS), donc rejouable.
+-- ===========================================================================
+-- Campagnes : ecrire a une liste de clients, et savoir qui a recu quoi.
+-- ===========================================================================
+-- Le cabinet pouvait ecrire a UN client depuis sa fiche, jamais a un groupe. Les
+-- rappels d'echeance et les demandes de pieces partaient donc hors de l'outil,
+-- sans trace.
+--
+-- Ces tables ne portent aucun secret, contrairement a celles d'OAuth : elles
+-- restent exposees a PostgREST en lecture, l'ecriture etant reservee aux
+-- administrateurs par server/src/rest-droits.ts.
+
+-- ---------------------------------------------------------------------------
+-- L'OPT-OUT, sur les clients.
+--
+-- `DEFAULT true` : les clients existants sont reputes joignables, ce qui est le
+-- cas â€” le cabinet leur ecrit deja individuellement. Ce drapeau ne dit pas
+-- Â« a accepte une newsletter Â», il dit Â« n'a pas demande a ne plus recevoir Â».
+-- C'est un opt-OUT, et le lien de desinscription de chaque courriel est ce qui le
+-- rend honnete.
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS accepte_mailings boolean NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN clients.accepte_mailings IS
+  'Faux si le client s''est desinscrit via le lien d''un courriel de campagne.';
+
+-- ---------------------------------------------------------------------------
+-- Les campagnes.
+--
+-- `filtres` conserve la selection telle qu'elle a ete demandee (statut, regime,
+-- mois de cloture, collaborateurs). Pas pour la rejouer automatiquement â€” le
+-- portefeuille bouge â€” mais pour repondre a Â« a qui ai-je ecrit, au fait ? Â» six
+-- mois plus tard.
+CREATE TABLE IF NOT EXISTS "mailing_campagnes" (
+  "id"               uuid DEFAULT gen_random_uuid() NOT NULL,
+  "sujet"            text NOT NULL,
+  "corps"            text NOT NULL,
+  "filtres"          jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "cree_par"         uuid,
+  "created_at"       timestamp with time zone DEFAULT now() NOT NULL,
+  "envoye_le"        timestamp with time zone,
+  "nb_destinataires" integer DEFAULT 0 NOT NULL,
+  "nb_exclus"        integer DEFAULT 0 NOT NULL,
+  CONSTRAINT "mailing_campagnes_pkey" PRIMARY KEY (id),
+  CONSTRAINT "mailing_campagnes_cree_par_fkey"
+    FOREIGN KEY (cree_par) REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+-- ---------------------------------------------------------------------------
+-- Les destinataires reels d'une campagne.
+--
+-- L'ADRESSE EST FIGEE ICI, et non lue depuis `clients` a l'affichage : c'est a
+-- celle-la que le courriel est parti. Un client qui change d'adresse ensuite ne
+-- doit pas reecrire l'histoire.
+--
+-- âš ï¸ PAS DE CLE ETRANGERE SUR `email_queue_id`, ET C'EST DELIBERE. La tache
+-- `purge-file-emails` supprime chaque dimanche les lignes de `email_queue`
+-- traitees depuis plus de 30 jours. Une cle etrangere ferait echouer cette purge,
+-- ou â€” pire avec ON DELETE CASCADE â€” emporterait la tracabilite qui est la raison
+-- d'etre de cette table. On garde donc l'identifiant sans contrainte : il sert a
+-- rapprocher les deux tant que la file existe, et devient un simple souvenir
+-- ensuite.
+CREATE TABLE IF NOT EXISTS "mailing_destinataires" (
+  "id"             uuid DEFAULT gen_random_uuid() NOT NULL,
+  "campagne_id"    uuid NOT NULL,
+  "client_id"      uuid,
+  "email"          text NOT NULL,
+  "email_queue_id" uuid,
+  "created_at"     timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "mailing_destinataires_pkey" PRIMARY KEY (id),
+  CONSTRAINT "mailing_destinataires_campagne_id_fkey"
+    FOREIGN KEY (campagne_id) REFERENCES mailing_campagnes(id) ON DELETE CASCADE,
+  CONSTRAINT "mailing_destinataires_client_id_fkey"
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+  -- Une adresse, un envoi par campagne. La contrainte double le dedoublonnage
+  -- applicatif : si un jour le code se trompe, la base refuse.
+  CONSTRAINT "mailing_destinataires_campagne_email_key" UNIQUE (campagne_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS "idx_mailing_destinataires_campagne"
+  ON "mailing_destinataires" (campagne_id);
+CREATE INDEX IF NOT EXISTS "idx_mailing_destinataires_client"
+  ON "mailing_destinataires" (client_id);
+
