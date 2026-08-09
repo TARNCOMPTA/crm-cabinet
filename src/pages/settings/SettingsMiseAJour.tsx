@@ -29,7 +29,28 @@ import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../contexts/ToastContext';
 import { VERSION_FRONT, etatVersion, type EtatVersion } from '../../lib/versionService';
 
-const COMMANDE = 'cd /opt/crmcabinet && sudo ./installation/maj.sh';
+/**
+ * ⚠️ `sh maj.sh` ET NON `./maj.sh`, ET CE N'EST PAS UN DÉTAIL DE STYLE.
+ *
+ * Cet écran affichait `sudo ./installation/maj.sh`, qui échouait sur toute
+ * installation :
+ *
+ *     sudo: cannot execute '/opt/crmcabinet/installation/maj.sh':
+ *           Permission denied (os error 13)
+ *
+ * Le script était enregistré en `100644` dans git — sans bit exécutable. Le bit
+ * est désormais posé, et cette commande fonctionnerait telle quelle ; on garde
+ * pourtant `sh`, qui marche sur un dépôt cloné depuis un système de fichiers qui
+ * ne porte pas les permissions, et sur une copie restaurée d'une archive.
+ *
+ * Le défaut a vécu longtemps parce que cet écran N'AVAIT JAMAIS EU DE MISE À
+ * JOUR À PROPOSER : le manifeste répondait 404. Deux défauts qui se cachaient
+ * l'un l'autre — corriger le premier a rendu le second atteignable.
+ *
+ * Le README et NOTICE-INSTALLATION.md disent la même chose. Les trois doivent
+ * le rester : c'est la commande que l'administrateur copie sans la relire.
+ */
+const COMMANDE = 'cd /opt/crmcabinet && sudo sh installation/maj.sh';
 
 export function SettingsMiseAJour() {
   const { showToast } = useToast();

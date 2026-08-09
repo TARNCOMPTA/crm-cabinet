@@ -12,6 +12,22 @@
 # ============================================================================
 set -e
 
+# `--forcer` reconstruit même sans nouveau commit.
+#
+# Le script s'arrête normalement dès que `git pull` ne ramène rien : sans code
+# nouveau, il n'y a rien à déployer. Mais les CONTENEURS peuvent être en retard
+# sur le dépôt — une mise à jour interrompue, un `git pull` lancé à la main sans
+# reconstruction, une image dont une couche a été mise en cache à tort. L'arrêt
+# devient alors un piège : le dossier est à jour, ce qui tourne ne l'est pas, et
+# le script refuse d'agir en annonçant que tout va bien.
+FORCER=0
+for argument in "$@"; do
+  case "$argument" in
+    --forcer|-f) FORCER=1 ;;
+    *) echo "Option inconnue : $argument (attendu : --forcer)" >&2; exit 1 ;;
+  esac
+done
+
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$DIR"
 
@@ -81,10 +97,14 @@ echo "--- 3/5 Récupération du code ---"
 git pull
 
 APRES=$(git rev-parse --short HEAD)
-if [ "$AVANT" = "$APRES" ]; then
+if [ "$AVANT" = "$APRES" ] && [ "$FORCER" -eq 0 ]; then
   echo ""
   echo "Déjà à jour ($AVANT). Rien à faire."
   echo "La sauvegarde de la base a tout de même été conservée."
+  echo ""
+  echo "Si ce qui tourne est en retard sur ce dossier — mise à jour interrompue,"
+  echo "  « git pull » lancé à la main sans reconstruction — forcez la reprise :"
+  echo "    sudo sh installation/maj.sh --forcer"
   exit 0
 fi
 echo "Révision : $AVANT → $APRES"

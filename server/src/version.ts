@@ -20,10 +20,44 @@
  * auto-hébergé cherche à éviter.
  */
 
+import { readFileSync } from 'node:fs';
 import { config } from './config.js';
 
+/**
+ * La version de cette instance, lue dans l'image et non dans l'environnement.
+ *
+ * ⚠️ `APP_VERSION` NE PEUT PAS FAIRE FOI. `docker-compose.yml` l'alimente depuis
+ * `VERSION` du `.env` — une valeur saisie à l'installation, que ni `maj.sh` ni
+ * rien d'autre ne met à jour. Le front, lui, fige sa version au build. Toute
+ * instance mise à jour dérivait donc, et l'écran « Version et mise à jour »
+ * annonçait un serveur en 2.0.0 sous une interface en 2.1.0 — trouvé en
+ * production le 2026-08-09.
+ *
+ * `version.json` est copié dans l'image finale (Dockerfile) et porte la version
+ * du code qu'elle contient, qu'elle ait été construite sur place ou tirée de
+ * GHCR. C'est la seule source qui ne peut pas mentir.
+ *
+ * `APP_VERSION` reste en repli : une exécution hors conteneur — `npm run dev`
+ * depuis `server/` — n'a pas le fichier à cet emplacement.
+ */
+export function versionLocale(): string {
+  // Deux emplacements, et il en faut deux : `../` depuis `dist/` vise
+  // `/app/version.json` dans l'image ; `../../` depuis `src/` vise la racine du
+  // dépôt quand le serveur tourne en développement, hors conteneur.
+  for (const relatif of ['../version.json', '../../version.json']) {
+    try {
+      const brut = readFileSync(new URL(relatif, import.meta.url), 'utf8');
+      const version = JSON.parse(brut)?.version;
+      if (typeof version === 'string' && version) return version;
+    } catch {
+      // Fichier absent ou illisible : on essaie l'emplacement suivant.
+    }
+  }
+  return process.env.APP_VERSION ?? 'dev';
+}
+
 export interface EtatVersion {
-  /** Version de cette instance, posée par l'image Docker. */
+  /** Version de cette instance, lue dans `version.json` de l'image. */
   locale: string;
   /** Version publiée, ou null si la vérification est coupée ou a échoué. */
   distante: string | null;
@@ -67,7 +101,7 @@ let cache: { valeur: EtatVersion; expireLe: number } | null = null;
 const DUREE_CACHE_MS = 6 * 3600_000;
 
 export async function etatVersion(forcer = false): Promise<EtatVersion> {
-  const locale = process.env.APP_VERSION ?? 'dev';
+  const locale = versionLocale();
 
   if (config.maj.desactivee) {
     return {

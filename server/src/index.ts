@@ -36,7 +36,7 @@ import { enregistrerRoutesMcp } from './routes/mcp.js';
 import { enregistrerRoutesMcpOauth } from './routes/mcp-oauth.js';
 import { enregistrerRoutesCampagnes } from './routes/campagnes.js';
 import { demarrerPlanificateur, arreterPlanificateur, listerTaches, declencher } from './planificateur.js';
-import { etatVersion } from './version.js';
+import { etatVersion, versionLocale } from './version.js';
 import { exigerAdmin } from './gardes.js';
 import { fermer as fermerSmtp } from './mail.js';
 
@@ -89,9 +89,14 @@ async function demarrer() {
 
   app.get('/api/config', async () => configPublique());
 
+  // Meme source que l'ecran « Version et mise a jour » : `version.json` de
+  // l'image, et non `APP_VERSION` que rien ne met a jour apres l'installation.
+  // Deux reponses divergentes sur la meme question seraient pires qu'une seule
+  // fausse — c'est ce controle que `maj.sh` interroge pour valider un
+  // deploiement.
   app.get('/api/sante', async () => ({
     ok: true,
-    version: process.env.APP_VERSION ?? 'dev',
+    version: versionLocale(),
   }));
 
   // Etat de version : une mise a jour existe-t-elle ? Reserve aux

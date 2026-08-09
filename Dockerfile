@@ -79,6 +79,17 @@ COPY schema/cible.sql schema/auth-interne.sql ./schema/
 # table nouvelle atteint une instance déjà installée, que cible.sql ne revoit
 # jamais. Les oublier ici les rendrait invisibles dans l'image.
 COPY schema/increments ./schema/increments
+# ⚠️ `version.json` DANS L'IMAGE FINALE, et pas seulement dans l'étage de
+# construction du front. Le serveur ne connaissait sa version que par
+# `APP_VERSION`, alimentée depuis `VERSION` du `.env` — une valeur saisie à
+# l'installation que RIEN ne met jamais à jour. Le front, lui, fige la sienne au
+# build. Toute instance mise à jour dérivait donc : l'écran « Version et mise à
+# jour » annonçait un serveur en 2.0.0 sous une interface en 2.1.0.
+#
+# Le fichier est bâti par `npm run version:definir` et vaut aussi bien pour une
+# image construite sur place que pour une image tirée de GHCR : dans les deux
+# cas il porte la version du code qu'elle contient.
+COPY version.json ./version.json
 COPY docker/entree.sh ./entree.sh
 RUN chmod +x ./entree.sh
 
