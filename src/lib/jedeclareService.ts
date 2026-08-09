@@ -220,8 +220,41 @@ export async function lancerAnalyse(demande: {
   return rep.data;
 }
 
-export async function testerConnexion(): Promise<{ ok: boolean; message?: string }> {
-  const rep = await appelerFonction<{ ok: boolean; message?: string }>('jedeclare/tester');
+/** Un compte de flux, tel que le serveur l'a interrogé. */
+export interface CompteTeste {
+  login: string;
+  ok: boolean;
+  nbPieces?: number;
+  detail?: string;
+}
+
+export interface ResultatDiagnostic {
+  editeur: string;
+  logiciel: string;
+  login: string;
+  /** Vrai dès qu'un des deux services répond : ils sont indépendants. */
+  ok: boolean;
+  nbComptes: number;
+  comptes: CompteTeste[];
+  communication: { ok: boolean; nbPieces?: number; detail?: string };
+  gestion: { ok: boolean; teste: boolean; nbDossiers?: number; detail?: string };
+}
+
+/**
+ * Le diagnostic, COMPTE PAR COMPTE.
+ *
+ * ⚠️ CETTE FONCTION APLATISSAIT LA RÉPONSE en `{ ok, message }`, et aucun écran
+ * ne l'appelait. Le serveur teste pourtant chaque compte de flux séparément — il
+ * le fait exprès, son commentaire le dit : « un mot de passe faux sur le second
+ * compte doit se voir comme tel ». Tout ce détail était jeté à l'arrivée.
+ *
+ * Conséquence vécue : un cabinet à deux comptes voyait la moitié de ses
+ * télétransmissions, sans aucun moyen de savoir lequel des deux ne répondait
+ * pas, ni pourquoi. Le diagnostic existait, écrit et testé ; il ne sortait
+ * simplement jamais du serveur.
+ */
+export async function testerConnexion(): Promise<ResultatDiagnostic> {
+  const rep = await appelerFonction<ResultatDiagnostic>('jedeclare/tester');
   if (!rep.ok || !rep.data) {
     throw new ErreurSuivi(rep.message ?? 'Test impossible.', rep.status);
   }

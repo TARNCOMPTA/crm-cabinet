@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarClock, Info, RefreshCw, UserX } from 'lucide-react';
+import { CalendarClock, Info, RefreshCw, Stethoscope, UserX } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useShowMyDossiers } from '../hooks/useShowMyDossiers';
@@ -32,6 +32,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { MatriceSuivi } from '../components/suiviEcheances/MatriceSuivi';
 import { DetailCellule } from '../components/suiviEcheances/DetailCellule';
 import { AnalyseModal } from '../components/suiviEcheances/AnalyseModal';
+import { DiagnosticJedeclare } from '../components/suiviEcheances/DiagnosticJedeclare';
 import {
   chargerCatalogue,
   chargerSuivi,
@@ -72,6 +73,7 @@ export function SuiviEcheances() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [ouverte, setOuverte] = useState<CelluleOuverte | null>(null);
   const [analyseOuverte, setAnalyseOuverte] = useState(false);
+  const [diagnosticOuvert, setDiagnosticOuvert] = useState(false);
 
   const majFiltre = useCallback(
     (cles: Record<string, string>) => {
@@ -205,6 +207,12 @@ export function SuiviEcheances() {
             Actualiser
           </Button>
           {isAdmin && !nonConfigure && (
+            <Button variant="outline" onClick={() => setDiagnosticOuvert((v) => !v)}>
+              <Stethoscope className="w-4 h-4 mr-2" />
+              Diagnostic
+            </Button>
+          )}
+          {isAdmin && !nonConfigure && (
             <Button onClick={() => setAnalyseOuverte(true)}>
               <CalendarClock className="w-4 h-4 mr-2" />
               Analyser
@@ -212,6 +220,12 @@ export function SuiviEcheances() {
           )}
         </div>
       </div>
+
+      {/* Une cellule vide ne dit pas si le mois n'a rien eu ou si un compte de
+          flux n'a pas repondu. Le diagnostic est le seul endroit qui tranche. */}
+      {diagnosticOuvert && isAdmin && !nonConfigure && (
+        <DiagnosticJedeclare onFermer={() => setDiagnosticOuvert(false)} />
+      )}
 
       {nonConfigure && (
         <Card>
