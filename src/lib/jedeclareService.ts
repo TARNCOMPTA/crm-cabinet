@@ -95,6 +95,16 @@ export interface Catalogue {
   configure: boolean;
 }
 
+/** Miroir de `BilanParCompte` côté serveur — voir le commentaire qui l'y explique. */
+export interface BilanParCompte {
+  compte: number;
+  login: string;
+  trouvees: number;
+  dejaEnCache: number;
+  ecarteesPrudence: number;
+  aTraiter: number;
+}
+
 export interface BilanAnalyse {
   prudent: boolean;
   piecesTrouvees: number;
@@ -104,6 +114,8 @@ export interface BilanAnalyse {
   declarationsEnregistrees: number;
   restantes: number;
   ecarteesPrudence: number;
+  /** Vide quand un seul compte de flux est configuré. */
+  parCompte?: BilanParCompte[];
 }
 
 export interface FiltresSuivi {

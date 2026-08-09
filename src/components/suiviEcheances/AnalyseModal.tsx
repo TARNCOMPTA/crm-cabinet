@@ -132,6 +132,58 @@ export function AnalyseModal({
           </dl>
         )}
 
+        {/* ⚠️ LA VENTILATION EST CE QUI REND LES TOTAUX DIAGNOSTICABLES.
+            « 170 écartés par prudence » ne dit pas s'ils viennent d'un compte ou
+            des deux. Un compte dont AUCUN accusé n'est récupéré par le logiciel
+            de production voit 100 % de ses pièces écartées, à chaque analyse, et
+            n'apparaît jamais dans le suivi — le total, lui, a seulement l'air
+            partiel. */}
+        {bilan?.parCompte && bilan.parCompte.length > 1 && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                  <th className="px-4 py-2">Compte de flux</th>
+                  <th className="px-4 py-2 text-right">Trouvés</th>
+                  <th className="px-4 py-2 text-right">En cache</th>
+                  <th className="px-4 py-2 text-right">Écartés</th>
+                  <th className="px-4 py-2 text-right">À traiter</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {bilan.parCompte.map((c) => (
+                  <tr key={c.compte}>
+                    <td className="px-4 py-2 text-gray-900 dark:text-gray-100 break-all">
+                      {c.login}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{c.trouvees}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                      {c.dejaEnCache}
+                    </td>
+                    <td
+                      className={`px-4 py-2 text-right tabular-nums ${
+                        c.ecarteesPrudence > 0 && c.aTraiter === 0
+                          ? 'text-orange-600 dark:text-orange-400 font-medium'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {c.ecarteesPrudence}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{c.aTraiter}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {bilan.parCompte.some((c) => c.trouvees > 0 && c.aTraiter === 0 && c.dejaEnCache === 0) && (
+              <p className="px-4 py-2 text-xs text-orange-600 dark:text-orange-400 border-t border-gray-200 dark:border-gray-700">
+                Un compte dont rien n'est ni en cache ni à traiter n'alimentera jamais le suivi :
+                ses accusés ne sont récupérés par aucun logiciel de production, et le mode prudent
+                les écarte tous.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={fermer}>
             {bilan ? 'Fermer' : 'Annuler'}

@@ -16,6 +16,7 @@
  * coûterait des accusés au logiciel de production du cabinet.
  */
 
+import { config } from '../config.js';
 import { requete } from '../db.js';
 import {
   etatCellule,
@@ -75,6 +76,25 @@ const frVersIso = (fr: string | null | undefined): string => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
 };
 
+/**
+ * Le compte de flux qui a fourni les pièces, et ce qu'elles sont devenues.
+ *
+ * ⚠️ SANS CETTE VENTILATION, LES TOTAUX NE SE DIAGNOSTIQUENT PAS. Un bilan qui
+ * annonce « 368 trouvées, 170 écartées par prudence » ne dit pas si ces 170
+ * viennent d'un compte ou des deux. Or c'est toute la question quand un cabinet
+ * dépose sous plusieurs comptes : un compte dont AUCUN accusé n'est récupéré par
+ * le logiciel de production voit 100 % de ses pièces écartées, à chaque analyse,
+ * et n'apparaît jamais dans le suivi. Le total, lui, a l'air simplement partiel.
+ */
+export interface BilanParCompte {
+  compte: number;
+  login: string;
+  trouvees: number;
+  dejaEnCache: number;
+  ecarteesPrudence: number;
+  aTraiter: number;
+}
+
 export interface BilanAnalyse {
   prudent: boolean;
   piecesTrouvees: number;
@@ -84,6 +104,8 @@ export interface BilanAnalyse {
   declarationsEnregistrees: number;
   restantes: number;
   ecarteesPrudence: number;
+  /** Les mêmes chiffres, compte par compte. Vide si un seul compte est configuré. */
+  parCompte: BilanParCompte[];
 }
 
 /**
@@ -219,6 +241,25 @@ export async function analyserPeriode(opts: {
   await Promise.all([travailleur(), travailleur()]);
   await enregistrer(lignes);
 
+  // La ventilation ne sert qu'à partir de deux comptes : sur un seul, elle
+  // repeterait les totaux ligne pour ligne.
+  const comptes = config.jedeclare.comptes;
+  const parCompte: BilanParCompte[] =
+    comptes.length < 2
+      ? []
+      : comptes.map((c, rang) => {
+          const siennes = pieces.filter((p) => p.compte === rang);
+          const inconnues = siennes.filter((p) => !dejaVues.has(`${p.numero}|${p.typePiece}`));
+          return {
+            compte: rang,
+            login: c.login,
+            trouvees: siennes.length,
+            dejaEnCache: siennes.length - inconnues.length,
+            ecarteesPrudence: prudent ? inconnues.filter((p) => !p.recuperee).length : 0,
+            aTraiter: inconnues.filter((p) => !prudent || p.recuperee).length,
+          };
+        });
+
   return {
     prudent,
     piecesTrouvees: pieces.length,
@@ -228,6 +269,7 @@ export async function analyserPeriode(opts: {
     declarationsEnregistrees: lignes.length,
     restantes: candidats.length - aTraiter.length,
     ecarteesPrudence,
+    parCompte,
   };
 }
 
