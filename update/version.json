@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
-  "notes": "Refonte complete : Supabase remplace par Node + PostgreSQL sur votre serveur, authentification par passkey, envoi de courrier par votre SMTP, mono-cabinet. Voir CHANGELOG.md.",
+  "version": "2.1.0",
+  "notes": "Ciblage des campagnes par code NAF, resume des statuts deposes au greffe sur la fiche client, et correction de l'adresse du manifeste de mise a jour — sans laquelle aucune instance ne voyait les nouvelles versions.",
   "url": "https://github.com/TARNCOMPTA/crm-cabinet"
 }

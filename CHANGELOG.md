@@ -5,7 +5,65 @@ signale un changement qui demande une action de votre part.
 
 ---
 
-## 2.0.0 — non publiée
+## 2.1.0 — 2026-08-09
+
+Deux ajouts métier, et une correction sans laquelle vous n'auriez jamais vu
+cette version.
+
+### ⚠️ Les mises à jour étaient invisibles
+
+L'instance interrogeait l'adresse d'un dépôt **privé** pour savoir si une version
+existait. `raw.githubusercontent.com` ne sert pas les dépôts privés, et
+l'instance interroge sans jeton — c'est ce qui lui évite d'envoyer quoi que ce
+soit, votre identité comprise. L'adresse répondait donc 404, pour tout le monde,
+depuis toujours.
+
+Rien ne cassait, personne ne se plaignait, et les instances restaient sur une
+version périmée. C'est corrigé : **Paramètres ▸ Version et mise à jour** vous
+signalera désormais les versions suivantes.
+
+### Campagnes : cibler par métier
+
+La section « À qui » gagne un filtre **code NAF**. Il ne propose que les codes
+présents dans votre portefeuille, avec leur effectif — la nomenclature en compte
+732, un cabinet en touche quelques dizaines, et proposer les autres ferait
+choisir des filtres qui ne ramènent personne.
+
+La recherche porte aussi sur le nom de la section : taper « construction »
+trouve 41, 42 et 43. Un code vise une activité précise (`6201Z`), une division
+tout son groupe (`62`), et plusieurs codes s'additionnent.
+
+Les fiches **sans** code NAF sont écartées par un tel filtre, quel que soit leur
+métier réel. Leur nombre est annoncé à l'écran dès qu'un code est retenu, plutôt
+que découvert après l'envoi.
+
+### Fiche client : les statuts déposés au greffe
+
+Une carte **Statuts** résume ce qui est déposé au registre : statuts constitutifs
+et leur date, dernière version, nombre de modifications, les derniers dépôts — et
+un bouton pour télécharger le PDF, qui n'existait nulle part alors que le serveur
+savait déjà le servir.
+
+La carte n'apparaît que si des statuts existent. Elle reste en revanche visible,
+avec le motif, quand le registre n'a pas pu être consulté : une panne et une
+absence ne doivent pas produire le même écran vide.
+
+À la première ouverture d'une fiche, le registre est interrogé une fois, et le
+résultat conservé.
+
+### Corrections
+
+- le téléchargement des statuts pouvait livrer un **procès-verbal** : la pièce
+  était reconnue sur son libellé entier, or « PV d'assemblée générale
+  extraordinaire - Modification des statuts » en est un ;
+- une pièce du registre sans date faisait échouer l'enregistrement de toutes les
+  autres, et le registre était alors réinterrogé à chaque ouverture de fiche ;
+- le contrôle du schéma en intégration continue échouait depuis le 7 août, sur
+  trois compteurs qui avaient pris du retard sur le schéma.
+
+---
+
+## 2.0.0 — 2026-08-06
 
 Refonte du socle technique. L'application est la même ; ce qui change, c'est où
 elle tourne et comment on s'y connecte.
