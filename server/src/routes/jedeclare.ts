@@ -298,7 +298,9 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
    *   3. bornes obligatoires sur la période et sur le nombre de pièces ;
    *   4. verrou d'exécution unique ;
    *   5. journal d'audit écrit AVANT l'appel ;
-   *   6. mode prudent FORCÉ, non débrayable depuis le CRM.
+   *   6. mode prudent FORCÉ, non débrayable depuis le CRM — sa seule exception
+   *      se déclare compte par compte dans le `.env` du serveur, et l'audit du
+   *      point 5 la nomme.
    */
   app.post<{
     Body: { debut?: string; fin?: string; procedure?: string; limite?: number };
@@ -339,14 +341,30 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
      * processus tombe ou si l'appel expire, le marquage a QUAND MÊME eu lieu
      * chez jedeclare. Une trace écrite après ne serait jamais écrite dans le
      * seul cas où elle sert à quelque chose.
+     *
+     * ⚠️ `prudent: true` NE SUFFIT PLUS À DÉCRIRE CE QUI SE PASSE : le `.env`
+     * peut lever la prudence sur un compte que rien ne relève, et les accusés de
+     * ce compte-là sont alors bel et bien marqués. La trace nomme donc les
+     * comptes concernés — sans quoi l'audit d'une opération destructrice
+     * affirmerait qu'elle ne l'était pas.
      */
+    const marquageOuvertSur = config.jedeclare.comptes
+      .filter((c) => c.marquageAutorise)
+      .map((c) => c.login);
     await requete(
       'INSERT INTO audit_logs (user_id, action, entity_type, details) VALUES ($1, $2, $3, $4)',
       [
         session.sub,
         'jedeclare.analyse',
         'jedeclare',
-        JSON.stringify({ debut, fin, procedure: procedure ?? 'TOUTES', limite, prudent: true }),
+        JSON.stringify({
+          debut,
+          fin,
+          procedure: procedure ?? 'TOUTES',
+          limite,
+          prudent: true,
+          marquageOuvertSur,
+        }),
       ]
     );
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { etatCellule, sirenDe, type LigneTeletransmission } from './etat.js';
+import { pieceLisible } from './prudence.js';
 
 /**
  * L'état d'une cellule du suivi.
@@ -15,6 +16,7 @@ import { etatCellule, sirenDe, type LigneTeletransmission } from './etat.js';
  */
 
 const ligne = (p: Partial<LigneTeletransmission>): LigneTeletransmission => ({
+  compte: 0,
   numero: 'P1', type_piece: '03', ligne: 0, procedure: 'EDI-TVA', nature: 'ARS',
   numero_ads: '', date_avis: '2026-07-15', siret: '', siren: '', societe: '',
   dossier: '', type_declaration: 'IDT', type_libelle: '', destinataire: 'DGFIP',
@@ -186,5 +188,49 @@ describe('sirenDe', () => {
     for (const mauvais of [null, undefined, '', '1234', 'abcdefghi']) {
       expect(sirenDe(mauvais)).toBe('');
     }
+  });
+});
+
+/**
+ * La règle qui autorise — ou non — à lire un accusé.
+ * ---------------------------------------------------------------------------
+ * C'est la seule décision du module dont une erreur est IRRÉVERSIBLE : lire un
+ * accusé le marque « récupéré » chez jedeclare, et le logiciel de production du
+ * cabinet, qui filtre sur « non récupérés », ne le reverra jamais comme nouveau.
+ * Un test qui passe ici ne prouve pas grand-chose ; un test qui casse dit qu'on
+ * s'apprête à prendre des accusés à quelqu'un.
+ */
+describe('pieceLisible — la prudence, compte par compte', () => {
+  const FERME = [{ marquageAutorise: false }, { marquageAutorise: false }];
+  const SECOND_OUVERT = [{ marquageAutorise: false }, { marquageAutorise: true }];
+
+  it('en mode prudent, n ouvre que les accuses deja recuperes', () => {
+    expect(pieceLisible({ compte: 0, recuperee: true }, true, FERME)).toBe(true);
+    expect(pieceLisible({ compte: 0, recuperee: false }, true, FERME)).toBe(false);
+  });
+
+  it('hors mode prudent, tout est lisible', () => {
+    expect(pieceLisible({ compte: 0, recuperee: false }, false, FERME)).toBe(true);
+    expect(pieceLisible({ compte: 1, recuperee: false }, false, FERME)).toBe(true);
+  });
+
+  // Le cas qui a motivé le réglage : un compte que personne ne relève n'a jamais
+  // d'accusé récupéré, donc jamais un seul accusé lisible. 204 pièces écartées
+  // sur 204, à chaque analyse, mesuré le 2026-08-09.
+  it('ouvre le compte dont le marquage est autorise, et lui SEUL', () => {
+    expect(pieceLisible({ compte: 1, recuperee: false }, true, SECOND_OUVERT)).toBe(true);
+    expect(pieceLisible({ compte: 0, recuperee: false }, true, SECOND_OUVERT)).toBe(false);
+  });
+
+  // Un rang hors liste vient d'une numérotation trouée ou d'une configuration
+  // changée entre deux analyses. Il ne doit surtout pas hériter de l'ouverture
+  // d'un voisin : l'inconnu se traite en prudent.
+  it('refuse un compte absent de la configuration', () => {
+    expect(pieceLisible({ compte: 7, recuperee: false }, true, SECOND_OUVERT)).toBe(false);
+    expect(pieceLisible({ compte: 7, recuperee: false }, true, [])).toBe(false);
+  });
+
+  it('un accuse deja recupere reste lisible meme sur un compte ferme', () => {
+    expect(pieceLisible({ compte: 1, recuperee: true }, true, FERME)).toBe(true);
   });
 });

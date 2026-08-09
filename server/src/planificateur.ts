@@ -138,6 +138,14 @@ const TACHES: Tache[] = [
      * recopions. Mesuré sur le compte réel le 2026-08-03 — 2 165 accusés sur un
      * an, tous déjà récupérés, aucun en attente.
      *
+     * ⚠️ LA SEULE EXCEPTION VAUT ICI AUSSI, et il faut le savoir avant de la
+     * poser : un compte dont le `.env` lève la prudence
+     * (`JEDECLARE_MARQUAGE_AUTORISE{suffixe}`) verra ses accusés lus — donc
+     * marqués — par CETTE tâche, chaque matin, sans que personne ne clique. Ce
+     * n'est pas un oubli : le réglage n'existe que pour un compte qu'aucun
+     * logiciel ne relève, où le marquage ne prive personne de rien. Mais celui
+     * qui l'active doit savoir qu'il l'active aussi pour la nuit.
+     *
      * Conséquence à accepter : un accusé arrivé cette nuit n'entre au cache que
      * lorsque le logiciel de production l'a consommé. Le suivi accuse donc un
      * retard d'un jour ou deux sur les toutes dernières déclarations. C'est le
@@ -161,7 +169,8 @@ const TACHES: Tache[] = [
         debut: jour(7),
         fin: jour(0),
         // `prudent` FORCÉ : c'est toute la raison pour laquelle cette tâche est
-        // acceptable. Ne pas le rendre configurable.
+        // acceptable. Ne pas le rendre configurable — la seule dérogation, par
+        // compte, se lit dans le `.env` du serveur (voir ci-dessus).
         prudent: true,
         limite: 400,
       });

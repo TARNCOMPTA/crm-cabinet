@@ -84,7 +84,9 @@ export function AnalyseModal({
             </p>
             <p>
               Le CRM n’ouvre donc que les accusés <strong>déjà marqués récupérés</strong> — leur
-              lecture ne change plus rien. Ce mode prudent n’est pas débrayable depuis cet écran.
+              lecture ne change plus rien. Ce mode prudent n’est pas débrayable depuis cet écran,
+              ni depuis aucun autre : sa seule exception se déclare compte par compte dans la
+              configuration du serveur, et le bilan ci-dessous nomme les comptes concernés.
             </p>
           </div>
         </div>
@@ -155,6 +157,18 @@ export function AnalyseModal({
                   <tr key={c.compte}>
                     <td className="px-4 py-2 text-gray-900 dark:text-gray-100 break-all">
                       {c.login}
+                      {/* Un compte sur lequel la prudence est levée MARQUE ce qu'il
+                          lit. Le dire ici, à côté du bouton qui déclenche, et non
+                          seulement dans un fichier de configuration que personne
+                          ne relit. */}
+                      {c.marquageAutorise && (
+                        <span
+                          className="ml-2 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40 align-middle"
+                          title="La configuration du serveur autorise le marquage sur ce compte : ses accusés sont lus même jamais récupérés."
+                        >
+                          marquage autorisé
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{c.trouvees}</td>
                     <td className="px-4 py-2 text-right tabular-nums text-gray-500 dark:text-gray-400">
@@ -178,7 +192,9 @@ export function AnalyseModal({
               <p className="px-4 py-2 text-xs text-orange-600 dark:text-orange-400 border-t border-gray-200 dark:border-gray-700">
                 Un compte dont rien n'est ni en cache ni à traiter n'alimentera jamais le suivi :
                 ses accusés ne sont récupérés par aucun logiciel de production, et le mode prudent
-                les écarte tous.
+                les écarte tous. Si aucun autre logiciel ne relève ce compte, la prudence peut y
+                être levée — <code>JEDECLARE_MARQUAGE_AUTORISE</code> dans la configuration du
+                serveur, avec le suffixe du compte.
               </p>
             )}
           </div>

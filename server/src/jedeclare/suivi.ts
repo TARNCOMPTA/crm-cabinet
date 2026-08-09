@@ -30,9 +30,13 @@ import {
 export { etatCellule, sirenDe } from './etat.js';
 export type { EtatCellule, LigneTeletransmission } from './etat.js';
 import { listePieces, analyserPiece } from './client.js';
+// La règle qui autorise — ou non — la lecture d'un accusé. Elle vit dans son
+// propre module, sans dépendance, parce qu'elle décide d'une opération que rien
+// ne défait : voir l'en-tête de prudence.ts.
+import { pieceLisible } from './prudence.js';
 
 const COLONNES = [
-  'numero', 'type_piece', 'ligne', 'procedure', 'nature', 'numero_ads', 'date_avis',
+  'compte', 'numero', 'type_piece', 'ligne', 'procedure', 'nature', 'numero_ads', 'date_avis',
   'siret', 'siren', 'societe', 'dossier', 'type_declaration', 'type_libelle',
   'destinataire', 'periode_debut', 'periode_fin', 'resultat', 'bloquee', 'montant',
   'rof', 'lien',
@@ -53,7 +57,7 @@ async function enregistrer(lignes: LigneTeletransmission[]): Promise<void> {
     await requete(
       `INSERT INTO jedeclare_teletransmissions (${COLONNES.join(', ')})
        VALUES ${tuples.join(', ')}
-       ON CONFLICT (numero, type_piece, ligne) DO UPDATE SET
+       ON CONFLICT (compte, numero, type_piece, ligne) DO UPDATE SET
          resultat = EXCLUDED.resultat,
          nature = EXCLUDED.nature,
          type_libelle = EXCLUDED.type_libelle,
@@ -63,13 +67,29 @@ async function enregistrer(lignes: LigneTeletransmission[]): Promise<void> {
   }
 }
 
-/** Pièces déjà analysées, pour ne jamais en relire une. */
+/**
+ * Pièces déjà analysées, pour ne jamais en relire une.
+ *
+ * ⚠️ LE COMPTE FAIT PARTIE DE LA CLÉ, comme dans l'index unique de la table.
+ * Deux comptes de flux numérotent leurs pièces chacun de leur côté : sans lui,
+ * une pièce du second compte passait pour déjà analysée dès qu'un numéro
+ * coïncidait avec une pièce du premier — et n'était jamais lue.
+ *
+ * Le défaut est resté invisible tant que le mode prudent écartait de toute
+ * façon 100 % des pièces du second compte : rien n'arrivait jusqu'ici. Il se
+ * serait réveillé le jour même où l'on ouvre la prudence, en donnant
+ * l'impression que l'ouverture n'a servi à rien.
+ */
 async function piecesAnalysees(): Promise<Set<string>> {
-  const lignes = await requete<{ numero: string; type_piece: string }>(
-    'SELECT DISTINCT numero, type_piece FROM jedeclare_teletransmissions'
+  const lignes = await requete<{ compte: number; numero: string; type_piece: string }>(
+    'SELECT DISTINCT compte, numero, type_piece FROM jedeclare_teletransmissions'
   );
-  return new Set(lignes.map((l) => `${l.numero}|${l.type_piece}`));
+  return new Set(lignes.map((l) => `${l.compte}|${l.numero}|${l.type_piece}`));
 }
+
+/** La clé du cache, écrite une fois : quatre lectures s'en servent. */
+const cleCache = (p: { compte: number; numero: string; typePiece: string }): string =>
+  `${p.compte}|${p.numero}|${p.typePiece}`;
 
 const frVersIso = (fr: string | null | undefined): string => {
   const m = String(fr ?? '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
@@ -93,6 +113,12 @@ export interface BilanParCompte {
   dejaEnCache: number;
   ecarteesPrudence: number;
   aTraiter: number;
+  /**
+   * Vrai quand le `.env` lève la prudence sur ce compte : ses accusés sont lus
+   * même jamais récupérés, donc marqués. Remonté jusqu'à l'écran parce que c'est
+   * la seule chose qui distingue « ce compte avance » de « ce compte marque ».
+   */
+  marquageAutorise: boolean;
 }
 
 export interface BilanAnalyse {
@@ -114,6 +140,10 @@ export interface BilanAnalyse {
  * `prudent` (défaut) ne lit que les accusés DÉJÀ marqués « récupérés » chez
  * jedeclare — leur lecture ne change donc rien, et le logiciel de production du
  * cabinet ne perd rien. C'est le seul mode ouvert depuis le CRM.
+ *
+ * Il souffre UNE exception, réservée au `.env` du serveur : un compte que rien
+ * ne relève n'a jamais d'accusé récupéré, et resterait invisible pour toujours.
+ * C'est `prudence.ts` qui porte le raisonnement, et la décision.
  */
 export async function analyserPeriode(opts: {
   debut: string;
@@ -133,14 +163,17 @@ export async function analyserPeriode(opts: {
     typeProcedure: opts.procedure ?? 'TOUTES',
   });
 
+  // Une seule expression pour les quatre compteurs qui suivent : ils doivent
+  // trancher pareil, sinon le bilan décrit une analyse qui n'a pas eu lieu.
+  const lisible = (p: { compte: number; recuperee: boolean }): boolean =>
+    pieceLisible(p, prudent, config.jedeclare.comptes);
+
   const dejaVues = await piecesAnalysees();
-  const candidats = pieces
-    .filter((p) => !dejaVues.has(`${p.numero}|${p.typePiece}`))
-    .filter((p) => !prudent || p.recuperee);
+  const candidats = pieces.filter((p) => !dejaVues.has(cleCache(p))).filter(lisible);
   const aTraiter = candidats.slice(0, limite);
-  const ecarteesPrudence = prudent
-    ? pieces.filter((p) => !p.recuperee && !dejaVues.has(`${p.numero}|${p.typePiece}`)).length
-    : 0;
+  const ecarteesPrudence = pieces.filter(
+    (p) => !dejaVues.has(cleCache(p)) && !lisible(p)
+  ).length;
 
   const lignes: LigneTeletransmission[] = [];
   let analysees = 0;
@@ -200,6 +233,7 @@ export async function analyserPeriode(opts: {
         declarations.forEach((d, index) => {
           const siret = d?.siret ?? '';
           lignes.push({
+            compte: piece.compte,
             numero: piece.numero,
             type_piece: piece.typePiece,
             ligne: index,
@@ -249,21 +283,22 @@ export async function analyserPeriode(opts: {
       ? []
       : comptes.map((c, rang) => {
           const siennes = pieces.filter((p) => p.compte === rang);
-          const inconnues = siennes.filter((p) => !dejaVues.has(`${p.numero}|${p.typePiece}`));
+          const inconnues = siennes.filter((p) => !dejaVues.has(cleCache(p)));
           return {
             compte: rang,
             login: c.login,
             trouvees: siennes.length,
             dejaEnCache: siennes.length - inconnues.length,
-            ecarteesPrudence: prudent ? inconnues.filter((p) => !p.recuperee).length : 0,
-            aTraiter: inconnues.filter((p) => !prudent || p.recuperee).length,
+            ecarteesPrudence: inconnues.filter((p) => !lisible(p)).length,
+            aTraiter: inconnues.filter(lisible).length,
+            marquageAutorise: c.marquageAutorise,
           };
         });
 
   return {
     prudent,
     piecesTrouvees: pieces.length,
-    dejaEnCache: pieces.filter((p) => dejaVues.has(`${p.numero}|${p.typePiece}`)).length,
+    dejaEnCache: pieces.filter((p) => dejaVues.has(cleCache(p))).length,
     analysees,
     illisibles,
     declarationsEnregistrees: lignes.length,

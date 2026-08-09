@@ -698,6 +698,14 @@ CREATE TABLE "jedeclare_teletransmissions" (
 
   -- Identite de la piece chez jedeclare. `ligne` distingue les declarations
   -- d'un meme accuse : un ACS en porte souvent plusieurs.
+  --
+  -- `compte` est le RANG du compte de flux qui a liste la piece, dans l'ordre
+  -- ou le `.env` les declare (0 = sans suffixe, 1 = `_2`...). Il fait partie de
+  -- l'identite, et pas seulement de la tracabilite : deux comptes numerotent
+  -- leurs pieces chacun de leur cote, et rien n'empeche deux accuses distincts
+  -- de porter le meme `numero`. Sans cette colonne dans la cle, la piece du
+  -- second compte passait pour deja analysee et n'etait jamais lue.
+  "compte" integer DEFAULT 0 NOT NULL,
   "numero" text NOT NULL,
   "type_piece" text NOT NULL,
   "ligne" integer DEFAULT 0 NOT NULL,
@@ -1423,7 +1431,7 @@ CREATE UNIQUE INDEX jedeclare_suivi_interne_cellule_key ON public.jedeclare_suiv
 CREATE INDEX idx_jedeclare_suivi_interne_client_id ON public.jedeclare_suivi_interne USING btree (client_id);
 CREATE INDEX idx_jedeclare_suivi_interne_mois ON public.jedeclare_suivi_interne USING btree (mois);
 -- Idem cote cache : l'ecriture incrementale s'appuie sur cette unicite.
-CREATE UNIQUE INDEX jedeclare_teletransmissions_piece_key ON public.jedeclare_teletransmissions USING btree (numero, type_piece, ligne);
+CREATE UNIQUE INDEX jedeclare_teletransmissions_piece_key ON public.jedeclare_teletransmissions USING btree (compte, numero, type_piece, ligne);
 CREATE INDEX idx_jedeclare_teletransmissions_periode_fin ON public.jedeclare_teletransmissions USING btree (periode_fin);
 CREATE INDEX idx_jedeclare_teletransmissions_siren ON public.jedeclare_teletransmissions USING btree (siren);
 CREATE INDEX idx_legal_acts_act_date ON public.legal_acts USING btree (act_date DESC);

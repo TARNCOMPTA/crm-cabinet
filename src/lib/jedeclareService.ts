@@ -103,6 +103,8 @@ export interface BilanParCompte {
   dejaEnCache: number;
   ecarteesPrudence: number;
   aTraiter: number;
+  /** La prudence est levée sur ce compte, dans le `.env` : ses lectures marquent. */
+  marquageAutorise: boolean;
 }
 
 export interface BilanAnalyse {

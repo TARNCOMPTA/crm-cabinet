@@ -24,6 +24,13 @@ export function sirenDe(siret: string | null | undefined): string {
 }
 
 export interface LigneTeletransmission {
+  /**
+   * Le compte de flux qui a fourni la piece.
+   *
+   * Fait partie de l'IDENTITE de la piece : deux comptes numerotent leurs
+   * pieces chacun de leur cote, et l'index unique les confondait sans lui.
+   */
+  compte: number;
   numero: string;
   type_piece: string;
   ligne: number;

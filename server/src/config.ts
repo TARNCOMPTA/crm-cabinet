@@ -37,6 +37,28 @@ export interface CompteJedeclare {
   motDePasse: string;
   /** Ne sert qu'à la liste des dossiers ; son absence n'empêche rien. */
   idCompte: string;
+  /**
+   * Autorise la LECTURE d'accusés non encore récupérés sur ce compte.
+   *
+   * ⚠️ CE RÉGLAGE REND UNE OPÉRATION DESTRUCTRICE POSSIBLE, et il ne s'active
+   * donc que dans le `.env` du serveur — jamais d'un clic dans l'application.
+   * Lire un accusé le marque « récupéré » chez jedeclare : le logiciel de
+   * production du cabinet, qui filtre sur « non récupérés », ne le verra alors
+   * plus jamais comme nouveau.
+   *
+   * Il n'a de sens que dans deux cas, et le cabinet est seul à pouvoir en juger :
+   *
+   *   · AUCUN autre logiciel ne dépose ni ne relève sur ce compte — le marquage
+   *     ne lèse personne ;
+   *   · le couple éditeur/logiciel est inscrit en exception de marquage auprès
+   *     de `contacts.editeurs@jedeclare.info`, auquel cas la lecture ne marque
+   *     plus rien du tout.
+   *
+   * Par compte, et non global : un cabinet a rarement la même réponse pour tous
+   * les siens. C'est précisément le cas qui a motivé ce réglage — un compte
+   * traité par un logiciel de production, un autre que personne ne relève.
+   */
+  marquageAutorise: boolean;
 }
 
 /**
@@ -61,6 +83,10 @@ export interface CompteJedeclare {
  * Un trou dans la numérotation n'interrompt pas la lecture : `_3` est pris en
  * compte même si `_2` manque. Un compte à moitié renseigné — login sans mot de
  * passe — est ignoré, faute de pouvoir s'authentifier.
+ *
+ * `JEDECLARE_MARQUAGE_AUTORISE{suffixe}` suit la même numérotation, et vaut faux
+ * tant qu'on ne l'écrit pas : la prudence est l'état par défaut, y compris sur un
+ * compte ajouté plus tard par quelqu'un qui ignore ce réglage.
  */
 function comptesJedeclare(): CompteJedeclare[] {
   const comptes: CompteJedeclare[] = [];
@@ -73,6 +99,7 @@ function comptesJedeclare(): CompteJedeclare[] {
       login,
       motDePasse,
       idCompte: optionnel(`JEDECLARE_ID_COMPTE${suffixe}`).trim(),
+      marquageAutorise: booleen(`JEDECLARE_MARQUAGE_AUTORISE${suffixe}`, false),
     });
   }
   return comptes;
