@@ -143,3 +143,63 @@ describe('appels de fonctions distantes', () => {
     expect(inconnues, `fonctions appelées mais absentes des types : ${inconnues.join(', ')}`).toEqual([]);
   });
 });
+
+/**
+ * Les variables d'environnement atteignent-elles le conteneur ?
+ * ---------------------------------------------------------------------------
+ * ⚠️ `docker-compose.yml` ÉNUMÈRE LES VARIABLES UNE PAR UNE. Ce qui n'y est pas
+ * nommé n'atteint jamais l'application, même écrit dans le `.env` — et rien ne
+ * le signale : `optionnel()` rend sa valeur par défaut, `booleen()` rend faux,
+ * le réglage est simplement ignoré. L'exploitant, lui, voit un logiciel qui ne
+ * tient pas compte de ce qu'il vient d'écrire.
+ *
+ * C'est arrivé à `JEDECLARE_MARQUAGE_AUTORISE_2` : livré, documenté, testé,
+ * déployé — et sans le moindre effet, faute d'une ligne dans le compose. Le
+ * défaut a coûté un aller-retour complet jusqu'en production avant d'être vu.
+ *
+ * Le contrôle porte sur les FAMILLES à suffixe, là où l'oubli est le plus
+ * facile : `comptesJedeclare()` lit N variables par compte, et il suffit d'en
+ * ajouter une au code sans l'ajouter au compose pour la rendre inerte.
+ */
+describe('variables d’environnement', () => {
+  const config = lire('server/src/config.ts');
+  const compose = lire('docker-compose.yml');
+
+  /** Les noms lus par le serveur avec un suffixe de compte : `JEDECLARE_X${suffixe}`. */
+  const basesSuffixees = [
+    ...new Set(
+      [...config.matchAll(/`([A-Z][A-Z0-9_]*)\$\{suffixe\}`/g)].map((m) => m[1])
+    ),
+  ];
+
+  /** Les suffixes que le compose déclare réellement, déduits d'une base connue. */
+  const suffixes = [
+    ...new Set(
+      [...compose.matchAll(/^\s{6}JEDECLARE_LOGIN(_\d+)?:/gm)].map((m) => m[1] ?? '')
+    ),
+  ];
+
+  it('le serveur lit bien une famille de comptes a suffixe', () => {
+    // Garde-fou du garde-fou : si `comptesJedeclare()` était réécrit sans
+    // template, les regex ci-dessus ne trouveraient rien et le test passerait
+    // en ne vérifiant PLUS RIEN. Mieux vaut qu'il casse et qu'on le relise.
+    expect(basesSuffixees).toContain('JEDECLARE_LOGIN');
+    expect(basesSuffixees.length).toBeGreaterThanOrEqual(4);
+    expect(suffixes).toContain('');
+    expect(suffixes).toContain('_2');
+  });
+
+  it('chaque variable de compte est declaree dans docker-compose.yml', () => {
+    const manquantes: string[] = [];
+    for (const base of basesSuffixees) {
+      for (const suffixe of suffixes) {
+        const nom = `${base}${suffixe}`;
+        if (!new RegExp(`^\\s+${nom}:`, 'm').test(compose)) manquantes.push(nom);
+      }
+    }
+    expect(
+      manquantes,
+      `absentes de docker-compose.yml, donc inertes malgre le .env : ${manquantes.join(', ')}`
+    ).toEqual([]);
+  });
+});

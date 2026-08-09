@@ -96,6 +96,19 @@ services:
       JEDECLARE_LOGIN_3: ${JEDECLARE_LOGIN_3:-}
       JEDECLARE_MDP_3: ${JEDECLARE_MDP_3:-}
       JEDECLARE_ID_COMPTE_3: ${JEDECLARE_ID_COMPTE_3:-}
+      # ⚠️ CE FICHIER ENUMERE LES VARIABLES UNE PAR UNE : ce qui n'est pas nomme
+      # ici n'atteint JAMAIS le conteneur, meme ecrit dans le `.env`. Une ligne
+      # manquante ne produit aucune erreur — le reglage est simplement ignore, et
+      # l'application se comporte comme si personne ne l'avait pose.
+      #
+      # C'est exactement ce qui est arrive a ce reglage-ci : livre, documente,
+      # teste, et sans effet, faute des trois lignes ci-dessous.
+      #
+      # Leve la prudence sur UN compte de flux. Voir `.env.exemple` pour ce que
+      # cela autorise, et pourquoi cela ne se decide que la.
+      JEDECLARE_MARQUAGE_AUTORISE: ${JEDECLARE_MARQUAGE_AUTORISE:-}
+      JEDECLARE_MARQUAGE_AUTORISE_2: ${JEDECLARE_MARQUAGE_AUTORISE_2:-}
+      JEDECLARE_MARQUAGE_AUTORISE_3: ${JEDECLARE_MARQUAGE_AUTORISE_3:-}
       VIES_DISABLED: ${VIES_DISABLED:-0}
       APP_VERSION: ${VERSION:-dev}
       UPDATE_DISABLED: ${UPDATE_DISABLED:-0}
