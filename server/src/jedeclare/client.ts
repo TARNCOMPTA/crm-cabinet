@@ -348,8 +348,25 @@ export async function listePieces(opts: {
           compte: tache.compte,
         });
         for (const piece of lot) {
-          // Une même pièce peut ressortir sur deux tranches limitrophes.
-          const cle = `${piece.numero}|${piece.typePiece}`;
+          /**
+           * Une même pièce peut ressortir sur deux tranches limitrophes — c'est
+           * ce que ce dédoublonnage écarte, et rien d'autre.
+           *
+           * ⚠️ LE COMPTE FAIT PARTIE DE LA CLÉ, et il en manquait. Un numéro de
+           * pièce est rattaché au compte qui l'a déposée : `PieceDisponible.compte`
+           * est d'ailleurs décrit comme « indispensable pour la récupérer ». Deux
+           * comptes numérotant leurs pièces chacun de leur côté, une clé sans le
+           * compte faisait passer les pièces du SECOND pour des doublons de
+           * celles du PREMIER — et les jetait.
+           *
+           * Le cabinet voyait alors la moitié de ses télétransmissions, sans
+           * aucun message : le second compte s'authentifiait correctement, la
+           * requête aboutissait, et le résultat était écarté ici, en silence.
+           * Le tri par compte n'existait que jusqu'à cette ligne.
+           *
+           * À l'intérieur d'un même compte, le comportement est inchangé.
+           */
+          const cle = `${piece.compte}|${piece.numero}|${piece.typePiece}`;
           if (vues.has(cle)) continue;
           vues.add(cle);
           pieces.push(piece);
