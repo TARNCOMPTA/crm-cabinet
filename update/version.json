@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
-  "notes": "Ciblage des campagnes par code NAF, resume des statuts deposes au greffe sur la fiche client, et correction de l'adresse du manifeste de mise a jour — sans laquelle aucune instance ne voyait les nouvelles versions.",
+  "version": "2.1.1",
+  "notes": "Corrections : la commande de mise a jour affichee par l'application ne fonctionnait pas, et le serveur annoncait une version que rien ne mettait a jour. Recommandee a toute instance en 2.1.0.",
   "url": "https://github.com/TARNCOMPTA/crm-cabinet"
 }

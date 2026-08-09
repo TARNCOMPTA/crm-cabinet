@@ -5,6 +5,29 @@ signale un changement qui demande une action de votre part.
 
 ---
 
+## 2.1.1 — 2026-08-09
+
+Trois corrections, trouvées en production le jour même de la 2.1.0 — à la
+première mise à jour que l'application ait jamais eu à proposer. **Recommandée à
+toute instance en 2.1.0**, dont l'image ne les porte pas.
+
+- **La commande de mise à jour affichée par l'application ne fonctionnait pas.**
+  L'écran donnait `sudo ./installation/maj.sh`, et le script était enregistré
+  sans bit exécutable : `Permission denied`. Il est désormais exécutable, et
+  l'écran affiche `sudo sh installation/maj.sh`, qui marche même sur une copie
+  restaurée d'une archive.
+- **Le serveur annonçait une version que rien ne mettait à jour.** Il la lisait
+  dans une variable saisie à l'installation, jamais retouchée depuis, quand
+  l'interface figeait la sienne à la construction. Toute instance mise à jour
+  affichait donc un écart qui ne se résorbait jamais. Les deux lisent maintenant
+  la même source, embarquée dans l'image.
+- **`maj.sh --forcer`** reconstruit sans nouveau commit. Sans cette option, une
+  instance dont les conteneurs sont en retard sur le dossier — mise à jour
+  interrompue, `git pull` lancé à la main — se voyait répondre « déjà à jour,
+  rien à faire », sans moyen d'insister.
+
+---
+
 ## 2.1.0 — 2026-08-09
 
 Deux ajouts métier, et une correction sans laquelle vous n'auriez jamais vu
