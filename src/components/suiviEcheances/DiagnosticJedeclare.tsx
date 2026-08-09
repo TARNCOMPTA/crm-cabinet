@@ -30,16 +30,19 @@ function Ligne({
   ok,
   mesure,
   detail,
+  marque,
 }: {
   titre: string;
   ok: boolean;
   mesure?: string;
   detail?: string;
+  /** Marqueur discret accolé au titre, pour un état de configuration. */
+  marque?: string;
 }) {
   return (
     <div className="py-2 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {ok ? (
             <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
           ) : (
@@ -48,6 +51,11 @@ function Ligne({
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all">
             {titre}
           </span>
+          {marque && (
+            <span className="rounded px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40">
+              {marque}
+            </span>
+          )}
         </div>
         {detail && (
           <p className="mt-1 ml-6 text-xs text-red-600 dark:text-red-400 break-words">{detail}</p>
@@ -151,17 +159,29 @@ export function DiagnosticJedeclare({ onFermer }: { onFermer: () => void }) {
               </div>
             )}
 
+            {/* ⚠️ C'EST ICI QU'ON VÉRIFIE UN RÉGLAGE, et nulle part ailleurs.
+                Le mode prudent d'un compte ne se lisait que dans le bilan d'une
+                ANALYSE — soit en marquant des accusés pour savoir si un réglage
+                avait pris. Lister ne marque rien : la réponse appartient à cet
+                écran-ci. Un `.env` mal orthographié, ou une variable absente de
+                docker-compose.yml, se voit alors sans rien déclencher. */}
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {resultat.comptes.map((c) => (
                 <Ligne
                   key={c.login}
                   titre={c.login}
                   ok={c.ok}
+                  marque={c.marquageAutorise ? 'marquage autorisé' : undefined}
                   mesure={c.ok ? `${c.nbPieces ?? 0} pièce(s) hier` : undefined}
                   detail={c.detail}
                 />
               ))}
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Sans mention « marquage autorisé », un compte est en mode prudent : seuls ses
+              accusés déjà récupérés par un autre logiciel sont lus. Un compte que personne ne
+              relève n'en a jamais, et reste donc absent du suivi.
+            </p>
 
             <div className="pt-2 border-t border-gray-100 dark:border-white/[0.06] divide-y divide-gray-100 dark:divide-gray-800">
               <Ligne

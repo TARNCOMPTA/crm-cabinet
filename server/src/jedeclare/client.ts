@@ -655,7 +655,27 @@ export async function testerConnexion(): Promise<{
   ok: boolean;
   /** Nombre de comptes de flux configurés, et le détail de chacun. */
   nbComptes: number;
-  comptes: Array<{ login: string; ok: boolean; nbPieces?: number; detail?: string }>;
+  comptes: Array<{
+    login: string;
+    ok: boolean;
+    nbPieces?: number;
+    detail?: string;
+    /**
+     * L'état du mode prudent SUR CE COMPTE, tel que le serveur l'a lu.
+     *
+     * ⚠️ SANS CETTE LIGNE, VÉRIFIER UN RÉGLAGE COÛTAIT UNE ANALYSE. Le seul
+     * endroit qui disait si `JEDECLARE_MARQUAGE_AUTORISE{suffixe}` avait été
+     * pris en compte était le bilan d'analyse — c'est-à-dire une opération qui
+     * marque des accusés. On ne peut pas demander de déclencher une opération
+     * destructrice pour savoir si un réglage est actif.
+     *
+     * Le diagnostic, lui, ne fait que lister : il ne marque rien. C'est donc ici
+     * que la réponse doit se lire, et le champ vaut faux tant que le serveur n'a
+     * pas vu la variable — ce qui rend un `.env` mal orthographié, ou une
+     * variable absente de `docker-compose.yml`, visible d'un coup d'œil.
+     */
+    marquageAutorise: boolean;
+  }>;
   communication: { ok: boolean; nbPieces?: number; detail?: string };
   gestion: { ok: boolean; teste: boolean; nbDossiers?: number; detail?: string };
 }> {
@@ -668,6 +688,7 @@ export async function testerConnexion(): Promise<{
   const comptes = await Promise.all(
     rangsComptes().map(async (rang) => {
       const login = config.jedeclare.comptes[rang]!.login;
+      const marquageAutorise = config.jedeclare.comptes[rang]!.marquageAutorise;
       try {
         // Une téléprocédure explicite est indispensable, sinon « code retour 11 ».
         const lot = await listeParProcedure({
@@ -678,9 +699,14 @@ export async function testerConnexion(): Promise<{
           typeProcedure: 'EDI-TDFC',
           compte: rang,
         });
-        return { login, ok: true, nbPieces: lot.length };
+        return { login, marquageAutorise, ok: true, nbPieces: lot.length };
       } catch (e) {
-        return { login, ok: false, detail: e instanceof Error ? e.message : String(e) };
+        return {
+          login,
+          marquageAutorise,
+          ok: false,
+          detail: e instanceof Error ? e.message : String(e),
+        };
       }
     })
   );

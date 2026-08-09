@@ -240,6 +240,13 @@ export interface CompteTeste {
   ok: boolean;
   nbPieces?: number;
   detail?: string;
+  /**
+   * L'état du mode prudent sur ce compte, TEL QUE LE SERVEUR L'A LU.
+   *
+   * Vérifier un réglage ne doit pas coûter une analyse : lister ne marque rien,
+   * analyser marque. C'est donc ici que la réponse se lit.
+   */
+  marquageAutorise: boolean;
 }
 
 export interface ResultatDiagnostic {

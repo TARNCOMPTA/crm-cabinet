@@ -25,10 +25,37 @@ function entier(nom: string, defaut: number): number {
   return n;
 }
 
+/**
+ * Un booléen du `.env`, et ce qu'il fait d'une valeur qu'il ne comprend pas.
+ *
+ * ⚠️ IL RENDAIT `false` EN SILENCE. `JEDECLARE_MARQUAGE_AUTORISE_2=oui` — ou la
+ * même valeur suivie d'une espace, ce qu'une saisie à la main produit sans
+ * qu'on la voie — donnait exactement le même résultat qu'une variable absente :
+ * le réglage était ignoré, sans une ligne de journal. Dans un fichier dont tous
+ * les commentaires sont en français, `oui` n'est pas une faute de l'exploitant.
+ *
+ * Trois corrections, du même défaut :
+ *   · la valeur est ÉLAGUÉE — `« 1 »` vaut `1` ;
+ *   · le vocabulaire est élargi à ce qu'on écrit vraiment (`oui`, `vrai`,
+ *     `yes`, `on`), dans les deux sens ;
+ *   · ce qui reste incompris est SIGNALÉ, au lieu de retomber sur le défaut
+ *     sans rien dire. On ne lève pas : refuser de démarrer pour un réglage
+ *     facultatif serait pire que de l'ignorer. Mais on le dit.
+ */
+const VRAI = new Set(['1', 'true', 'oui', 'vrai', 'yes', 'on']);
+const FAUX = new Set(['0', 'false', 'non', 'faux', 'no', 'off', '']);
+
 function booleen(nom: string, defaut: boolean): boolean {
-  const v = process.env[nom];
-  if (v === undefined) return defaut;
-  return v === '1' || v.toLowerCase() === 'true';
+  const brut = process.env[nom];
+  if (brut === undefined) return defaut;
+  const v = brut.trim().toLowerCase();
+  if (VRAI.has(v)) return true;
+  if (FAUX.has(v)) return false;
+  console.warn(
+    `[config] ${nom}=« ${brut} » n'est ni vrai ni faux : valeur ignoree, ` +
+      `${nom}=${defaut ? '1' : '0'} retenu. Ecrivez 1 ou 0.`
+  );
+  return defaut;
 }
 
 /** Un compte de flux jedeclare. */
