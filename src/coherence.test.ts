@@ -147,23 +147,33 @@ describe('appels de fonctions distantes', () => {
 /**
  * Les variables d'environnement atteignent-elles le conteneur ?
  * ---------------------------------------------------------------------------
- * ⚠️ `docker-compose.yml` ÉNUMÈRE LES VARIABLES UNE PAR UNE. Ce qui n'y est pas
- * nommé n'atteint jamais l'application, même écrit dans le `.env` — et rien ne
- * le signale : `optionnel()` rend sa valeur par défaut, `booleen()` rend faux,
- * le réglage est simplement ignoré. L'exploitant, lui, voit un logiciel qui ne
- * tient pas compte de ce qu'il vient d'écrire.
+ * ⚠️ LES FICHIERS COMPOSE ÉNUMÈRENT LES VARIABLES UNE PAR UNE. Ce qui n'y est
+ * pas nommé n'atteint jamais l'application, même écrit dans le `.env` — et rien
+ * ne le signale : `optionnel()` rend sa valeur par défaut, `booleen()` rend
+ * faux, le réglage est simplement ignoré. L'exploitant, lui, voit un logiciel
+ * qui ne tient pas compte de ce qu'il vient d'écrire.
  *
- * C'est arrivé à `JEDECLARE_MARQUAGE_AUTORISE_2` : livré, documenté, testé,
- * déployé — et sans le moindre effet, faute d'une ligne dans le compose. Le
- * défaut a coûté un aller-retour complet jusqu'en production avant d'être vu.
+ * ⚠️ ET IL Y EN A DEUX. `docker-compose.partage.yml` n'est PAS une surcharge de
+ * `docker-compose.yml` : c'est une pile complète et parallèle, avec ses propres
+ * services et son propre bloc `environment:`. Une instance démarre avec l'un OU
+ * l'autre. Les tenir à jour ensemble n'est donc pas une élégance, c'est la
+ * condition pour que le réglage existe partout.
  *
- * Le contrôle porte sur les FAMILLES à suffixe, là où l'oubli est le plus
- * facile : `comptesJedeclare()` lit N variables par compte, et il suffit d'en
- * ajouter une au code sans l'ajouter au compose pour la rendre inerte.
+ * C'est arrivé à `JEDECLARE_MARQUAGE_AUTORISE_2`, DEUX FOIS de suite :
+ *
+ *   · d'abord absent des deux fichiers — livré, documenté, sans effet ;
+ *   · puis ajouté au seul `docker-compose.yml`, avec une première version de ce
+ *     test qui ne relisait que celui-là. Le test était vert, et l'instance qui
+ *     tourne en mode partagé restait cassée.
+ *
+ * D'où la boucle sur TOUS les `docker-compose*.yml` : un contrôle qui ne couvre
+ * qu'un fichier sur deux donne surtout l'illusion d'être couvert.
  */
 describe('variables d’environnement', () => {
   const config = lire('server/src/config.ts');
-  const compose = lire('docker-compose.yml');
+  const composes = readdirSync(RACINE)
+    .filter((f) => /^docker-compose.*\.ya?ml$/.test(f))
+    .map((f) => ({ nom: f, texte: lire(f) }));
 
   /** Les noms lus par le serveur avec un suffixe de compte : `JEDECLARE_X${suffixe}`. */
   const basesSuffixees = [
@@ -172,34 +182,48 @@ describe('variables d’environnement', () => {
     ),
   ];
 
-  /** Les suffixes que le compose déclare réellement, déduits d'une base connue. */
-  const suffixes = [
+  /** Les suffixes déclarés par un fichier donné, déduits d'une base connue. */
+  const suffixesDe = (texte: string) => [
     ...new Set(
-      [...compose.matchAll(/^\s{6}JEDECLARE_LOGIN(_\d+)?:/gm)].map((m) => m[1] ?? '')
+      [...texte.matchAll(/^\s{6}JEDECLARE_LOGIN(_\d+)?:/gm)].map((m) => m[1] ?? '')
     ),
   ];
 
-  it('le serveur lit bien une famille de comptes a suffixe', () => {
-    // Garde-fou du garde-fou : si `comptesJedeclare()` était réécrit sans
-    // template, les regex ci-dessus ne trouveraient rien et le test passerait
-    // en ne vérifiant PLUS RIEN. Mieux vaut qu'il casse et qu'on le relise.
-    expect(basesSuffixees).toContain('JEDECLARE_LOGIN');
-    expect(basesSuffixees.length).toBeGreaterThanOrEqual(4);
-    expect(suffixes).toContain('');
-    expect(suffixes).toContain('_2');
+  it('les deux piles compose sont bien presentes', () => {
+    // Garde-fou du garde-fou. Si ce fichier était renommé, la boucle ci-dessous
+    // ne parcourrait plus qu'une pile et redeviendrait le contrôle borgne qui a
+    // laissé passer le défaut. Mieux vaut qu'il casse et qu'on le relise.
+    expect(composes.map((c) => c.nom).sort()).toEqual([
+      'docker-compose.partage.yml',
+      'docker-compose.yml',
+    ]);
   });
 
-  it('chaque variable de compte est declaree dans docker-compose.yml', () => {
+  it('le serveur lit bien une famille de comptes a suffixe', () => {
+    expect(basesSuffixees).toContain('JEDECLARE_LOGIN');
+    expect(basesSuffixees.length).toBeGreaterThanOrEqual(4);
+    for (const { nom, texte } of composes) {
+      const suffixes = suffixesDe(texte);
+      expect(suffixes, `${nom} ne declare aucun compte de flux`).toContain('');
+      expect(suffixes, `${nom} ne declare pas de second compte`).toContain('_2');
+    }
+  });
+
+  it('chaque variable de compte est declaree dans CHAQUE pile compose', () => {
     const manquantes: string[] = [];
-    for (const base of basesSuffixees) {
-      for (const suffixe of suffixes) {
-        const nom = `${base}${suffixe}`;
-        if (!new RegExp(`^\\s+${nom}:`, 'm').test(compose)) manquantes.push(nom);
+    for (const { nom, texte } of composes) {
+      for (const base of basesSuffixees) {
+        for (const suffixe of suffixesDe(texte)) {
+          const variable = `${base}${suffixe}`;
+          if (!new RegExp(`^\\s+${variable}:`, 'm').test(texte)) {
+            manquantes.push(`${variable} (${nom})`);
+          }
+        }
       }
     }
     expect(
       manquantes,
-      `absentes de docker-compose.yml, donc inertes malgre le .env : ${manquantes.join(', ')}`
+      `inertes malgre le .env, faute d'etre declarees : ${manquantes.join(', ')}`
     ).toEqual([]);
   });
 });

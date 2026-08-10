@@ -31,6 +31,22 @@ on:
         description: "Repertoire de l'instance sur le serveur"
         default: /opt/crmcabinet
         required: false
+      # ⚠️ SANS CETTE OPTION, CE WORKFLOW NE RATTRAPE PAS UN CONTENEUR EN RETARD.
+      # `maj.sh` s'arrete sur « Deja a jour » des que `git pull` ne ramene rien —
+      # or c'est exactement l'etat d'une instance dont le DEPOT est a jour mais
+      # dont le CONTENEUR n'a jamais ete recree. Les variables d'environnement
+      # etant injectees au demarrage du conteneur, un reglage ecrit dans le
+      # `.env` reste alors sans effet, indefiniment.
+      #
+      # Vecu le 2026-08-09 : depot a `e90f4c7`, `docker-compose.yml` correct,
+      # `.env` correct, et une application qui ignorait le reglage parce que le
+      # conteneur datait d'avant. Le seul recours etait une ligne de commande sur
+      # le serveur — ce que ce workflow existe justement pour eviter.
+      forcer:
+        description: "Reconstruire meme sans nouveau commit"
+        type: boolean
+        default: false
+        required: false
 
 # Deux mises a jour en meme temps, ce sont deux `docker compose up` concurrents
 # sur la meme instance. `cancel-in-progress: false` : une mise a jour deja lancee
@@ -89,10 +105,16 @@ jobs:
       - name: Mise a jour de l'instance
         env:
           INSTANCE: ${{ inputs.instance }}
+          FORCER: ${{ inputs.forcer }}
         run: |
           set -e
           cd "$INSTANCE"
-          sh installation/maj.sh
+          if [ "$FORCER" = "true" ]; then
+            echo "Reconstruction forcee demandee."
+            sh installation/maj.sh --forcer
+          else
+            sh installation/maj.sh
+          fi
 
       # Le compte rendu, sur la page de l'execution : ce qui tourne VRAIMENT
       # apres coup, lu depuis l'application elle-meme et non deduit du depot.

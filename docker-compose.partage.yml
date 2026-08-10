@@ -98,6 +98,20 @@ services:
       JEDECLARE_LOGIN_3: ${JEDECLARE_LOGIN_3:-}
       JEDECLARE_MDP_3: ${JEDECLARE_MDP_3:-}
       JEDECLARE_ID_COMPTE_3: ${JEDECLARE_ID_COMPTE_3:-}
+      # ⚠️ CE FICHIER EST UNE PILE COMPLETE, ET NON UNE SURCHARGE de
+      # docker-compose.yml. Son bloc `environment:` doit donc etre tenu a jour
+      # EN MEME TEMPS que celui de l'autre fichier : une variable ajoutee la-bas
+      # et oubliee ici n'atteint pas les instances qui tournent en mode partage.
+      #
+      # C'est exactement ce qui est arrive a `JEDECLARE_MARQUAGE_AUTORISE_2` :
+      # ajoute a docker-compose.yml, verifie par un test... qui ne relisait que
+      # ce fichier-la. L'instance concernee, elle, demarre avec celui-ci. Le test
+      # de src/coherence.test.ts parcourt desormais les DEUX.
+      #
+      # Leve la prudence sur UN compte de flux. Voir `.env.exemple`.
+      JEDECLARE_MARQUAGE_AUTORISE: ${JEDECLARE_MARQUAGE_AUTORISE:-}
+      JEDECLARE_MARQUAGE_AUTORISE_2: ${JEDECLARE_MARQUAGE_AUTORISE_2:-}
+      JEDECLARE_MARQUAGE_AUTORISE_3: ${JEDECLARE_MARQUAGE_AUTORISE_3:-}
       VIES_DISABLED: ${VIES_DISABLED:-0}
       APP_VERSION: ${VERSION:-dev}
       UPDATE_DISABLED: ${UPDATE_DISABLED:-0}

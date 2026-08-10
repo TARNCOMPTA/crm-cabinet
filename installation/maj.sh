@@ -74,6 +74,28 @@ echo "--- 1/5 Version actuelle ---"
 AVANT=$(git rev-parse --short HEAD)
 echo "Révision : $AVANT"
 
+# ⚠️ UN `.env` MODIFIÉ DOIT DÉCLENCHER UNE RECONSTRUCTION, et il ne le faisait pas.
+#
+# Le script ne comparait que les révisions git. Or `docker-compose.yml` injecte
+# le `.env` au démarrage du conteneur : changer un réglage sans recréer le
+# conteneur ne change RIEN, et le script annonçait « Déjà à jour. Rien à faire »
+# — ce qui est vrai du code, et faux de l'instance.
+#
+# Vécu le 2026-08-09 : un réglage jedeclare écrit dans le `.env`, `maj.sh` lancé,
+# « Déjà à jour », et trois analyses dépensées à chercher pourquoi le logiciel
+# ignorait ce qu'on venait de lui écrire.
+#
+# L'empreinte est rangée dans data/, à côté des sauvegardes : c'est le volume qui
+# survit à la reconstruction. Absente — première exécution après cette
+# correction, ou instance restaurée — on reconstruit, ce qui est le choix sûr.
+EMPREINTE_ENV="$DIR/data/.env.empreinte"
+ENV_ACTUEL=$(sha256sum .env | cut -d' ' -f1)
+ENV_CHANGE=1
+if [ -f "$EMPREINTE_ENV" ] && [ "$(cat "$EMPREINTE_ENV")" = "$ENV_ACTUEL" ]; then
+  ENV_CHANGE=0
+fi
+[ "$ENV_CHANGE" -eq 1 ] && echo "Configuration : .env modifié depuis la dernière mise à jour."
+
 echo ""
 echo "--- 2/5 Sauvegarde de la base ---"
 # pg_dump depuis le conteneur applicatif : postgresql-client y est installé, et
@@ -97,9 +119,9 @@ echo "--- 3/5 Récupération du code ---"
 git pull
 
 APRES=$(git rev-parse --short HEAD)
-if [ "$AVANT" = "$APRES" ] && [ "$FORCER" -eq 0 ]; then
+if [ "$AVANT" = "$APRES" ] && [ "$FORCER" -eq 0 ] && [ "$ENV_CHANGE" -eq 0 ]; then
   echo ""
-  echo "Déjà à jour ($AVANT). Rien à faire."
+  echo "Déjà à jour ($AVANT), .env inchangé. Rien à faire."
   echo "La sauvegarde de la base a tout de même été conservée."
   echo ""
   echo "Si ce qui tourne est en retard sur ce dossier — mise à jour interrompue,"
@@ -140,6 +162,11 @@ until docker compose exec -T app node -e \
   fi
   sleep 3
 done
+
+# L'empreinte n'est retenue QU'APRÈS la vérification de santé. Une mise à jour
+# qui échoue laisse donc le `.env` marqué « à appliquer », et la reprise suivante
+# reconstruira — au lieu de croire le réglage déjà en place.
+echo "$ENV_ACTUEL" > "$EMPREINTE_ENV"
 
 # Les sauvegardes s'accumulent sinon : une par mise à jour, indéfiniment. Dix
 # couvrent largement le besoin — au-delà, la plus récente est de toute façon la
