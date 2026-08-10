@@ -5,6 +5,87 @@ signale un changement qui demande une action de votre part.
 
 ---
 
+## 2.2.0 — 2026-08-10
+
+Cette version répare un angle mort du suivi des échéances : **un cabinet qui
+dépose ses flux sous plusieurs comptes jedeclare n'en voyait qu'un**. Le reste
+n'apparaissait nulle part, et rien ne le signalait — l'écran avait seulement
+l'air incomplet.
+
+### Suivi des échéances : les comptes de flux multiples
+
+Une requête jedeclare ne voit que le compte qu'elle authentifie ; il n'existe
+aucun paramètre pour en désigner un autre. Les comptes supplémentaires se
+déclarent donc dans le `.env` avec les suffixes `_2`, `_3`… et sont désormais
+interrogés séparément, leurs résultats fusionnés.
+
+- **Le diagnostic est branché**, et détaille **chaque compte**. Le serveur les
+  testait déjà un par un — « un mot de passe faux sur le second compte doit se
+  voir comme tel » — mais la réponse était aplatie en un seul état, et aucun
+  écran ne l'appelait. Un cabinet à deux comptes ne pouvait pas savoir lequel ne
+  répondait pas.
+- **Le bilan d'analyse est ventilé par compte** : trouvés, en cache, écartés, à
+  traiter. Un total de « 170 écartés » ne dit pas s'ils viennent d'un compte ou
+  des deux ; la ventilation, si.
+- **Les pièces du second compte ne sont plus jetées comme doublons.** Deux
+  comptes numérotent leurs accusés chacun de leur côté : à numéro identique, la
+  seconde passait pour déjà connue. Le compte fait maintenant partie de
+  l'identité d'une pièce, en base comme en mémoire.
+
+### Le mode prudent, compte par compte
+
+Lire un accusé le marque « récupéré » chez jedeclare. Le mode prudent n'ouvre
+donc que les accusés **déjà** marqués : leur lecture ne retire rien au logiciel
+de production qui les a déjà vus. C'est la bonne règle — tant qu'un logiciel
+relève effectivement le compte.
+
+Sur un compte que **personne ne relève**, aucun accusé n'est jamais marqué, et
+la règle se retourne : 100 % des pièces écartées, à chaque analyse, et le compte
+absent du suivi pour toujours. Mesuré sur un cabinet réel : 204 écartées sur
+204, dont pas une n'aurait pu passer un jour.
+
+`JEDECLARE_MARQUAGE_AUTORISE_2=1` lève la prudence **sur ce compte-là
+uniquement**. Faux par défaut, y compris pour un compte ajouté plus tard.
+
+> ⚠️ Ce réglage rend une opération irréversible possible, et **ne se règle que
+> dans le `.env` du serveur** — aucun écran ne permet de l'activer. Ne l'utilisez
+> que si aucun autre logiciel ne relève ce compte, ou si votre couple
+> éditeur/logiciel est inscrit en exception de marquage auprès de jedeclare.
+
+Le compte concerné porte la mention **« marquage autorisé »** dans le diagnostic
+et dans le bilan, et le journal d'audit nomme les comptes ouverts à chaque
+analyse. La tâche de 6h30 hérite de la dérogation : c'est écrit là où on la pose.
+
+### Mise à jour : deux pièges refermés
+
+- **Un `.env` modifié déclenche maintenant une reconstruction.** `maj.sh` ne
+  comparait que les révisions git, or les réglages sont injectés au démarrage du
+  conteneur : changer le fichier sans le recréer ne changeait rien, et le script
+  répondait « déjà à jour, rien à faire » — vrai du code, faux de l'instance.
+- **`installation/runner.sh`** installe l'agent qui exécute le workflow de
+  déploiement. La mise à jour se déclenche alors depuis GitHub, sans terminal.
+  Facultatif, et à lire avant : le workflow lance `maj.sh` en root, donc
+  quiconque peut pousser sur la branche par défaut peut exécuter du code en root
+  sur le serveur. C'est la nature d'un déploiement auto-hébergé.
+
+### Contrôles ajoutés
+
+Trois défauts de cette version sont partis en production **sans effet visible**,
+faute d'un contrôle qui casse plutôt que de se taire :
+
+- les fichiers `docker-compose*.yml` énumèrent les variables une par une, et il
+  y en a **deux** — une pile complète et une pile partagée. Une variable oubliée
+  n'atteint pas le conteneur, sans erreur. Un test compare désormais les noms
+  lus par le serveur à ceux déclarés dans **chaque** pile ;
+- `booleen()` rendait faux en silence sur ce qu'il ne comprenait pas : `oui`, ou
+  une valeur suivie d'une espace, valaient « absent ». La valeur est élaguée, le
+  vocabulaire élargi, et l'incompris journalisé ;
+- l'état d'un réglage se lit dans le diagnostic, qui ne marque rien. Il fallait
+  auparavant lancer une analyse — donc marquer des accusés — pour savoir si le
+  serveur avait vu le réglage.
+
+---
+
 ## 2.1.1 — 2026-08-09
 
 Trois corrections, trouvées en production le jour même de la 2.1.0 — à la

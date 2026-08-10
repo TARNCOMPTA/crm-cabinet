@@ -1,5 +1,5 @@
 {
-  "version": "2.1.1",
-  "notes": "Corrections : la commande de mise a jour affichee par l'application ne fonctionnait pas, et le serveur annoncait une version que rien ne mettait a jour. Recommandee a toute instance en 2.1.0.",
+  "version": "2.2.0",
+  "notes": "Suivi jedeclare : les cabinets a plusieurs comptes de flux voyaient la moitie de leurs teletransmissions. Diagnostic compte par compte, bilan d'analyse ventile, et mode prudent ouvrable sur un compte que personne ne releve. Mise a jour : maj.sh reconstruit aussi quand le .env a change.",
   "url": "https://github.com/TARNCOMPTA/crm-cabinet"
 }

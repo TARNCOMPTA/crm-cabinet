@@ -87,11 +87,23 @@ jobs:
             echo "::error::Aucun .env dans $INSTANCE : l'instance n'est pas installee la."
             exit 1
           fi
-          # Un runner hors du groupe `docker` echouerait plus loin, au milieu de
-          # maj.sh, avec « permission denied » sur la socket — message exact mais
-          # trouve apres la sauvegarde. Autant le dire tout de suite.
-          if ! docker compose version >/dev/null 2>&1; then
-            echo "::error::docker compose inutilisable par $(id -un). Ajoutez cet utilisateur au groupe docker."
+          # ⚠️ TOUT PASSE PAR SUDO, ET C'EST DELIBERE. `$INSTANCE` appartient a
+          # root : son `.env` est en 0600, `data/` ne lui est pas ouvert, et
+          # `docker compose` doit lire ce `.env` pour resoudre sa configuration.
+          # Le runner tourne sous un compte dedie SANS le groupe `docker` — qui
+          # aurait donne root en entier et sans trace. Il recoit a la place deux
+          # droits nommes, poses par installation/runner.sh :
+          #
+          #     crm-runner ALL=(root) NOPASSWD: <instance>/installation/maj.sh, /usr/bin/docker
+          #
+          # Sans cette regle, l'echec arriverait au milieu de maj.sh, apres la
+          # sauvegarde, sur un « permission denied ». Autant le dire tout de suite.
+          if ! sudo -n docker compose version >/dev/null 2>&1; then
+            echo "::error::sudo docker indisponible pour $(id -un). Lancez installation/runner.sh sur ce serveur."
+            exit 1
+          fi
+          if ! sudo -n -l "$INSTANCE/installation/maj.sh" >/dev/null 2>&1; then
+            echo "::error::$(id -un) n'a pas le droit sudo sur maj.sh. Lancez installation/runner.sh sur ce serveur."
             exit 1
           fi
           cd "$INSTANCE"
@@ -109,11 +121,14 @@ jobs:
         run: |
           set -e
           cd "$INSTANCE"
+          # Le chemin est ABSOLU et le script appele directement, sans `sh` :
+          # c'est la forme exacte que nomme la regle sudoers. `sudo sh script`
+          # ne correspondrait a rien et serait refuse.
           if [ "$FORCER" = "true" ]; then
             echo "Reconstruction forcee demandee."
-            sh installation/maj.sh --forcer
+            sudo -n "$INSTANCE/installation/maj.sh" --forcer
           else
-            sh installation/maj.sh
+            sudo -n "$INSTANCE/installation/maj.sh"
           fi
 
       # Le compte rendu, sur la page de l'execution : ce qui tourne VRAIMENT
@@ -130,7 +145,7 @@ jobs:
           cd "$INSTANCE" || exit 0
           REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo '?')
           BRANCHE=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
-          SANTE=$(docker compose exec -T app node -e \
+          SANTE=$(sudo -n docker compose exec -T app node -e \
             "fetch('http://localhost:3000/api/sante').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))" \
             2>/dev/null || echo 'injoignable')
           {

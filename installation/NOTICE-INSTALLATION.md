@@ -107,17 +107,54 @@ courrier — ou affiché à l'écran si le SMTP n'est pas encore réglé.
 ## Mise à jour
 
 ```sh
-cd /opt/crmcabinet && sh installation/maj.sh
+sudo sh /opt/crmcabinet/installation/maj.sh
 ```
 
 Le script **sauvegarde la base avant toute modification**, récupère le code,
 reconstruit et vérifie que l'application répond. En cas de problème, il affiche
 la commande de retour en arrière.
 
+Il reconstruit aussi quand le **`.env` a changé**, même sans nouveau code : les
+réglages sont injectés au démarrage du conteneur, donc modifier le fichier sans
+recréer le conteneur ne change rien. Sans ce contrôle, le script répondait
+« Déjà à jour » — vrai du code, faux de l'instance.
+
 Les mises à jour ne sont **jamais** appliquées automatiquement. Vous décidez
 quand, et vous pouvez rester sur une version aussi longtemps que vous voulez.
 
 Les dix dernières sauvegardes sont conservées dans `data/sauvegardes/`.
+
+### Mettre à jour depuis GitHub, sans terminal (facultatif)
+
+```sh
+sudo sh /opt/crmcabinet/installation/runner.sh
+```
+
+Installe sur le serveur l'agent qui exécute le workflow **Deploiement**. La mise
+à jour se déclenche ensuite depuis GitHub — *Actions ▸ Deploiement ▸ Run
+workflow* — avec une case « Reconstruire même sans nouveau commit ».
+
+Le script demande un jeton d'enregistrement, à prendre sur
+`<votre dépôt>/settings/actions/runners/new` (valable une heure).
+
+> **À savoir avant de l'installer.** Le workflow lance `maj.sh` en root sur ce
+> serveur. **Quiconque peut pousser sur la branche par défaut du dépôt peut donc
+> y exécuter du code en root.** C'est la nature d'un déploiement auto-hébergé,
+> et la raison pour laquelle ce workflow n'a aucun déclencheur `push` ni
+> `pull_request` : seul un lancement manuel, réservé à qui a les droits sur le
+> dépôt. À n'installer que si le dépôt et le serveur sont sous la même
+> responsabilité.
+
+Le runner tourne sous un compte dédié `crm-runner`, **hors du groupe `docker`**
+— qui aurait donné root en entier et sans trace. Il reçoit à la place deux
+droits nommés dans `/etc/sudoers.d/crm-runner` : `maj.sh` et `docker`.
+
+Pour le retirer :
+
+```sh
+cd /opt/actions-runner && sudo ./svc.sh stop && sudo ./svc.sh uninstall
+sudo rm /etc/sudoers.d/crm-runner
+```
 
 ---
 
