@@ -124,26 +124,95 @@ const ACCEPTE = /accept/i;
 /** Le destinataire n'a pas répondu. Ce n'est ni un refus ni une acceptation. */
 const SANS_RETOUR = /sansretour/i;
 
+/** Ce qu'une ligne dit, une fois les codes de jedeclare traduits. */
+type Verdict = 'accepte' | 'refuse' | 'attente';
+
+const verdictDe = (l: LigneTeletransmission): Verdict => {
+  // Bloquée d'abord : la déclaration n'est PARTIE chez personne, quel que soit
+  // ce que `resultat` raconte par ailleurs.
+  if (l.bloquee) return 'refuse';
+  if (REJET.test(l.resultat)) return 'refuse';
+  if (ACCEPTE.test(l.resultat)) return 'accepte';
+  return 'attente';
+};
+
+/** Le plus récent d'abord ; à date égale l'ARS passe devant, il répond à l'ACS. */
+const plusRecentDabord = (a: LigneTeletransmission, b: LigneTeletransmission): number =>
+  b.date_avis.localeCompare(a.date_avis) ||
+  (b.nature === 'ACS' ? 0 : 1) - (a.nature === 'ACS' ? 0 : 1);
+
+/**
+ * Le dernier mot d'un destinataire, et lui seul.
+ *
+ * ⚠️ UNE DÉCLARATION REFUSÉE PUIS RÉGÉNÉRÉE EST ACCEPTÉE. Le cabinet corrige,
+ * redépose, et le destinataire accepte : la cellule doit passer au vert. Elle
+ * restait rouge, parce que le jugement cherchait « un refus quelque part » sans
+ * jamais regarder les dates — malgré un commentaire qui affirmait le contraire.
+ * Le travail refait n'apparaissait donc nulle part, et le suivi montrait un
+ * arriéré qui n'existait plus.
+ *
+ * C'est le DERNIER ARS qui tranche. À défaut d'ARS, l'ACS : un contrôle de
+ * conformité refusé arrête tout, la déclaration n'est jamais partie ; un ACS
+ * accepté n'est qu'un dépôt, donc une attente.
+ */
+function dernierMot(lignes: LigneTeletransmission[]): Verdict {
+  const ordonnees = lignes.slice().sort(plusRecentDabord);
+  const ars = ordonnees.find((l) => l.nature === 'ARS');
+  if (ars) return verdictDe(ars);
+  const acs = ordonnees[0];
+  return acs && verdictDe(acs) === 'refuse' ? 'refuse' : 'attente';
+}
+
 /**
  * État d'une cellule.
  *
- * Rouge : un refus, ou une déclaration bloquée. Vert : un ARS accepté — et lui
- * seul fait foi, l'ACS n'atteste que du dépôt. Orange : tout le reste, c'est-à-
- * dire l'attente.
+ * Rouge : le dernier mot d'un destinataire est un refus, ou une déclaration
+ * bloquée. Vert : un ARS accepté — et lui seul fait foi, l'ACS n'atteste que du
+ * dépôt. Orange : tout le reste, c'est-à-dire l'attente.
  *
- * L'ORDRE COMPTE : un refus l'emporte sur une acceptation antérieure. Une
- * déclaration acceptée puis refusée est refusée.
+ * ⚠️ LE JUGEMENT SE FAIT DESTINATAIRE PAR DESTINATAIRE, et ce n'est pas un
+ * raffinement. Une même cellule part souvent à la DGFiP ET aux banques du
+ * client — 436 lignes sur 6 075 au relevé du 2026-08-03, et le type `ILF` est
+ * même à 100 % bancaire. Prendre « le dernier ARS » toutes lignes confondues
+ * ferait passer au vert une liasse REFUSÉE PAR LA DGFiP au seul motif qu'une
+ * banque l'a acceptée après. Un refus de l'administration disparaîtrait de
+ * l'écran — exactement ce qu'un comptable ne doit jamais rater.
+ *
+ * Un destinataire dont le dernier mot est un refus garde donc la cellule rouge,
+ * quoi qu'en disent les autres.
  */
 export function etatCellule(lignes: LigneTeletransmission[]): EtatCellule | null {
   if (!lignes.length) return null;
-  const lignesRefusees = lignes.filter((l) => REJET.test(l.resultat) || l.bloquee);
-  const rejet = lignesRefusees.length > 0;
-  const anomalie = lignes.some((l) => ANOMALIE.test(l.resultat));
-  const arsAccepte = lignes.some((l) => l.nature === 'ARS' && ACCEPTE.test(l.resultat));
+
+  const parDestinataire = new Map<string, LigneTeletransmission[]>();
+  for (const l of lignes) {
+    const cle = l.destinataire || '';
+    if (!parDestinataire.has(cle)) parDestinataire.set(cle, []);
+    parDestinataire.get(cle)!.push(l);
+  }
+
+  const verdicts = [...parDestinataire.entries()].map(([destinataire, siennes]) => ({
+    destinataire,
+    verdict: dernierMot(siennes),
+    lignes: siennes,
+  }));
+
+  const refusees = verdicts.filter((v) => v.verdict === 'refuse');
+  const rejet = refusees.length > 0;
+  const arsAccepte = verdicts.some((v) => v.verdict === 'accepte');
+
+  // L'anomalie est celle de la décision RETENUE, et non de tout l'historique :
+  // une déclaration régénérée puis acceptée sans anomalie ne doit pas traîner
+  // l'anomalie de la tentative précédente.
+  const decisives = verdicts.flatMap((v) =>
+    v.lignes.slice().sort(plusRecentDabord).slice(0, 1)
+  );
+  const anomalie = decisives.some((l) => ANOMALIE.test(l.resultat));
+
   // Un « sans retour » n'est PAS une anomalie : c'est un silence du
   // destinataire, fréquent et souvent normal. Il mérite d'être nommé, pas
   // confondu avec une déclaration qui n'aurait jamais été déposée.
-  const sansRetour = !arsAccepte && lignes.some((l) => SANS_RETOUR.test(l.resultat));
+  const sansRetour = !arsAccepte && decisives.some((l) => SANS_RETOUR.test(l.resultat));
   const montant = lignes.reduce((total, l) => (l.montant ? total + Number(l.montant) : total), 0);
 
   return {
@@ -151,17 +220,19 @@ export function etatCellule(lignes: LigneTeletransmission[]): EtatCellule | null
     anomalie,
     // Le destinataire est NOMMÉ : « refusée par Banque Populaire Occitane » ne
     // se confond pas avec un refus de l'administration, là où « refusée par le
-    // destinataire » laissait tout supposer.
+    // destinataire » laissait tout supposer. Seuls les destinataires dont le
+    // DERNIER mot est un refus sont nommés — citer celui qui a refusé avant de
+    // finalement accepter serait un contresens.
     libelle: rejet
-      ? lignes.some((l) => l.bloquee)
+      ? refusees.some((v) => v.lignes.some((l) => l.bloquee))
         ? 'refusée (déclaration bloquée)'
-        : `refusée par ${nommer(lignesRefusees.map((l) => l.destinataire))}`
+        : `refusée par ${nommer(refusees.map((v) => v.destinataire))}`
       : arsAccepte
         ? anomalie
           ? 'acceptée avec anomalie'
           : 'acceptée'
         : sansRetour
-          ? `déposée, sans retour de ${nommer(lignes.filter((l) => SANS_RETOUR.test(l.resultat)).map((l) => l.destinataire))}`
+          ? `déposée, sans retour de ${nommer(decisives.filter((l) => SANS_RETOUR.test(l.resultat)).map((l) => l.destinataire))}`
           : 'déposée, en attente de réponse',
     // À date égale — deux accusés émis le même jour, c'est courant — l'ACS
     // passe devant : il atteste du dépôt, l'ARS y répond. Sans ce départage, la

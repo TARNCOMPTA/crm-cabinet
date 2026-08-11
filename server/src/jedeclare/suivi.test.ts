@@ -61,7 +61,10 @@ describe('etatCellule — les resultats reels de jedeclare', () => {
     expect(etatCellule([ligne({ nature: 'ACS', resultat: 'refusees' })])?.etat).toBe('rouge');
   });
 
-  /** Un refus l'emporte sur une acceptation anterieure. */
+  /**
+   * C'est le DERNIER mot qui compte, et ici c'est un refus. Le cas symétrique —
+   * un refus suivi d'une acceptation — est vert, et vit plus bas.
+   */
   it('rouge quand une acceptation est suivie d un refus', () => {
     const e = etatCellule([
       ligne({ nature: 'ARS', resultat: 'accepteesprecedement', date_avis: '2026-06-01' }),
@@ -232,5 +235,123 @@ describe('pieceLisible — la prudence, compte par compte', () => {
 
   it('un accuse deja recupere reste lisible meme sur un compte ferme', () => {
     expect(pieceLisible({ compte: 1, recuperee: true }, true, FERME)).toBe(true);
+  });
+});
+
+/**
+ * La déclaration régénérée.
+ * ---------------------------------------------------------------------------
+ * Le cabinet corrige une déclaration refusée, la redépose, et le destinataire
+ * l'accepte. La cellule doit passer au VERT : le travail est fait.
+ *
+ * Elle restait rouge. Le jugement cherchait « un refus quelque part » sans
+ * jamais regarder les dates — alors que son commentaire affirmait le contraire
+ * (« l'ordre compte : un refus l'emporte sur une acceptation antérieure »).
+ * Conséquence : un arriéré qui n'existait plus restait affiché indéfiniment, et
+ * une correction déjà faite se relisait comme une correction à faire.
+ */
+describe('etatCellule — une declaration refusee puis regeneree', () => {
+  it('VERT quand le dernier ARS accepte, malgre un refus anterieur', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ACS', resultat: 'acceptée', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'refusees', date_avis: '2026-06-03' }),
+      ligne({ nature: 'ACS', resultat: 'acceptée', date_avis: '2026-06-10' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-12' }),
+    ]);
+    expect(e?.etat, 'un travail refait qui reste affiche comme a faire').toBe('vert');
+    expect(e?.libelle).toBe('acceptée');
+  });
+
+  it('le refus reste le dernier mot quand rien ne l a suivi', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'refusees', date_avis: '2026-07-01' }),
+    ]);
+    expect(e?.etat).toBe('rouge');
+  });
+
+  /** Un ACS refusé arrête tout — sauf si un dépôt ultérieur a abouti. */
+  it('VERT quand un ACS refuse est suivi d un ARS accepte', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ACS', resultat: 'refusees', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ACS', resultat: 'acceptée', date_avis: '2026-06-05' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-07' }),
+    ]);
+    expect(e?.etat).toBe('vert');
+  });
+
+  /** Une déclaration bloquée n'est partie chez personne — le redépôt, si. */
+  it('VERT quand une declaration bloquee est redeposee et acceptee', () => {
+    const e = etatCellule([
+      ligne({ resultat: 'acceptée', bloquee: true, date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-08' }),
+    ]);
+    expect(e?.etat).toBe('vert');
+  });
+
+  /** L'anomalie de la tentative ratée ne doit pas survivre à la correction. */
+  it('n herite pas de l anomalie de la tentative precedente', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ARS', resultat: 'acceptée avec anomalie', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-20' }),
+    ]);
+    expect(e?.etat).toBe('vert');
+    expect(e?.anomalie).toBe(false);
+    expect(e?.libelle).toBe('acceptée');
+  });
+
+  it('a date egale, l ARS tranche apres l ACS', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ARS', resultat: 'acceptée', date_avis: '2026-06-12' }),
+      ligne({ nature: 'ACS', resultat: 'refusees', date_avis: '2026-06-12' }),
+    ]);
+    expect(e?.etat).toBe('vert');
+  });
+});
+
+/**
+ * ⚠️ LE GARDE-FOU DE LA REGLE PRECEDENTE.
+ *
+ * « Le dernier ARS fait foi » est juste POUR UN DESTINATAIRE DONNE. Applique a
+ * la cellule entiere, il efface un refus : une meme cellule part souvent a la
+ * DGFiP ET aux banques du client — 436 lignes sur 6 075 au releve du
+ * 2026-08-03, et le type ILF est a 100 % bancaire. Une liasse refusee par
+ * l'administration passerait au vert parce qu'une banque l'a acceptee deux
+ * jours plus tard.
+ *
+ * C'est le seul endroit ou la regle demandee devait etre resserree, et ces
+ * tests sont ce qui l'empeche de se relacher.
+ */
+describe('etatCellule — un refus ne s efface pas par un autre destinataire', () => {
+  it('ROUGE quand la DGFiP refuse et qu une banque accepte apres', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ARS', resultat: 'refusees', destinataire: 'DGFiP', date_avis: '2026-06-03' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', destinataire: 'LCL', date_avis: '2026-06-20' }),
+    ]);
+    expect(e?.etat, 'un refus de l administration masque par une banque').toBe('rouge');
+    expect(e?.libelle).toBe('refusée par DGFiP');
+  });
+
+  it('ne nomme que le destinataire dont le dernier mot est un refus', () => {
+    const e = etatCellule([
+      // La banque a refuse, puis accepte le redepot : elle n'est plus en cause.
+      ligne({ nature: 'ARS', resultat: 'refusees', destinataire: 'LCL', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', destinataire: 'LCL', date_avis: '2026-06-15' }),
+      ligne({ nature: 'ARS', resultat: 'refusees', destinataire: 'DGFiP', date_avis: '2026-06-10' }),
+    ]);
+    expect(e?.etat).toBe('rouge');
+    expect(e?.libelle, 'nommer qui a fini par accepter serait un contresens').toBe(
+      'refusée par DGFiP'
+    );
+  });
+
+  it('VERT quand chaque destinataire a fini par accepter', () => {
+    const e = etatCellule([
+      ligne({ nature: 'ARS', resultat: 'refusees', destinataire: 'DGFiP', date_avis: '2026-06-01' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', destinataire: 'DGFiP', date_avis: '2026-06-15' }),
+      ligne({ nature: 'ARS', resultat: 'refusees', destinataire: 'LCL', date_avis: '2026-06-02' }),
+      ligne({ nature: 'ARS', resultat: 'acceptée', destinataire: 'LCL', date_avis: '2026-06-16' }),
+    ]);
+    expect(e?.etat).toBe('vert');
   });
 });
