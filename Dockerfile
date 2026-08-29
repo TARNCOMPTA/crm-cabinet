@@ -42,7 +42,7 @@
 # Pour le relever a la main :  docker buildx imagetools inspect node:22-alpine
 
 # ---- 1. Construction du front ---------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS front
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS front
 WORKDIR /build
 
 # Les dépendances d'abord : cette couche reste en cache tant que package*.json
@@ -74,7 +74,7 @@ COPY src ./src
 RUN npm run build
 
 # ---- 2. Construction du serveur -------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS serveur
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS serveur
 WORKDIR /build
 
 COPY server/package.json server/package-lock.json ./
@@ -90,7 +90,7 @@ COPY server/src ./src
 RUN npx tsc -p tsconfig.json
 
 # ---- 3. Image d'exécution --------------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3
 WORKDIR /app
 
 # `postgresql-client` fournit pg_dump : c'est ce qui permet à maj.sh de
