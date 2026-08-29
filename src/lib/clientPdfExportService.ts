@@ -5,6 +5,54 @@ import { fetchContactsForClient } from './contactsDirectoryService';
 import { fetchMeetingNotes } from './meetingNotesService';
 import { listAttachments, STATUS_LABELS as REVENUE_STATUS_LABELS } from './revenueDeclarationService';
 
+/**
+ * Les lignes de l'export, taillees sur les `select` de la page precedente.
+ *
+ * `sanitize()` et `formatDate()` acceptent deja `null` : les colonnes nullables
+ * sont donc declarees telles quelles, sans repli force. Le nombre est laisse en
+ * `number | string | null` la ou la colonne est `numeric` — Supabase la rend en
+ * chaine, et le code fait deja `Number(...)`.
+ */
+interface LigneCollaborateur {
+  role: string | null;
+  created_at: string | null;
+  user: { prenom: string | null; nom: string | null; email: string | null; job_role: string | null } | null;
+}
+interface LigneDirigeant {
+  role: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  company_officers: {
+    first_name: string | null; last_name: string | null;
+    denomination: string | null; person_type: string | null;
+  } | null;
+}
+interface LigneDepot {
+  date_cloture: string | null; date_parution: string | null;
+  type_depot: string | null; tribunal: string | null; numero_annonce: number | null;
+}
+interface LigneActe {
+  act_type: string | null; act_date: string | null; act_category: string | null;
+  deposit_date: string | null; inpi_reference: string | null;
+}
+interface LigneDeclarationRevenus {
+  id: string; annee: number | string | null; person_name: string | null;
+  statut: string | null; commentaire: string | null;
+}
+interface LigneRelance {
+  numero_facture: string | null; libelle: string | null;
+  montant: number | string | null; montant_regle: number | string | null;
+  date_facture: string | null; date_echeance: string | null; statut: string | null;
+  nombre_relances: number | null; derniere_relance: string | null;
+  mode_reglement: string | null; date_reglement: string | null;
+}
+interface LigneArd {
+  annee: number | string | null; ca: number | string | null;
+  charges_totales: number | string | null; frais_compta: number | string | null;
+  adhesion_cga: number | string | null; cfe: number | string | null;
+  autres_charges: number | string | null;
+}
+
 const MONTHS_FR = [
   'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre',
@@ -362,6 +410,7 @@ export async function exportClientToPdf({
       ? [['Pays', sanitize(client.pays)] as [string, string]]
       : []),
     ['Email', sanitize(client.email)],
+    ['Email 2', sanitize(client.email_2)],
     ['Telephone', sanitize(client.telephone)],
     ['Telephone 2', sanitize(client.telephone_2)],
     ['Contact principal', sanitize(client.contact_principal)],
@@ -395,10 +444,10 @@ export async function exportClientToPdf({
 
   // Section: Collaborateurs
   drawSectionTitle(cursor, 'Collaborateurs assignes');
-  const collabRows = (collabRes.data ?? []).map((c: any) => {
+  const collabRows = (collabRes.data ?? []).map((c: LigneCollaborateur) => {
     const user = c.user;
     const fullName = user ? `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() : '-';
-    const roleLabel = roleMap.get(c.role) || c.role || '-';
+    const roleLabel = (c.role ? roleMap.get(c.role) : null) || c.role || '-';
     return [
       fullName || '-',
       sanitize(user?.job_role),
@@ -422,7 +471,7 @@ export async function exportClientToPdf({
 
   // Section: Dirigeants
   drawSectionTitle(cursor, 'Dirigeants');
-  const officerRows = (officersRes.data ?? []).map((o: any) => {
+  const officerRows = (officersRes.data ?? []).map((o: LigneDirigeant) => {
     const off = o.company_officers;
     const name = off
       ? off.person_type === 'morale'
@@ -440,18 +489,18 @@ export async function exportClientToPdf({
 
   // Section: Depots de comptes
   drawSectionTitle(cursor, 'Depots de comptes (BODACC)');
-  const depotRows = (depotsRes.data ?? []).map((d: any) => [
+  const depotRows = (depotsRes.data ?? []).map((d: LigneDepot) => [
     formatDate(d.date_cloture),
     sanitize(d.type_depot),
     formatDate(d.date_parution),
     sanitize(d.tribunal),
-    sanitize(d.numero_annonce),
+    d.numero_annonce != null ? String(d.numero_annonce) : '-',
   ]);
   drawTable(cursor, ['Cloture', 'Type', 'Parution', 'Tribunal', 'Annonce'], depotRows);
 
   // Section: Actes juridiques
   drawSectionTitle(cursor, 'Actes juridiques');
-  const actRows = (legalActsRes.data ?? []).map((a: any) => [
+  const actRows = (legalActsRes.data ?? []).map((a: LigneActe) => [
     formatDate(a.act_date),
     sanitize(a.act_type),
     sanitize(a.act_category),
@@ -463,13 +512,13 @@ export async function exportClientToPdf({
   // Section: Déclarations de revenus
   drawSectionTitle(cursor, 'Déclarations de revenus');
   const declRows: string[][] = [];
-  for (const decl of (revenueDeclRes.data ?? []) as any[]) {
+  for (const decl of (revenueDeclRes.data ?? []) as LigneDeclarationRevenus[]) {
     const atts = attachmentsByDeclaration.get(decl.id) ?? [];
     const attText = atts.length > 0 ? atts.join('\n') : '-';
     declRows.push([
       String(decl.annee),
       sanitize(decl.person_name),
-      REVENUE_STATUS_LABELS[decl.statut as keyof typeof REVENUE_STATUS_LABELS] || decl.statut,
+      REVENUE_STATUS_LABELS[decl.statut as keyof typeof REVENUE_STATUS_LABELS] || decl.statut || '-',
       sanitize(decl.commentaire),
       attText,
     ]);
@@ -478,7 +527,7 @@ export async function exportClientToPdf({
 
   // Section: Relances
   drawSectionTitle(cursor, 'Relances');
-  const relanceRows = (relancesRes.data ?? []).map((r: any) => [
+  const relanceRows = (relancesRes.data ?? []).map((r: LigneRelance) => [
     sanitize(r.numero_facture),
     sanitize(r.libelle),
     formatDate(r.date_facture),
@@ -497,7 +546,7 @@ export async function exportClientToPdf({
   // Section: ARD calculations (LMNP)
   if (ardRes.data && ardRes.data.length > 0) {
     drawSectionTitle(cursor, 'Calculs ARD (LMNP)');
-    const ardRows = ardRes.data.map((a: any) => [
+    const ardRows = ardRes.data.map((a: LigneArd) => [
       String(a.annee),
       `${Number(a.ca || 0).toFixed(2)}`,
       `${Number(a.charges_totales || 0).toFixed(2)}`,

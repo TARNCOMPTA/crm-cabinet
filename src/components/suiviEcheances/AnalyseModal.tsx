@@ -25,7 +25,6 @@ interface Props {
   onFermer: () => void;
   debut: string;
   fin: string;
-  procedure: string;
   teleprocedures: Record<string, string>;
   onLancer: (demande: {
     debut: string;
@@ -40,13 +39,15 @@ export function AnalyseModal({
   onFermer,
   debut,
   fin,
-  procedure,
   teleprocedures,
   onLancer,
 }: Props) {
   const [d, setD] = useState(debut);
   const [f, setF] = useState(fin);
-  const [p, setP] = useState(procedure);
+  // « Toutes » par defaut : l'ecran ne porte plus de filtre de teleprocedure
+  // dont heriter, et une analyse restreinte a l'insu de celui qui la lance
+  // laisserait croire que jedeclare n'a rien d'autre.
+  const [p, setP] = useState('TOUTES');
   const [limite, setLimite] = useState(150);
   const [encours, setEncours] = useState(false);
   const [bilan, setBilan] = useState<BilanAnalyse | null>(null);

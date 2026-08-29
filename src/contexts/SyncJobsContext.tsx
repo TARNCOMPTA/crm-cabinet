@@ -12,6 +12,7 @@ import {
 } from '../lib/syncJobsService';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import type { Json } from '../types/database';
 
 interface SyncJobsContextValue {
   jobs: SyncJob[];
@@ -20,7 +21,7 @@ interface SyncJobsContextValue {
   startJob: (input: {
     jobType: SyncJobType;
     total?: number;
-    payload?: Record<string, unknown>;
+    payload?: Json;
     message?: string;
   }) => Promise<SyncJob | null>;
   updateJob: typeof updateSyncJob;

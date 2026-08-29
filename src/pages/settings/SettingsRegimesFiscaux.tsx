@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/database';
+import { codeErreur } from '../../lib/erreurs';
 
 /**
  * Exactement la projection selectionnee. Ecrite a la main, elle donnait
@@ -53,7 +54,7 @@ export function SettingsRegimesFiscaux() {
 
       if (error) throw error;
       setRegimes(data || []);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des regimes fiscaux', 'error');
       setRegimes([]);
     } finally {
@@ -125,8 +126,8 @@ export function SettingsRegimesFiscaux() {
 
       setShowModal(false);
       loadData();
-    } catch (error: any) {
-      if (error?.code === '23505') {
+    } catch (error) {
+      if (codeErreur(error) === '23505') {
         showToast('Ce code de regime existe deja', 'error');
       } else {
         showToast(
@@ -148,8 +149,8 @@ export function SettingsRegimesFiscaux() {
       showToast('Regime fiscal supprime', 'success');
       setDeleteConfirm(null);
       loadData();
-    } catch (error: any) {
-      if (error?.code === '23503') {
+    } catch (error) {
+      if (codeErreur(error) === '23503') {
         showToast('Impossible de supprimer : ce regime est utilise par des clients', 'error');
       } else {
         showToast('Erreur lors de la suppression', 'error');

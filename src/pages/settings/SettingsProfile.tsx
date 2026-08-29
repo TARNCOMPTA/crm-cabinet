@@ -56,7 +56,7 @@ export function SettingsProfile() {
           default_collaborator_role_key: data.default_collaborator_role_key || '',
         });
       }
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement du profil', 'error');
     }
   }
@@ -84,7 +84,7 @@ export function SettingsProfile() {
       if (error) throw error;
 
       showToast('Profil mis à jour avec succès', 'success');
-    } catch (error: any) {
+    } catch {
       showToast('Erreur lors de la mise à jour du profil', 'error');
     } finally {
       setLoading(false);

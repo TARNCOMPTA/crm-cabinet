@@ -188,3 +188,76 @@ describe('sa propre fiche de profil', () => {
     expect(v.autorise).toBe(false);
   });
 });
+
+/**
+ * Les appels RPC.
+ * ---------------------------------------------------------------------------
+ * ⚠️ TOUT PASSAIT. `nomTable()` rend « rpc » pour n'importe quelle fonction, et
+ * cette pseudo-table n'etant dans aucune liste, le proxy relayait sans controle
+ * les huit fonctions du schema `public`.
+ *
+ * La consequence n'etait pas theorique : `create_notification` est
+ * SECURITY DEFINER, son declencheur AFTER INSERT remplit `email_queue`, et
+ * l'ordonnanceur la vide toutes les deux minutes. N'importe quel collaborateur
+ * connecte faisait donc partir un courriel DEPUIS LE SMTP DU CABINET, vers
+ * n'importe quel utilisateur, avec le titre, le message et le lien de son choix.
+ */
+describe('deciderAcces — les appels RPC', () => {
+  const appel = (url: string, roleApp = 'user') =>
+    deciderAcces({ methode: 'POST', url, roleApp, sub: 'moi', corps: {} });
+
+  it('laisse passer les quatre fonctions que le front appelle vraiment', () => {
+    for (const f of [
+      'get_dashboard_stats',
+      'initialize_bilan_defaults',
+      'initialize_opportunity_defaults',
+      'replace_client_collaborators',
+    ]) {
+      expect(appel(`/rest/v1/rpc/${f}`).autorise, f).toBe(true);
+    }
+  });
+
+  /** ⭐ LE DEFAUT CORRIGE : l'envoi de courriel au nom du cabinet. */
+  it('REFUSE create_notification, meme a un administrateur', () => {
+    const u = appel('/rest/v1/rpc/create_notification');
+    expect(u.autorise, 'un collaborateur peut ecrire au nom du cabinet').toBe(false);
+    // L'administrateur non plus : le navigateur n'a aucune raison de l'appeler,
+    // et le serveur ne passe pas par ce proxy.
+    expect(appel('/rest/v1/rpc/create_notification', 'admin').autorise).toBe(false);
+  });
+
+  it('refuse les autres fonctions internes', () => {
+    for (const f of ['process_email_digest', 'auto_archive_done_tasks', 'build_notification_email_html']) {
+      expect(appel(`/rest/v1/rpc/${f}`).autorise, f).toBe(false);
+    }
+  });
+
+  /**
+   * Le chemin est decode AVANT d'etre decoupe : PostgREST route sur le chemin
+   * decode, donc `rpc%2fcreate_notification` y designe bien la fonction.
+   */
+  it('n est pas contournable par un separateur encode', () => {
+    for (const u of [
+      '/rest/v1/rpc%2fcreate_notification',
+      '/rest/v1/rpc%2Fcreate_notification',
+    ]) {
+      expect(appel(u).autorise, u).toBe(false);
+    }
+  });
+
+  it('refuse une fonction inconnue plutot que de la relayer', () => {
+    expect(appel('/rest/v1/rpc/fonction_ajoutee_demain').autorise).toBe(false);
+  });
+
+  /** Le refus doit nommer la fonction : un 403 muet ne se diagnostique pas. */
+  it('nomme la fonction refusee', () => {
+    const v = appel('/rest/v1/rpc/create_notification');
+    expect(v.autorise).toBe(false);
+    if (!v.autorise) expect(v.message).toMatch(/create_notification/);
+  });
+
+  /** Une table qui commencerait par « rpc » n'est pas un appel RPC. */
+  it('ne confond pas une table nommee rpc_quelque_chose avec un appel', () => {
+    expect(appel('/rest/v1/rpc_journal?select=*').autorise).toBe(true);
+  });
+});

@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { prendreVerrou, rendreVerrou } from './verrou-base';
 
 /**
  * Le schéma appliqué à un vrai PostgreSQL.
@@ -38,7 +39,7 @@ const URL_TEST = process.env.DATABASE_URL_TEST;
 const suite = URL_TEST ? describe : describe.skip;
 
 /**
- * Les tables attendues dans `public` : 81 metier, plus `passkeys` et
+ * Les tables attendues dans `public` : 83 metier, plus `passkeys` et
  * `enrolment_codes` que `auth-interne.sql` ajoute.
  *
  * DEUX ASSERTIONS S'EN SERVENT, et le nombre etait ecrit deux fois. L'une compte
@@ -47,13 +48,14 @@ const suite = URL_TEST ? describe : describe.skip;
  * ensemble ne le garantissent pas — ils ont d'ailleurs derive ensemble, restes
  * a 78 quand l'OAuth du connecteur MCP (`mcp_oauth_clients`, `mcp_oauth_codes`,
  * `mcp_oauth_tokens`) et les campagnes (`mailing_campagnes`,
- * `mailing_destinataires`) ont porte le total a 83.
+ * `mailing_destinataires`) ont porte le total a 83. La repartition des parts
+ * (`client_associes`, increment 013) l'a porte a 85.
  *
  * Ce qu'un ecart signale, et qui reste la raison d'etre du controle : un
  * increment qui cree une table absente de `cible.sql`, donc une installation
  * neuve qui ne l'aurait jamais.
  */
-const TABLES_ATTENDUES = 83;
+const TABLES_ATTENDUES = 85;
 
 suite('schema appliqué à PostgreSQL', () => {
   const client = new pg.Client({ connectionString: URL_TEST });
@@ -61,6 +63,9 @@ suite('schema appliqué à PostgreSQL', () => {
 
   beforeAll(async () => {
     await client.connect();
+    // Le verrou AVANT le premier geste : `tests/mcp-sql.test.ts` rase la même
+    // base, et vitest lance les deux fichiers en parallèle. Voir verrou-base.ts.
+    await prendreVerrou(client);
     // Base jetable : on repart d'un schéma public vide à chaque exécution, sans
     // quoi le test ne dirait rien d'une seconde application.
     await client.query('DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;');
@@ -95,6 +100,7 @@ suite('schema appliqué à PostgreSQL', () => {
   }, 120_000);
 
   afterAll(async () => {
+    await rendreVerrou(client);
     await client.end().catch(() => {});
   });
 
@@ -643,6 +649,400 @@ suite('schema appliqué à PostgreSQL', () => {
         WHERE n.nspname = 'crm_meta' ORDER BY 1`
     );
     expect(fn.map((f) => f.proname)).toEqual(['est_entrepreneur_individuel', 'numero_tva_fr']);
+  });
+
+  /**
+   * Le contrat de l'increment 010 : le courriel de notification n'est plus
+   * injectable.
+   *
+   * Sur `cible.sql` SEUL, comme les deux precedents : trouver l'echappement ici
+   * prouve qu'il y a bien ete reporte. Une installation neuve depourvue du
+   * correctif serait pourtant marquee a jour par le registre, donc jamais
+   * rattrapee — et enverrait des courriels injectables pour toujours.
+   */
+  it('porte le contrat complet de l increment 010', async () => {
+    // Le titre et le message sont du TEXTE : le balisage doit ressortir inerte.
+    const { rows: ech } = await client.query(
+      `SELECT build_notification_email_html(
+                'task_assigned', '<img src=x onerror=alert(1)>',
+                '<script>alert(1)</script>', NULL) AS h`
+    );
+    expect(ech[0].h, 'le titre est injecte tel quel dans le courriel').not.toContain(
+      '<img src=x'
+    );
+    expect(ech[0].h, 'le message est injecte tel quel').not.toContain('<script>');
+
+    // Un guillemet dans le lien ne doit pas sortir de l'attribut href.
+    const { rows: attr } = await client.query(
+      `SELECT build_notification_email_html('t', 't', 'm', '/a" onmouseover="x') AS h`
+    );
+    expect(attr[0].h).not.toContain('" onmouseover=');
+
+    // Echapper ne suffit pas pour un href : les schemas vivants sont refuses,
+    // le bouton disparait plutot que de conduire ailleurs.
+    for (const lien of ['javascript:alert(1)', '//evil.tld/x', 'data:text/html,x']) {
+      const { rows } = await client.query(
+        `SELECT build_notification_email_html('t', 't', 'm', $1) AS h`,
+        [lien]
+      );
+      expect(rows[0].h, `lien accepte : ${lien}`).not.toContain('Voir le detail');
+    }
+
+    // ⚠️ ET LES NOTIFICATIONS REELLES CONTINUENT DE POSER LEUR BOUTON : elles
+    // emploient un chemin RELATIF (« /tasks?id=... »). Une restriction aux seuls
+    // http(s) aurait retire le bouton de tous les courriels du produit.
+    const { rows: relatif } = await client.query(
+      `SELECT build_notification_email_html('task_assigned', 'T', 'M', '/tasks?id=abc') AS h`
+    );
+    expect(relatif[0].h, 'le lien relatif des vraies notifications a saute').toContain(
+      'href="/tasks?id=abc"'
+    );
+  });
+
+  /**
+   * Meme contrat de parite, pour l'increment 009.
+   *
+   * Cette suite tourne sur `cible.sql` SEUL : trouver la colonne ici prouve que
+   * le DDL de l'increment y a bien ete reporte. Sans cela, une installation
+   * neuve ne l'aurait pas — et serait pourtant marquee a jour par le registre,
+   * donc jamais rattrapee. Le suivi des echeances repondrait alors en erreur SQL
+   * sur son `SELECT ... tva_jour_echeance`, pour toute la page.
+   */
+  it('porte le contrat complet de l increment 009', async () => {
+    const { rows } = await client.query(
+      `SELECT is_nullable FROM information_schema.columns
+        WHERE table_name = 'clients' AND column_name = 'tva_jour_echeance'`
+    );
+    expect(rows, 'clients.tva_jour_echeance manque a cible.sql').toHaveLength(1);
+    // Nullable, et c'est le sens meme de la colonne : NULL veut dire « applique
+    // la regle CA3 », et non « pas encore calcule ».
+    expect(rows[0].is_nullable).toBe('YES');
+
+    // La borne est le calendrier civil, et non les quatre jours du calendrier
+    // CA3 : la surcharge existe precisement pour les cas que la regle ne couvre
+    // pas, et la brider a {16,19,21,24} lui retirerait sa raison d'etre.
+    await client.query(
+      `INSERT INTO clients (nom_entreprise, tva_jour_echeance) VALUES ('ZZ ECHEANCE', 24)`
+    );
+    await expect(
+      client.query(
+        `INSERT INTO clients (nom_entreprise, tva_jour_echeance) VALUES ('ZZ ECHEANCE HORS', 32)`
+      )
+    ).rejects.toThrow(/clients_tva_jour_echeance_check/);
+  });
+
+  /**
+   * Meme contrat de parite, pour l'increment 012.
+   *
+   * Une colonne oubliee dans `cible.sql` serait ici particulierement sournoise.
+   * `ClientDetail` envoie un patch des champs MODIFIES : sur une installation
+   * neuve depourvue de la colonne, la fiche s'afficherait normalement et ne
+   * casserait qu'au moment ou quelqu'un remplit la seconde adresse — un
+   * PGRST204 « column not found » sur l'enregistrement, donc la perte de TOUTES
+   * les modifications saisies en meme temps, pas seulement de l'adresse.
+   */
+  it('porte le contrat complet de l increment 012', async () => {
+    const { rows } = await client.query(
+      `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_name = 'clients' AND column_name = 'email_2'`
+    );
+    expect(rows, 'clients.email_2 manque a cible.sql').toHaveLength(1);
+    expect(rows[0].data_type).toBe('text');
+    expect(rows[0].is_nullable).toBe('YES');
+    // Sans defaut, comme `email` : une fiche sans seconde adresse n'en a pas,
+    // et une chaine vide se distinguerait mal d'une saisie effacee.
+    expect(rows[0].column_default).toBeNull();
+
+    // Le point de la colonne : elle accepte ce que `email` accepte, sans CHECK
+    // de format qui refuserait a la seconde ce que la premiere prend.
+    await client.query(
+      `INSERT INTO clients (nom_entreprise, email, email_2)
+       VALUES ('ZZ DEUX ADRESSES', 'direction@exemple.fr', 'compta@exemple.fr')`
+    );
+    const { rows: relu } = await client.query(
+      `SELECT email_2 FROM clients WHERE nom_entreprise = 'ZZ DEUX ADRESSES'`
+    );
+    expect(relu[0].email_2).toBe('compta@exemple.fr');
+  });
+
+  /**
+   * Meme contrat de parite, pour l'increment 013 — la repartition des parts.
+   *
+   * Ici la parite ne porte plus sur une colonne mais sur une TABLE ENTIERE, et
+   * l'oubli serait franc : sur une installation neuve, l'onglet « Parts » de la
+   * fiche client repondrait PGRST205 des l'ouverture.
+   *
+   * ⚠️ CHAQUE GARDE EST PROUVEE EN LA FAISANT ECHOUER, et non en constatant que
+   * l'insertion nominale passe. Une contrainte reportee dans `cible.sql` sous un
+   * nom different, ou perdue en route, laisserait passer tous les tests ecrits a
+   * l'endroit — et la base accepterait alors une detention a zero part ou deux
+   * lignes pour le meme associe. C'est exactement ce que ces `rejects` couvrent.
+   */
+  it('porte le contrat complet de l increment 013', async () => {
+    // ---- La colonne de la fiche, denominateur des pourcentages -------------
+    const { rows: totalCol } = await client.query(
+      `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_name = 'clients' AND column_name = 'parts_totales'`
+    );
+    expect(totalCol, 'clients.parts_totales manque a cible.sql').toHaveLength(1);
+    expect(totalCol[0].data_type).toBe('numeric');
+    // Nullable et sans defaut : un `0` par defaut mentirait, en ayant l'air
+    // d'une saisie tout en rendant toute division impossible.
+    expect(totalCol[0].is_nullable).toBe('YES');
+    expect(totalCol[0].column_default).toBeNull();
+
+    // ---- La table ----------------------------------------------------------
+    const { rows: colonnes } = await client.query(
+      `SELECT column_name, data_type, is_nullable, column_default
+         FROM information_schema.columns
+        WHERE table_name = 'client_associes' ORDER BY column_name`
+    );
+    // La liste est EXACTE et non « contient » : elle attrape aussi bien une
+    // colonne perdue qu'une colonne ajoutee a l'increment sans etre reportee
+    // dans `cible.sql`. Elle grandit donc a chaque increment qui touche la
+    // table — `source` vient de l'increment 014.
+    expect(
+      colonnes.map((c) => c.column_name),
+      'client_associes manque a cible.sql'
+    ).toEqual([
+      'acte_source', 'client_id', 'created_at', 'date_effet', 'demembrement',
+      'id', 'legal_act_id', 'nb_parts', 'notes', 'officer_id', 'source',
+      'updated_at',
+    ]);
+
+    const parColonne = Object.fromEntries(colonnes.map((c) => [c.column_name, c]));
+    expect(parColonne.nb_parts.is_nullable).toBe('NO');
+    expect(parColonne.demembrement.is_nullable).toBe('NO');
+    expect(parColonne.demembrement.column_default).toContain('pleine-propriete');
+    // `date_effet` reste nullable : une reprise de portefeuille connait souvent
+    // la detention sans la date, et une date inventee ne se voit pas.
+    expect(parColonne.date_effet.is_nullable).toBe('YES');
+
+    // ---- Le jeu d'essai ----------------------------------------------------
+    const { rows: sci } = await client.query(
+      `INSERT INTO clients (nom_entreprise, capital_social, parts_totales)
+       VALUES ('ZZ SCI DES PARTS', 10000, 1000) RETURNING id`
+    );
+    const { rows: pers } = await client.query(
+      `INSERT INTO company_officers (first_name, last_name)
+       VALUES ('ZZCLAUDE', 'ZZDURAND') RETURNING id`
+    );
+    const clientId = sci[0].id as string;
+    const officerId = pers[0].id as string;
+
+    await client.query(
+      `INSERT INTO client_associes (client_id, officer_id, nb_parts, date_effet)
+       VALUES ($1, $2, 250, '2019-03-12')`,
+      [clientId, officerId]
+    );
+
+    // ---- Ce que la base doit REFUSER ---------------------------------------
+
+    // Une detention nulle est une ligne a supprimer, pas une ligne a zero.
+    await expect(
+      client.query(
+        `INSERT INTO client_associes (client_id, officer_id, nb_parts, demembrement)
+         VALUES ($1, $2, 0, 'usufruit')`,
+        [clientId, officerId]
+      )
+    ).rejects.toThrow(/client_associes_nb_parts_check/);
+
+    // Deux lignes pour le meme associe dans le meme demembrement : la somme des
+    // parts deviendrait fausse sans que rien ne le signale.
+    await expect(
+      client.query(
+        `INSERT INTO client_associes (client_id, officer_id, nb_parts)
+         VALUES ($1, $2, 10)`,
+        [clientId, officerId]
+      )
+    ).rejects.toThrow(/client_associes_client_officer_demembrement_key/);
+
+    // Un demembrement hors des trois formes reconnues : une attestation qui
+    // annoncerait une qualite inventee serait fausse, pas imprecise.
+    await expect(
+      client.query(
+        `INSERT INTO client_associes (client_id, officer_id, nb_parts, demembrement)
+         VALUES ($1, $2, 10, 'usufruit-partiel')`,
+        [clientId, officerId]
+      )
+    ).rejects.toThrow(/client_associes_demembrement_check/);
+
+    // ---- Ce que la base doit ACCEPTER --------------------------------------
+
+    // La MEME personne, en nue-propriete : c'est le cas ordinaire d'une SCI
+    // familiale apres donation, et c'est la raison d'etre du troisieme membre
+    // de la cle d'unicite.
+    await client.query(
+      `INSERT INTO client_associes (client_id, officer_id, nb_parts, demembrement)
+       VALUES ($1, $2, 100, 'nue-propriete')`,
+      [clientId, officerId]
+    );
+
+    // ---- Le declencheur updated_at -----------------------------------------
+    await client.query(
+      `UPDATE client_associes SET nb_parts = 300
+        WHERE client_id = $1 AND demembrement = 'pleine-propriete'`,
+      [clientId]
+    );
+    const { rows: bouge } = await client.query(
+      `SELECT (updated_at > created_at) AS bouge FROM client_associes
+        WHERE client_id = $1 AND demembrement = 'pleine-propriete'`,
+      [clientId]
+    );
+    expect(bouge[0].bouge, 'le declencheur updated_at manque').toBe(true);
+
+    // ---- La cascade --------------------------------------------------------
+    // Sans elle, supprimer un client laisserait des detentions rattachees a
+    // personne, et le total de parts du cabinet ne voudrait plus rien dire.
+    await client.query('DELETE FROM clients WHERE id = $1', [clientId]);
+    const { rows: reste } = await client.query(
+      'SELECT count(*)::int AS n FROM client_associes WHERE client_id = $1',
+      [clientId]
+    );
+    expect(reste[0].n).toBe(0);
+
+    await client.query('DELETE FROM company_officers WHERE id = $1', [officerId]);
+  });
+
+  /**
+   * Le contrat de l'increment 014 : d'ou vient une ligne, et qui a le droit
+   * d'en poser.
+   *
+   * ⚠️ LES DEUX COLONNES ONT LE MEME OBJET — EMPECHER UN ELARGISSEMENT
+   * SILENCIEUX — et leur DEFAUT est ce qui le porte. Un `source` par defaut a
+   * `statuts` deprecierait du travail humain deja saisi ; un `peut_ecrire` par
+   * defaut a `true` donnerait l'ecriture a toute cle deja emise, du seul fait
+   * qu'on a deploye une version. C'est exactement l'effet de bord contre lequel
+   * le connecteur se premunit, et c'est pour cela que les defauts sont testes
+   * ici plutot que constates a la lecture.
+   */
+  it('porte le contrat complet de l increment 014', async () => {
+    // ---- L'origine d'une ligne de repartition ------------------------------
+    const { rows: src } = await client.query(
+      `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_name = 'client_associes' AND column_name = 'source'`
+    );
+    expect(src, 'client_associes.source manque a cible.sql').toHaveLength(1);
+    expect(src[0].data_type).toBe('text');
+    expect(src[0].is_nullable).toBe('NO');
+    expect(src[0].column_default).toContain('manual');
+
+    const { rows: sci } = await client.query(
+      `INSERT INTO clients (nom_entreprise, parts_totales)
+       VALUES ('ZZ SCI ORIGINE', 1000) RETURNING id`
+    );
+    const { rows: pers } = await client.query(
+      `INSERT INTO company_officers (first_name, last_name)
+       VALUES ('ZZANNE', 'ZZORIGINE') RETURNING id`
+    );
+    const clientId = sci[0].id as string;
+    const officerId = pers[0].id as string;
+
+    // Le defaut, sur une insertion qui ne dit rien : une ligne posee sans
+    // preciser son origine est reputee saisie par le cabinet.
+    await client.query(
+      `INSERT INTO client_associes (client_id, officer_id, nb_parts)
+       VALUES ($1, $2, 600)`,
+      [clientId, officerId]
+    );
+    const { rows: pose } = await client.query(
+      'SELECT source FROM client_associes WHERE client_id = $1',
+      [clientId]
+    );
+    expect(pose[0].source).toBe('manual');
+
+    // `statuts` est accepte : c'est l'autre moitie du contrat.
+    await client.query(
+      `INSERT INTO client_associes (client_id, officer_id, nb_parts, demembrement, source)
+       VALUES ($1, $2, 400, 'nue-propriete', 'statuts')`,
+      [clientId, officerId]
+    );
+
+    // Et rien d'autre ne l'est. Une provenance inventee — `inpi`, `import`,
+    // n'importe quoi — ferait perdre son sens a la distinction.
+    await expect(
+      client.query(
+        `INSERT INTO client_associes (client_id, officer_id, nb_parts, demembrement, source)
+         VALUES ($1, $2, 10, 'usufruit', 'inpi')`,
+        [clientId, officerId]
+      )
+    ).rejects.toThrow(/client_associes_source_check/);
+
+    await client.query('DELETE FROM clients WHERE id = $1', [clientId]);
+    await client.query('DELETE FROM company_officers WHERE id = $1', [officerId]);
+
+    // ---- Le droit d'ecrire d'une cle MCP -----------------------------------
+    const { rows: droit } = await client.query(
+      `SELECT data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_name = 'mcp_api_keys' AND column_name = 'peut_ecrire'`
+    );
+    expect(droit, 'mcp_api_keys.peut_ecrire manque a cible.sql').toHaveLength(1);
+    expect(droit[0].data_type).toBe('boolean');
+    expect(droit[0].is_nullable).toBe('NO');
+    expect(droit[0].column_default).toContain('false');
+
+    // ⭐ LA GARDE QUI COMPTE. Une cle creee comme le fait `mcp-cles.ts`, sans
+    // mentionner ce droit, ne doit PAS pouvoir ecrire. C'est ce qui garantit
+    // que le deploiement de cette version ne donne l'ecriture a personne.
+    await client.query(
+      `INSERT INTO mcp_api_keys (name, client_id, client_secret_hash)
+       VALUES ('ZZ cle de recette', 'zz_cle_recette', 'hache-sans-valeur')`
+    );
+    const { rows: cle } = await client.query(
+      `SELECT peut_ecrire FROM mcp_api_keys WHERE client_id = 'zz_cle_recette'`
+    );
+    expect(cle[0].peut_ecrire, 'une cle neuve ne doit pas pouvoir ecrire').toBe(false);
+    await client.query(`DELETE FROM mcp_api_keys WHERE client_id = 'zz_cle_recette'`);
+
+    // ---- Le remplacement transactionnel ------------------------------------
+    //
+    // ⚠️ ELLE EXISTE POUR QU'UN IMPORT NE PUISSE PAS VIDER UNE FICHE. Deux
+    // appels PostgREST — DELETE puis INSERT — font deux transactions : la
+    // seconde qui echoue laisse le client sans aucun associe, et la fiche a
+    // l'air d'une repartition simplement incomplete.
+    const { rows: fn } = await client.query(
+      `SELECT prosecdef FROM pg_proc WHERE proname = 'replace_client_associes'`
+    );
+    expect(fn, 'replace_client_associes manque a cible.sql').toHaveLength(1);
+    // Pas SECURITY DEFINER : `authenticated` a deja ces droits, et un chemin
+    // privilegie ne servirait qu'a en ouvrir un.
+    expect(fn[0].prosecdef).toBe(false);
+
+    const { rows: sci2 } = await client.query(
+      `INSERT INTO clients (nom_entreprise) VALUES ('ZZ SCI RPC') RETURNING id`
+    );
+    const { rows: p2 } = await client.query(
+      `INSERT INTO company_officers (first_name, last_name)
+       VALUES ('ZZPAUL', 'ZZRPC') RETURNING id`
+    );
+    const c2 = sci2[0].id as string;
+    const o2 = p2[0].id as string;
+
+    await client.query(
+      `INSERT INTO client_associes (client_id, officer_id, nb_parts) VALUES ($1, $2, 100)`,
+      [c2, o2]
+    );
+    await client.query(
+      `SELECT replace_client_associes($1, $2::jsonb, 'statuts')`,
+      [c2, JSON.stringify([{ officer_id: o2, nb_parts: 900, demembrement: 'nue-propriete' }])]
+    );
+    const { rows: apres } = await client.query(
+      'SELECT nb_parts::float8 AS n, demembrement, source FROM client_associes WHERE client_id = $1',
+      [c2]
+    );
+    expect(apres).toHaveLength(1);
+    expect(apres[0].n).toBe(900);
+    expect(apres[0].demembrement).toBe('nue-propriete');
+    expect(apres[0].source).toBe('statuts');
+
+    // Une provenance inventee est refusee la aussi : la fonction ne doit pas
+    // etre un contournement du CHECK de la table.
+    await expect(
+      client.query(`SELECT replace_client_associes($1, '[]'::jsonb, 'inpi')`, [c2])
+    ).rejects.toThrow(/manual ou statuts/);
+
+    await client.query('DELETE FROM clients WHERE id = $1', [c2]);
+    await client.query('DELETE FROM company_officers WHERE id = $1', [o2]);
   });
 });
 

@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { syncCardRegimeForClient } from '../lib/bilanService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { useClientFilters } from '../hooks/useClientFilters';
 import { useRegimesFiscaux } from '../hooks/useRegimesFiscaux';
 import { useShowMyDossiers } from '../hooks/useShowMyDossiers';
@@ -18,22 +20,22 @@ import { ClientImportModal } from '../components/clients/ClientImportModal';
 import { ClientCollaboratorAssignModal } from '../components/clients/ClientCollaboratorAssignModal';
 import { ClientsBulkBar } from '../components/clients/ClientsBulkBar';
 import { FloatingActionButton } from '../components/ui/FloatingActionButton';
-import type { Database } from '../types/database';
 
 /**
  * La requete demande desormais `*` : elle annoncait la ligne complete tout en
  * n'en selectionnant que vingt colonnes sur trente-cinq, si bien qu'aucun
  * resultat ne correspondait au type promis aux composants enfants.
  */
-type Client = Database['public']['Tables']['clients']['Row'] & {
-  collaborators?: Array<{
-    id: string;
-    user_id: string;
-    // `client_collaborators.role` a un DEFAULT ('assistant') sans NOT NULL.
-    role: string | null;
-    user?: { prenom: string | null; nom: string | null; avatar_color?: string | null } | null;
-  }>;
-};
+import { SELECT_LISTE, type ClientListe } from '../components/clients/colonnesListe';
+import { chargerPageClients, type PageClients } from '../lib/clientsListeService';
+
+/**
+ * ⚠️ CE TYPE EST PLUS ÉTROIT QUE LA LIGNE COMPLÈTE, ET C'EST LE POINT. La liste
+ * ne demande à la base que les colonnes qu'elle affiche ; lire ici une colonne
+ * absente de `COLONNES_LISTE` ne compile pas, au lieu d'arriver `undefined` à
+ * l'écran. Voir `colonnesListe.ts`.
+ */
+type Client = ClientListe;
 
 type CabinetUser = {
   id: string;
@@ -42,8 +44,26 @@ type CabinetUser = {
   email: string | null;
 };
 
+/** Les quatre colonnes que la liste sait completer sur place. */
+type ChampSaisissable = 'email' | 'numero_dossier' | 'regime_fiscal' | 'date_cloture';
+
+/**
+ * Comment chaque champ se nomme dans les messages.
+ *
+ * DEUX FORMES, parce qu'une seule sonnerait faux : le refus a besoin de
+ * l'article (« Impossible d'enregistrer l'email »), la confirmation du nom seul
+ * et de son accord (« Email enregistre », « Cloture enregistree »).
+ */
+const LIBELLES_CHAMPS: Record<ChampSaisissable, { avecArticle: string; confirme: string }> = {
+  email: { avecArticle: "l'email", confirme: 'Email enregistre' },
+  numero_dossier: { avecArticle: 'le numero de dossier', confirme: 'Numero de dossier enregistre' },
+  regime_fiscal: { avecArticle: 'le regime', confirme: 'Regime enregistre' },
+  date_cloture: { avecArticle: 'la cloture', confirme: 'Cloture enregistree' },
+};
+
 export function Clients() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const { regimes: REGIMES_FISCAUX } = useRegimesFiscaux();
   const [showMyDossiers, toggleShowMyDossiers] = useShowMyDossiers();
@@ -112,24 +132,39 @@ export function Clients() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Load data
+  /**
+   * DEUX CHARGEMENTS, ET C'EST LE CŒUR DE LA PAGINATION SERVEUR.
+   *
+   * En mode normal, `chargerPage` demande à `/api/clients/liste` la seule page
+   * affichée : filtrée, triée et bornée par SQL. Sur 403 dossiers, 538 Ko
+   * deviennent 45 Ko, et le coût cesse de grandir avec le portefeuille.
+   *
+   * ⚠️ L'ORDRE MANUEL, LUI, CONTINUE DE TOUT CHARGER. Il n'a jamais été
+   * paginé — l'écran affichait déjà le portefeuille entier dès qu'on
+   * l'activait — et pour cause : paginer un ordre que l'utilisateur pose à la
+   * main n'a pas de sens. Ce mode garde donc PostgREST et le filtrage
+   * JavaScript, inchangés.
+   */
   const loadClients = useCallback(async () => {
     if (!profile) {
       setLoading(false);
       return;
     }
     try {
+      /*
+        ⚠️ LES COLONNES SONT NOMMÉES, PAS `*`. Sur 403 dossiers, `select('*')`
+        rendait 1,11 Mo de JSON à chaque ouverture — soixante colonnes dont
+        `resume_ia`, 203 Ko de résumés générés par IA que cet écran n'affiche
+        nulle part. La liste vit dans `colonnesListe.ts`, d'où sort aussi le
+        type : y ajouter une colonne est la seule façon d'en lire une de plus.
+
+        `created_at` sert au tri sans être demandé — PostgREST ordonne sur une
+        colonne qu'il ne rend pas, et la rapatrier pour cela seul serait du
+        poids inutile sur chaque ligne.
+      */
       const { data, error } = await supabase
         .from('clients')
-        .select(`
-          *,
-          collaborators:client_collaborators(
-            id,
-            user_id,
-            role,
-            user:profiles(prenom, nom, avatar_color)
-          )
-        `)
+        .select(SELECT_LISTE)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setClients(data || []);
@@ -140,9 +175,116 @@ export function Clients() {
     }
   }, [profile]);
 
+  /**
+   * La recherche n'est plus instantanée : elle part au serveur. Sans ce délai,
+   * taper « Dupont » lancerait six requêtes dont cinq déjà périmées. 250 ms est
+   * en dessous de ce qu'on perçoit comme une attente, et au-dessus d'une frappe
+   * rapide.
+   */
+  const [rechercheEnvoyee, setRechercheEnvoyee] = useState(searchTerm);
   useEffect(() => {
-    loadClients();
-  }, [loadClients]);
+    const t = setTimeout(() => setRechercheEnvoyee(searchTerm), 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const [pageServeur, setPageServeur] = useState<PageClients>({ clients: [], total: 0 });
+
+  const chargerPage = useCallback(async () => {
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setPageServeur(
+        await chargerPageClients({
+          recherche: rechercheEnvoyee,
+          statut: filterStatus,
+          regime: filterRegime,
+          cloture: filterCloture,
+          collaborateurs: filterCollaboratorIds,
+          archives: showArchived,
+          mesDossiers: showMyDossiers ?? false,
+          tri: sortField,
+          sens: sortDirection,
+          limite: PAGE_SIZE,
+          decalage: (currentPage - 1) * PAGE_SIZE,
+        })
+      );
+    } catch {
+      setPageServeur({ clients: [], total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    profile, rechercheEnvoyee, filterStatus, filterRegime, filterCloture,
+    filterCollaboratorIds, showArchived, showMyDossiers, sortField,
+    sortDirection, currentPage,
+  ]);
+
+  useEffect(() => {
+    if (useCustomOrder) void loadClients();
+    else void chargerPage();
+  }, [useCustomOrder, loadClients, chargerPage]);
+
+  /** Recharge ce qui est à l'écran, quel que soit le mode. */
+  const rechargerListe = useCallback(() => {
+    if (useCustomOrder) void loadClients();
+    else void chargerPage();
+  }, [useCustomOrder, loadClients, chargerPage]);
+
+  /**
+   * Un champ saisi directement dans la liste, pour les fiches qui ne l'ont pas.
+   *
+   * PAS DE `loadClients()` APRES COUP, ET C'EST VOULU. Recharger tout le
+   * portefeuille remonterait la pagination et rejouerait le tri sous les doigts
+   * de qui complete dix fiches a la suite. On ne remplace que la fiche
+   * concernee — c'est aussi ce qui fait basculer la cellule de la saisie vers
+   * l'affichage.
+   *
+   * Rend un booleen : la cellule garde la saisie quand l'ecriture echoue.
+   */
+  const handleSaveChamp = useCallback(
+    async (clientId: string, champ: ChampSaisissable, valeur: string) => {
+      // La cle calculee s'elargirait en `{ [x: string]: string }`, que le type
+      // de mise a jour refuse — et a raison : il accepterait alors n'importe
+      // quelle colonne, y compris mal orthographiee. Le `Record` la borne aux
+      // quatre colonnes prevues.
+      const correctif: Partial<Record<ChampSaisissable, string>> = { [champ]: valeur };
+      const { error } = await supabase.from('clients').update(correctif).eq('id', clientId);
+      if (error) {
+        showToast(`Impossible d'enregistrer ${LIBELLES_CHAMPS[champ].avecArticle}`, 'error');
+        return false;
+      }
+      // Les DEUX sources : la page rendue par le serveur en mode normal, et la
+      // liste complète en ordre manuel. Ne corriger que l'une laisserait la
+      // cellule revenir à son tiret dès qu'on bascule de mode.
+      const corriger = <T extends { id: string }>(c: T): T =>
+        c.id === clientId ? { ...c, [champ]: valeur } : c;
+      setClients((prev) => prev.map(corriger));
+      setPageServeur((prev) => ({ ...prev, clients: prev.clients.map(corriger) }));
+
+      /**
+       * ⚠️ LE REGIME NE VIT PAS SEUL : LES BILANS LE SUIVENT.
+       *
+       * C'est le MEME geste que la fiche client (ClientDetail.tsx, a
+       * l'enregistrement) : `syncCardRegimeForClient` deplace les bilans du
+       * client vers le tableau du nouveau regime. Renseigner le regime ici sans
+       * l'appeler les laisserait sur l'ancien tableau, en silence — et personne
+       * ne ferait le lien avec une saisie faite depuis la liste.
+       *
+       * L'echec est avale, comme dans la fiche : le regime EST enregistre, et
+       * faire echouer la saisie parce que le rangement des bilans a rate serait
+       * pire que de la laisser passer.
+       */
+      if (champ === 'regime_fiscal') {
+        syncCardRegimeForClient(clientId, valeur).catch(() => {});
+      }
+
+      showToast(LIBELLES_CHAMPS[champ].confirme, 'success');
+      return true;
+    },
+    [showToast]
+  );
 
   useEffect(() => {
     async function loadCabinetUsers() {
@@ -171,21 +313,22 @@ export function Clients() {
     enabled: useCustomOrder,
   });
 
-  const totalFiltered = filteredClients.length;
+  /*
+    Le total vient du serveur en mode normal : il compte ce que le WHERE
+    retient, sur TOUT le portefeuille, alors que la page n'en porte que
+    cinquante lignes. Compter les lignes reçues annoncerait « 50 clients »
+    quel que soit le cabinet.
+  */
+  const totalFiltered = useCustomOrder ? filteredClients.length : pageServeur.total;
   const totalPages = Math.ceil(totalFiltered / PAGE_SIZE);
-
-  const paginatedClients = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredClients.slice(start, start + PAGE_SIZE);
-  }, [filteredClients, currentPage]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterRegime, filterCloture, filterCollaboratorIds, showArchived, showMyDossiers]);
 
-  const displayClients = useCustomOrder ? dndSortedClients : paginatedClients;
-  const displayIds = useCustomOrder ? dndOrderedIds : paginatedClients.map((c) => c.id);
+  const displayClients = useCustomOrder ? dndSortedClients : pageServeur.clients;
+  const displayIds = useCustomOrder ? dndOrderedIds : pageServeur.clients.map((c) => c.id);
 
   // Selection
   const toggleClientSelection = (clientId: string) => {
@@ -259,15 +402,27 @@ export function Clients() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/*
+        ⚠️ `flex-wrap` ICI ET SUR LE GROUPE DE BOUTONS, sous peine de déborder
+        l'écran. Sans lui, les quatre actions — « Mes dossiers », « Ordre
+        manuel », « Importer », « Nouveau client » — restent sur une ligne
+        unique : 447 px de boutons dans 342 px utiles sur un téléphone, et c'est
+        LA PAGE ENTIÈRE qui se met à défiler de 157 px vers la droite. Le
+        tableau, lui, a son propre défilement ; ce débordement-là décalait tout
+        le reste, en-tête et menu compris.
+      */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Clients</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {filteredClients.length} client{filteredClients.length > 1 ? 's' : ''}
+            {/* `totalFiltered` et non `filteredClients.length` : en mode
+                normal la page ne porte que cinquante lignes, et compter ce
+                qu'on a reçu annoncerait « 50 clients » à tout un cabinet. */}
+            {totalFiltered} client{totalFiltered > 1 ? 's' : ''}
             {activeFilterCount > 0 && ` (filtre${activeFilterCount > 1 ? 's' : ''} actif${activeFilterCount > 1 ? 's' : ''})`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -366,6 +521,8 @@ export function Clients() {
           onToggleSelection={toggleClientSelection}
           onToggleSelectAll={toggleSelectAll}
           onOpenAssignModal={openSingleAssignModal}
+          regimes={REGIMES_FISCAUX}
+          onSaveChamp={handleSaveChamp}
           onDragEnd={handleDragEnd}
         />
 
@@ -425,7 +582,7 @@ export function Clients() {
       <ClientCreateModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onCreated={loadClients}
+        onCreated={rechargerListe}
         initialSiret={createInitialSiret}
         initialName={createInitialName}
       />
@@ -449,7 +606,7 @@ export function Clients() {
         clientNames={assignModalClientNames}
         existingCollaborators={assignModalExistingCollabs}
         onSaved={() => {
-          loadClients();
+          rechargerListe();
           setSelectedClientIds(new Set());
         }}
       />

@@ -7,8 +7,10 @@ export interface DefaultDirectoryLink {
   url: string;
   description: string | null;
   position: number;
-  created_at: string;
-  updated_at: string;
+  // Nullables en base : le `as any` d'origine laissait croire le contraire, et
+  // un affichage de date sur une ligne fraiche aurait montre « Invalid Date ».
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface DefaultDirectoryCategory {
@@ -18,8 +20,8 @@ export interface DefaultDirectoryCategory {
   icon: string | null;
   color: string | null;
   position: number;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   web_directory_default_links: DefaultDirectoryLink[];
 }
 
@@ -31,7 +33,7 @@ export async function fetchDefaultCategories(): Promise<DefaultDirectoryCategory
 
   if (error) throw error;
 
-  return (data || []).map((cat: any) => ({
+  return (data || []).map((cat) => ({
     ...cat,
     web_directory_default_links: (cat.web_directory_default_links || []).sort(
       (a: DefaultDirectoryLink, b: DefaultDirectoryLink) => a.position - b.position

@@ -1,0 +1,52 @@
+-- Fiche client : une seconde adresse électronique.
+-- ===========================================================================
+--
+-- La fiche n'en portait qu'une, et une seule ne suffit pas : l'adresse du
+-- dirigeant n'est pas celle du secrétariat qui envoie les pièces, et le cabinet
+-- écrivait à l'une en perdant l'autre — retenue dans une note, un courriel, ou
+-- la tête d'un collaborateur.
+--
+-- ---------------------------------------------------------------------------
+-- UNE COLONNE, ET NON UNE TABLE
+--
+-- Un nombre quelconque d'adresses demanderait une table liée. Ce n'est pas le
+-- besoin, et ce ne serait pas non plus un manque : l'ANNUAIRE le couvre déjà.
+-- `directory_contacts` porte autant de contacts nommés qu'on veut, chacun avec
+-- son adresse, rattachés à la société — c'est là que vivent « le comptable
+-- interne » et « l'assistante ». Ce dont il s'agit ici est autre chose : la
+-- SECONDE adresse de la fiche elle-même, celle qu'on lit sans quitter l'écran.
+--
+-- La forme est donc celle de `telephone_2`, ajoutée pour exactement la même
+-- raison. Un besoin identique traité deux fois différemment coûterait plus que
+-- la colonne.
+--
+-- ---------------------------------------------------------------------------
+-- CE QUE CETTE COLONNE NE FAIT PAS
+--
+-- ELLE N'ÉLARGIT AUCUN ENVOI. Les campagnes (`routes/campagnes.ts`) lisent
+-- `clients.email` et posent UNE ligne d'`email_queue` par client ; elles
+-- continuent. Une seconde adresse qui doublerait silencieusement les
+-- destinataires d'une campagne serait une décision d'envoi, pas un champ de
+-- saisie — et elle ne se prend pas dans un incrément de schéma.
+--
+-- ---------------------------------------------------------------------------
+-- LES RÈGLES DU DOSSIER, ET CE QU'ELLES DONNENT ICI
+--
+--   1. Aucun BEGIN/COMMIT : docker/entree.sh possède la transaction ;
+--   2. aucun ordre non transactionnel ;
+--   3. idempotence dans le fichier, en ceinture du registre
+--      crm_meta.schema_migrations. `IF NOT EXISTS` y suffit : ce fichier
+--      n'ajoute qu'une colonne, sans remplissage — il n'a donc AUCUNE donnée à
+--      défaire s'il repasse.
+--
+-- Ni CHECK de format, ni NOT NULL, ni défaut — comme `email`, dont cette
+-- colonne est le doublon. Un CHECK ici et pas sur `email` refuserait à la
+-- seconde adresse ce que la première accepte, sur la même fiche et dans le même
+-- formulaire.
+--
+-- Aucun GRANT non plus : `authenticated` détient les droits AU NIVEAU DE LA
+-- TABLE sur `clients` (auth-interne.sql), et une nouvelle colonne en hérite. Le
+-- détail par colonne n'existe que pour `cabinets`.
+
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS email_2 text;

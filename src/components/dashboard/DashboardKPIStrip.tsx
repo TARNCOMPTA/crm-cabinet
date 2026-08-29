@@ -23,7 +23,17 @@ interface KPICardDef {
   color: string;
   bg: string;
   darkBg: string;
-  link: string;
+  /**
+   * `null` = TUILE SANS DESTINATION, et elle cesse alors d'etre cliquable.
+   *
+   * Une tuile qui compte quelque chose qu'aucun ecran ne montre est un cas
+   * legitime, pas un oubli : « Echeances proches » agrege des clotures
+   * d'exercice, des AG prevues et des taches (dashboardService.ts), un melange
+   * dont le tableau de bord est le seul endroit. La rediriger vers un ecran
+   * voisin afficherait un AUTRE nombre que celui de la tuile — pire qu'un
+   * simple lien absent.
+   */
+  link: string | null;
   getValue: (data: KPIData) => number;
 }
 
@@ -65,7 +75,10 @@ const ALL_KPIS: KPICardDef[] = [
     color: 'text-red-600 dark:text-red-400',
     bg: 'bg-red-50',
     darkBg: 'dark:bg-red-950/40',
-    link: '/fiscal-deadlines?filter=proche',
+    // L'ecran « Echeances fiscales » a ete retire du produit : ce lien menait au
+    // « Page introuvable » depuis. Le compte, lui, reste juste et la liste
+    // detaillee est juste en dessous (DashboardDeadlines).
+    link: null,
     getValue: d => d.echeancesProches,
   },
   {
@@ -185,14 +198,24 @@ export function DashboardKPIStrip({ data, userId, loading }: DashboardKPIStripPr
         {visibleKPIs.map(kpi => {
           const Icon = kpi.icon;
           const value = kpi.getValue(data);
+          const cible = kpi.link;
+          /**
+           * Sans destination, la tuile n'est PAS un bouton : ni curseur main, ni
+           * soulevement au survol, ni fleche. Ces trois signes promettent un
+           * ailleurs — les garder sur une tuile inerte ferait passer une absence
+           * de lien pour un clic qui ne marche pas.
+           */
+          const Enveloppe = cible ? 'button' : 'div';
           return (
             <Card
               key={kpi.id}
-              className="group cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              className={`group transition-all duration-200 ${
+                cible ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : ''
+              }`}
             >
               <CardContent className="py-5">
-                <button
-                  onClick={() => navigate(kpi.link)}
+                <Enveloppe
+                  {...(cible ? { onClick: () => navigate(cible) } : {})}
                   className="w-full text-left"
                 >
                   <div className="flex items-center justify-between">
@@ -208,10 +231,12 @@ export function DashboardKPIStrip({ data, userId, loading }: DashboardKPIStripPr
                       <Icon className={`w-5 h-5 ${kpi.color}`} />
                     </div>
                   </div>
-                  <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <ArrowRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                  </div>
-                </button>
+                  {cible && (
+                    <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                    </div>
+                  )}
+                </Enveloppe>
               </CardContent>
             </Card>
           );

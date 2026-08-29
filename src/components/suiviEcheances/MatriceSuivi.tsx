@@ -1,9 +1,22 @@
 /**
- * La matrice société × mois d'un type de déclaration.
+ * La matrice société × période d'un type de déclaration.
  * ---------------------------------------------------------------------------
+ * ⚠️ UNE PÉRIODE, ET PLUS UN MOIS. La grille recevait une liste de mois ; elle
+ * reçoit maintenant des COLONNES déjà groupées au rythme du tableau — au mois,
+ * au trimestre, à l'année. Une TVA trimestrielle n'a rien à déclarer deux mois
+ * sur trois : ces colonnes vides PAR CONSTRUCTION se lisaient comme du retard,
+ * et le bilan était pire, avec onze vides pour une pleine. Le pas est décidé
+ * côté serveur (`decoupageDe`), le groupement côté écran (`colonnesDe`), et ce
+ * composant ne fait qu'afficher ce qu'on lui donne.
+ *
+ * La conséquence à garder en tête : UNE COLONNE N'EST PLUS UN MOIS, donc ce
+ * qu'on écrit en base ne se déduit plus de la colonne. `resoudreCellule` rend
+ * les deux mois réels — celui du statut, celui de la déclaration — parce que
+ * `jedeclare_suivi_interne` est indexée sur un mois et contraint son format.
+ *
  * Deux partis pris d'affichage, et ils commandent tout le reste :
  *
- *   · CHAQUE MOIS OCCUPE DEUX COLONNES — « JD » ce que jedeclare constate, et
+ *   · CHAQUE PÉRIODE OCCUPE DEUX COLONNES — « JD » ce que jedeclare constate, et
  *     « Cab. » ce que le cabinet en dit. Sans cette seconde rangée d'en-tête,
  *     vingt-quatre pastilles alignées ne se distinguent plus les unes des
  *     autres, et personne ne sait plus laquelle il vient de cliquer.
@@ -22,7 +35,7 @@
  * peut pas être virtualisé sans être disloqué.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { AlertTriangle, HelpCircle, Search, UserX } from 'lucide-react';
@@ -30,17 +43,56 @@ import { Input } from '../ui/Input';
 import {
   LIBELLES_STATUT,
   STATUTS_INTERNES,
-  moisCourt,
+  resoudreCellule,
   type CelluleSuivi,
+  type Colonne,
   type SocieteSuivie,
   type StatutInterne,
   type TableSuivi,
 } from '../../lib/jedeclareService';
 
-/** Largeurs fixes : c'est ce qui permet aux deux rangées d'en-tête de s'aligner. */
-const L_SOCIETE = 260;
-const L_CELLULE = 56;
-const H_LIGNE = 44;
+/**
+ * Largeurs fixes : c'est ce qui permet aux deux rangées d'en-tête de s'aligner.
+ * ---------------------------------------------------------------------------
+ * ⚠️ DEUX JEUX, ET C'EST UNE CORRECTION DE BOGUE, PAS UN CONFORT. Sur un iPhone
+ * tenu droit, le conteneur fait 340 px utiles. Les deux colonnes figées — 260
+ * pour la société, 88 pour l'échéance — en occupaient 348 : PAS UNE SEULE
+ * PASTILLE N'ÉTAIT VISIBLE, et comme les deux colonnes sont `sticky`, faire
+ * défiler ne les découvrait pas davantage — elles recouvraient ce qu'on allait
+ * chercher. L'écran affichait donc une liste de noms, et rien de ce pour quoi
+ * il existe.
+ *
+ * Le jeu étroit laisse 160 px de données, soit un peu plus de deux mois lisibles
+ * d'un coup. C'est peu, mais c'est infiniment plus que rien.
+ *
+ * `ligne` ne rétrécit PAS avec le reste : 44 px est le plus petit rectangle
+ * qu'un doigt vise sans se tromper de ligne, et une pastille qu'on rate est
+ * pire qu'une pastille qu'on ne voit pas — elle écrit un statut faux.
+ */
+const LARGE = { societe: 260, echeance: 88, cellule: 56, ligne: 44 } as const;
+const ETROIT = { societe: 132, echeance: 48, cellule: 34, ligne: 44 } as const;
+
+/**
+ * Vrai sur un écran étroit, au sens du palier `sm` de Tailwind — celui que le
+ * reste de l'application emploie déjà, pour que la grille bascule en même temps
+ * que ce qui l'entoure.
+ *
+ * `matchMedia` plutôt qu'une mesure du conteneur : la bascule doit suivre la
+ * rotation du téléphone, et un écouteur de média le fait sans observer la mise
+ * en page à chaque image.
+ */
+function useEcranEtroit(): boolean {
+  const [etroit, setEtroit] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const maj = () => setEtroit(mq.matches);
+    mq.addEventListener('change', maj);
+    return () => mq.removeEventListener('change', maj);
+  }, []);
+  return etroit;
+}
 
 const COULEUR_JD: Record<'vert' | 'orange' | 'rouge', string> = {
   vert: 'bg-green-500',
@@ -66,21 +118,34 @@ const COULEUR_INTERNE: Record<StatutInterne, string> = {
 
 interface Props {
   table: TableSuivi;
-  mois: string[];
+  /**
+   * Les colonnes a afficher, deja au pas du tableau.
+   *
+   * ⚠️ DES COLONNES ET NON DES MOIS, depuis qu'une TVA trimestrielle se lit par
+   * trimestres et un bilan par annees : une colonne peut recouvrir plusieurs
+   * mois, et c'est `resoudreCellule` qui dit lequel elle vise reellement.
+   */
+  colonnes: Colonne[];
   onOuvrirDetail: (societe: SocieteSuivie, mois: string, cellule: CelluleSuivi) => void;
   onChangerStatut: (societe: SocieteSuivie, mois: string, statut: StatutInterne) => void;
+  /** Fixe le jour d'echeance TVA du client, ou le retire avec `null`. */
+  onFixerJour: (societe: SocieteSuivie, jour: number | null) => void;
   filtreMesDossiers: boolean;
 }
 
 export function MatriceSuivi({
   table,
-  mois,
+  colonnes,
   onOuvrirDetail,
   onChangerStatut,
+  onFixerJour,
   filtreMesDossiers,
 }: Props) {
   const [recherche, setRecherche] = useState('');
   const [problemesSeuls, setProblemesSeuls] = useState(false);
+  const [jourFiltre, setJourFiltre] = useState('tous');
+  const etroit = useEcranEtroit();
+  const L = etroit ? ETROIT : LARGE;
   const conteneur = useRef<HTMLDivElement>(null);
 
   /**
@@ -95,11 +160,47 @@ export function MatriceSuivi({
     [table.societes]
   );
 
+  /**
+   * Les jours d'echeance presents dans CE tableau.
+   *
+   * ⚠️ LA LISTE EST TIREE DES DONNEES, PAS DU CALENDRIER CA3. Proposer les
+   * quatre jours en dur donnerait des choix qui ne selectionnent rien — un
+   * tableau de TVA trimestrielle peut n'avoir aucune personne physique, donc ni
+   * 16 ni 19. Un filtre qui vide la liste sans prevenir se lit comme une panne.
+   */
+  const { jours, sansJour } = useMemo(() => {
+    const vus = new Set<number>();
+    let manquant = false;
+    for (const s of table.societes) {
+      if (s.echeance?.jour != null) vus.add(s.echeance.jour);
+      else manquant = true;
+    }
+    return { jours: [...vus].sort((a, b) => a - b), sansJour: manquant };
+  }, [table.societes]);
+
+  /**
+   * Le filtre effectivement applique.
+   *
+   * ⚠️ CHANGER D'ONGLET NE REMONTE PAS LE COMPOSANT : l'etat du filtre survit au
+   * passage de la TVA mensuelle a l'annuelle. Un « le 21 » herite du tableau
+   * precedent y viderait tout, sans que rien n'explique pourquoi. Un filtre qui
+   * ne correspond a rien ici est donc ignore plutot qu'applique.
+   */
+  const jourActif = useMemo(() => {
+    if (jourFiltre === 'aucun') return sansJour ? 'aucun' : 'tous';
+    if (jourFiltre !== 'tous' && !jours.includes(Number(jourFiltre))) return 'tous';
+    return jourFiltre;
+  }, [jourFiltre, jours, sansJour]);
+
   const societes = useMemo(() => {
     const terme = recherche.trim().toLowerCase();
     return table.societes.filter((s) => {
       if (filtreMesDossiers && !s.monDossier) return false;
       if (problemesSeuls && !aUnProbleme(s)) return false;
+      if (jourActif !== 'tous') {
+        const j = s.echeance?.jour ?? null;
+        if (jourActif === 'aucun' ? j !== null : String(j) !== jourActif) return false;
+      }
       if (!terme) return true;
       return (
         s.societe.toLowerCase().includes(terme) ||
@@ -108,19 +209,25 @@ export function MatriceSuivi({
         (s.clientNom ?? '').toLowerCase().includes(terme)
       );
     });
-  }, [table.societes, recherche, filtreMesDossiers, problemesSeuls]);
+  }, [table.societes, recherche, filtreMesDossiers, problemesSeuls, jourActif]);
 
   const virtualiseur = useVirtualizer({
     count: societes.length,
     getScrollElement: () => conteneur.current,
-    estimateSize: () => H_LIGNE,
+    estimateSize: () => L.ligne,
     overscan: 12,
   });
 
-  const largeur = L_SOCIETE + mois.length * L_CELLULE * 2;
+  // ⚠️ LES TROIS GRILLES DOIVENT S'ACCORDER — les deux rangees d'en-tete et le
+  // corps. La colonne d'echeance s'intercale entre la societe et les mois, et
+  // n'existe QUE pour la TVA : elle est donc calculee une fois ici, et
+  // interpolee partout, plutot que reecrite a trois endroits ou elle finirait
+  // par diverger et desaligner l'en-tete du contenu.
+  const colEcheance = table.estTva ? `${L.echeance}px ` : '';
+  const largeur = L.societe + (table.estTva ? L.echeance : 0) + colonnes.length * L.cellule * 2;
   const grille = {
     display: 'grid',
-    gridTemplateColumns: `${L_SOCIETE}px repeat(${mois.length * 2}, ${L_CELLULE}px)`,
+    gridTemplateColumns: `${L.societe}px ${colEcheance}repeat(${colonnes.length * 2}, ${L.cellule}px)`,
     width: largeur,
   } as const;
 
@@ -135,6 +242,33 @@ export function MatriceSuivi({
             icon={<Search className="w-4 h-4" />}
           />
         </div>
+        {/*
+          Le filtre n'apparait que s'il a de quoi trancher : un seul jour dans
+          tout le tableau, et le proposer ne ferait qu'ajouter un controle qui
+          ne change rien.
+        */}
+        {table.estTva && jours.length + (sansJour ? 1 : 0) > 1 && (
+          <select
+            value={jourActif}
+            onChange={(e) => setJourFiltre(e.target.value)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+              jourActif === 'tous'
+                ? 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700'
+                : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-700'
+            }`}
+            title="N'afficher que les sociétés dues à ce jour du mois"
+            aria-label="Filtrer par jour d'échéance"
+          >
+            <option value="tous">Toutes les échéances</option>
+            {jours.map((j) => (
+              <option key={j} value={j}>
+                le {j}
+              </option>
+            ))}
+            {sansJour && <option value="aucun">Sans jour</option>}
+          </select>
+        )}
+
         {nbAvecProbleme > 0 && (
           <button
             onClick={() => setProblemesSeuls((v) => !v)}
@@ -157,7 +291,7 @@ export function MatriceSuivi({
 
       <Destinataires liste={table.destinataires} />
 
-      <Legende />
+      <Legende etroit={etroit} />
 
       {societes.length === 0 ? (
         <p className="py-10 text-center text-gray-500 dark:text-gray-400">
@@ -173,26 +307,43 @@ export function MatriceSuivi({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: `${L_SOCIETE}px repeat(${mois.length}, ${L_CELLULE * 2}px)`,
+                gridTemplateColumns: `${L.societe}px ${colEcheance}repeat(${colonnes.length}, ${L.cellule * 2}px)`,
                 width: largeur,
               }}
             >
               <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Société
               </div>
-              {mois.map((m) => (
+              {table.estTva && (
                 <div
-                  key={m}
+                  className="sticky z-10 bg-gray-50 dark:bg-gray-800 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700"
+                  style={{ left: L.societe }}
+                  title="Jour du mois où la déclaration est due"
+                >
+                  {/* « ÉCHÉANCE » ne tient pas dans 48 px : sur étroit, le mot
+                      est coupé à ce que la colonne peut porter sans mentir. */}
+                  {etroit ? 'Éch.' : 'Échéance'}
+                </div>
+              )}
+              {colonnes.map((c) => (
+                <div
+                  key={c.cle}
                   className="py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-300 border-l border-gray-200 dark:border-gray-700"
                 >
-                  {moisCourt(m)}
+                  {c.libelle}
                 </div>
               ))}
             </div>
             <div style={grille}>
               <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800" />
-              {mois.map((m) => (
-                <FragmentEnTete key={m} />
+              {table.estTva && (
+                <div
+                  className="sticky z-10 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700"
+                  style={{ left: L.societe }}
+                />
+              )}
+              {colonnes.map((c) => (
+                <FragmentEnTete key={c.cle} />
               ))}
             </div>
           </div>
@@ -209,20 +360,34 @@ export function MatriceSuivi({
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    height: H_LIGNE,
+                    height: L.ligne,
                     transform: `translateY(${v.start}px)`,
                   }}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-800/40"
                 >
                   <CelluleSociete societe={societe} />
-                  {mois.map((m) => {
-                    const cellule = societe.cellules[m] ?? { jedeclare: null, interne: null };
+                  {table.estTva && (
+                    <CelluleEcheance
+                      societe={societe}
+                      onFixerJour={onFixerJour}
+                      gauche={L.societe}
+                    />
+                  )}
+                  {colonnes.map((c) => {
+                    // Le mois vise n'est pas la colonne : sur un trimestre ou
+                    // une annee, c'est celui qui porte la declaration — ou, a
+                    // defaut, celui ou un statut a deja ete pose.
+                    const { moisStatut, moisDeclaration, cellule, nbDeclarations } =
+                      resoudreCellule(societe, c);
                     return (
                       <FragmentCellule
-                        key={m}
+                        key={c.cle}
                         societe={societe}
-                        mois={m}
+                        moisStatut={moisStatut}
+                        moisDeclaration={moisDeclaration}
+                        periode={c.libelle}
                         cellule={cellule}
+                        nbDeclarations={nbDeclarations}
                         typeDeclaration={table.typeDeclaration}
                         onOuvrirDetail={onOuvrirDetail}
                         onChangerStatut={onChangerStatut}
@@ -286,14 +451,14 @@ function Destinataires({ liste }: { liste: { nom: string; lignes: number }[] }) 
   );
 }
 
-function Legende() {
+function Legende({ etroit }: { etroit: boolean }) {
   const JD: [string, string][] = [
     ['bg-green-500', 'acceptée'],
     ['bg-amber-400', 'en attente'],
     ['bg-red-500', 'rejetée'],
   ];
 
-  return (
+  const contenu = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
       <span className="font-medium text-gray-600 dark:text-gray-300">jedeclare</span>
       {JD.map(([couleur, libelle]) => (
@@ -315,6 +480,26 @@ function Legende() {
         </span>
       ))}
     </div>
+  );
+
+  if (!etroit) return contenu;
+
+  /**
+   * Sur un telephone, la legende se replie.
+   *
+   * Elle tient sur TROIS LIGNES a cette largeur — une centaine de pixels — et
+   * repousse d'autant le tableau, qui est ce qu'on vient voir. C'est une
+   * reference : on la consulte le premier jour, puis les formes et les couleurs
+   * se lisent seules. Elle reste a un doigt, et depliee sur grand ecran ou la
+   * place ne coute rien.
+   */
+  return (
+    <details className="text-xs">
+      <summary className="cursor-pointer text-gray-500 dark:text-gray-400 select-none">
+        Légende
+      </summary>
+      <div className="pt-2">{contenu}</div>
+    </details>
   );
 }
 
@@ -364,7 +549,7 @@ function CelluleSociete({ societe }: { societe: SocieteSuivie }) {
             {societe.societe}
           </span>
         )}
-        <span className="block text-[10px] font-mono text-gray-400">
+        <span className="block truncate text-[10px] font-mono text-gray-400">
           {societe.siren || societe.dossier || '—'}
         </span>
       </div>
@@ -390,10 +575,138 @@ function CelluleSociete({ societe }: { societe: SocieteSuivie }) {
   );
 }
 
+/**
+ * La colonne d'echeance.
+ *
+ * Collee a la colonne societe (`left: gauche`) et sticky comme elle : le
+ * tableau defile sur vingt-quatre mois, et un jour d'echeance qu'il faut
+ * ramener a l'ecran pour le lire ne sert a rien quand on regarde decembre.
+ */
+function CelluleEcheance({
+  societe,
+  onFixerJour,
+  gauche,
+}: {
+  societe: SocieteSuivie;
+  onFixerJour: Props['onFixerJour'];
+  /** Décalage de la colonne société, qui varie avec la largeur d'écran. */
+  gauche: number;
+}) {
+  return (
+    <div
+      className="sticky z-10 bg-white dark:bg-gray-900 flex items-center justify-center border-r border-gray-200 dark:border-gray-800"
+      style={{ left: gauche }}
+    >
+      <JourEcheance societe={societe} onFixerJour={onFixerJour} />
+    </div>
+  );
+}
+
+/**
+ * Le jour du calendrier CA3, et sa surcharge.
+ * ---------------------------------------------------------------------------
+ * ⚠️ UN JOUR DÉDUIT ET UN JOUR SAISI NE SE VALENT PAS, et l'écran doit le dire.
+ * La règle part de la forme juridique, qui est une donnée déclarative du CRM :
+ * elle peut manquer, ou dater d'avant une transformation de société. Affichés à
+ * l'identique, les deux se seraient confondus, et personne n'aurait su lequel
+ * mérite d'être vérifié. D'où le soulignement pointillé sur le déduit, et
+ * l'encre franche sur ce que le cabinet a tranché.
+ *
+ * Le motif est porté en `title` : un jour affiché sans sa justification ne peut
+ * ni se vérifier ni se contester.
+ */
+function JourEcheance({
+  societe,
+  onFixerJour,
+}: {
+  societe: SocieteSuivie;
+  onFixerJour: Props['onFixerJour'];
+}) {
+  const [edite, setEdite] = useState(false);
+  // Hors TVA il n'y a rien à dire : le calendrier CA3 ne s'y applique pas.
+  if (!societe.echeance) return null;
+  const { jour, origine, motif, jourRegle } = societe.echeance;
+
+  // La surcharge vit sur la fiche client : sans fiche, il n'y a rien à écrire.
+  // Le jour reste affiché — c'est le rattachement qu'il faut corriger d'abord.
+  const modifiable = Boolean(societe.clientId);
+
+  if (edite && modifiable) {
+    return (
+      <select
+        autoFocus
+        className="text-[10px] font-mono bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0 text-gray-900 dark:text-gray-100"
+        defaultValue={origine === 'surcharge' && jour !== null ? String(jour) : ''}
+        onBlur={() => setEdite(false)}
+        onChange={(e) => {
+          setEdite(false);
+          const v = e.target.value;
+          onFixerJour(societe, v === '' ? null : Number(v));
+        }}
+      >
+        <option value="">
+          {jourRegle === null ? 'Règle (aucun jour)' : `Règle (le ${jourRegle})`}
+        </option>
+        {Array.from({ length: 31 }, (_, i) => i + 1).map((j) => (
+          <option key={j} value={j}>
+            le {j}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  const commun = 'text-xs tabular-nums';
+  const titre = modifiable ? `${motif}\n\nCliquer pour fixer un autre jour.` : motif;
+
+  const contenu =
+    jour === null ? (
+      <span className="text-gray-300 dark:text-gray-600">—</span>
+    ) : origine === 'surcharge' ? (
+      <span className="text-teal-700 dark:text-teal-400 font-semibold">le {jour}</span>
+    ) : (
+      <span className="text-gray-600 dark:text-gray-300 underline decoration-dotted decoration-gray-300 dark:decoration-gray-600 underline-offset-4">
+        le {jour}
+      </span>
+    );
+
+  if (!modifiable) {
+    return (
+      <span className={commun} title={titre}>
+        {contenu}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`${commun} hover:text-teal-600 dark:hover:text-teal-400`}
+      title={titre}
+      onClick={() => setEdite(true)}
+    >
+      {contenu}
+    </button>
+  );
+}
+
 interface PropsCellule {
   societe: SocieteSuivie;
-  mois: string;
+  /** Le mois REEL ou s'ecrit le statut du cabinet. */
+  moisStatut: string;
+  /** Le mois de la declaration montree : c'est lui qu'ouvre le detail. */
+  moisDeclaration: string;
+  /**
+   * Ce que la colonne AFFICHE — « 1er T 26 », « 2026 », « mars 26 ».
+   *
+   * Distinct de `mois` a dessein : sur un trimestre, dire « mars 26 » dans une
+   * infobulle sous une colonne intitulee « 1er T 26 » ferait douter de ce qu'on
+   * regarde. L'utilisateur voit une periode, on lui nomme cette periode.
+   */
+  periode: string;
   cellule: CelluleSuivi;
+  /** Declarations que la colonne recouvre : au-dela d'une, elle n'en montre qu'une. */
+  nbDeclarations: number;
   typeDeclaration: string;
   onOuvrirDetail: Props['onOuvrirDetail'];
   onChangerStatut: Props['onChangerStatut'];
@@ -401,12 +714,22 @@ interface PropsCellule {
 
 function FragmentCellule({
   societe,
-  mois,
+  moisStatut,
+  moisDeclaration,
+  periode,
   cellule,
+  nbDeclarations,
   onOuvrirDetail,
   onChangerStatut,
 }: PropsCellule) {
   const { jedeclare, interne } = cellule;
+  /*
+    Une colonne groupee peut recouvrir plusieurs depots — une liasse et sa
+    rectificative dans la meme annee. On n'en montre qu'un, et le taire
+    laisserait croire qu'il n'y en a eu qu'un. L'anneau garde la priorite a
+    l'anomalie : deux anneaux concentriques sur 14 px ne se distinguent pas.
+  */
+  const cumul = nbDeclarations > 1 ? ` (${nbDeclarations} declarations, la plus recente est affichee)` : '';
 
   return (
     <>
@@ -414,11 +737,15 @@ function FragmentCellule({
         {jedeclare ? (
           <button
             type="button"
-            onClick={() => onOuvrirDetail(societe, mois, cellule)}
-            title={`${societe.societe} — ${moisCourt(mois)} : ${jedeclare.libelle}`}
-            aria-label={`${societe.societe}, ${moisCourt(mois)} : ${jedeclare.libelle}`}
+            onClick={() => onOuvrirDetail(societe, moisDeclaration, cellule)}
+            title={`${societe.societe} — ${periode} : ${jedeclare.libelle}${cumul}`}
+            aria-label={`${societe.societe}, ${periode} : ${jedeclare.libelle}${cumul}`}
             className={`w-3.5 h-3.5 rounded-full ${COULEUR_JD[jedeclare.etat]} ${
-              jedeclare.anomalie ? 'ring-2 ring-offset-1 ring-amber-400 dark:ring-offset-gray-900' : ''
+              jedeclare.anomalie
+                ? 'ring-2 ring-offset-1 ring-amber-400 dark:ring-offset-gray-900'
+                : nbDeclarations > 1
+                  ? 'ring-2 ring-offset-1 ring-sky-400/70 dark:ring-offset-gray-900'
+                  : ''
             } hover:scale-125 transition-transform`}
           />
         ) : (
@@ -449,8 +776,8 @@ function FragmentCellule({
         />
         <select
           value={interne?.statut ?? ''}
-          onChange={(e) => onChangerStatut(societe, mois, e.target.value as StatutInterne)}
-          aria-label={`Suivi du cabinet — ${societe.societe}, ${moisCourt(mois)}${
+          onChange={(e) => onChangerStatut(societe, moisStatut, e.target.value as StatutInterne)}
+          aria-label={`Suivi du cabinet — ${societe.societe}, ${periode}${
             interne ? ` : ${LIBELLES_STATUT[interne.statut]}` : ''
           }`}
           title={

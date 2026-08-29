@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../contexts/ToastContext';
 import { Plus, Search, CreditCard as Edit, Trash2, Package } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { codeErreur } from '../../lib/erreurs';
 
 interface Software {
   id: string;
@@ -65,7 +66,7 @@ export function SettingsSoftware() {
 
       if (error) throw error;
       setSoftware(data || []);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des logiciels', 'error');
     } finally {
       setLoading(false);
@@ -146,7 +147,7 @@ export function SettingsSoftware() {
 
       setShowModal(false);
       loadSoftware();
-    } catch (error: any) {
+    } catch {
       showToast('Erreur lors de la sauvegarde', 'error');
     }
   }
@@ -159,8 +160,8 @@ export function SettingsSoftware() {
       showToast('Logiciel supprimé', 'success');
       setDeleteConfirm(null);
       loadSoftware();
-    } catch (error: any) {
-      if (error.code === '23503') {
+    } catch (error) {
+      if (codeErreur(error) === '23503') {
         showToast(
           'Impossible de supprimer : ce logiciel est assigné à des clients',
           'error'

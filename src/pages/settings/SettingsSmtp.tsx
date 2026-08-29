@@ -79,7 +79,7 @@ export function SettingsSmtp() {
         });
         setLastTestStatus({ at: data.last_test_at, status: data.last_test_status });
       }
-    } catch (err) {
+    } catch {
       showToast('Erreur lors du chargement de la configuration SMTP', 'error');
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ export function SettingsSmtp() {
 
       if (error) throw error;
       showToast('Configuration SMTP enregistree', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erreur lors de la sauvegarde', 'error');
     } finally {
       setSaving(false);

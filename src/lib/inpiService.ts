@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { Database } from '../types/database';
+import { messageErreur, statutHttp } from './erreurs';
+import type { Json } from '../types/database';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type INPISyncHistory = Database['public']['Tables']['inpi_sync_history']['Row'];
@@ -8,6 +10,19 @@ type CompanyOfficer = Database['public']['Tables']['company_officers']['Row'];
 type OfficerCompany = Database['public']['Tables']['officer_companies']['Row'];
 
 // Retry configuration for API calls
+/**
+ * Une erreur d'appel a l'API INPI, qui porte son statut HTTP.
+ *
+ * `statutHttp()` la lit comme il lit une erreur d'axios ou de Supabase : c'est
+ * ce qui permet a `reessayer()` de ne pas relancer un 404.
+ */
+class ErreurApi extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ErreurApi';
+  }
+}
+
 const RETRY_CONFIG = {
   maxRetries: 3,
   initialDelay: 1000, // 1 second
@@ -25,13 +40,13 @@ async function retryWithBackoff<T>(
 ): Promise<T> {
   try {
     return await operation();
-  } catch (error: any) {
+  } catch (error) {
     if (retries === 0) {
       throw error;
     }
 
     // Don't retry on client errors (4xx) except 429 (rate limit)
-    const status = error?.status || error?.response?.status;
+    const status = statutHttp(error);
     if (status && status >= 400 && status < 500 && status !== 429) {
       throw error;
     }
@@ -187,10 +202,10 @@ export async function searchCompaniesByName(query: string): Promise<{
       results: entreprises,
       total: entreprises.length,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      message: error?.message || 'Erreur inattendue lors de la recherche',
+      message: messageErreur(error, 'Erreur inattendue lors de la recherche'),
     };
   }
 }
@@ -261,10 +276,10 @@ export async function testINPIConnection(): Promise<INPITestResult> {
       message: data.message,
       tokenValid: data.tokenValid
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      message: error?.message || 'Erreur inattendue lors du test de connexion'
+      message: messageErreur(error, 'Erreur inattendue lors du test de connexion')
     };
   }
 }
@@ -332,9 +347,10 @@ export async function syncClientWithINPI(clientId: string): Promise<{
 
       // Attach status for retry logic
       if (!res.ok) {
-        const error: any = new Error(responseData.message || 'Erreur API');
-        error.status = res.status;
-        throw error;
+        // Le statut voyage AVEC l'erreur : `reessayer()` s'en sert pour ne pas
+        // relancer un 4xx. `any` suffisait a poser le champ, au prix de ne plus
+        // rien verifier — `ErreurApi` le declare.
+        throw new ErreurApi(responseData.message || 'Erreur API', res.status);
       }
 
       return { response: res, data: responseData };
@@ -411,8 +427,8 @@ export async function syncClientWithINPI(clientId: string): Promise<{
       success: false,
       message: data.message || 'Aucune donnée reçue de l\'INPI'
     };
-  } catch (error: any) {
-    await logSyncHistory(clientId, 'error', null, error.message);
+  } catch (error) {
+    await logSyncHistory(clientId, 'error', null, messageErreur(error, 'Erreur inattendue'));
     return {
       success: false,
       message: 'Erreur inattendue lors de la synchronisation'
@@ -711,6 +727,8 @@ export async function resolveCompanyNames(
           }
         }
       } catch {
+        // Voir le journal d'echec plus bas : on ne fait pas echouer la synchro
+        // pour un enregistrement de trace.
       }
 
       if (onProgress) {
@@ -749,7 +767,7 @@ export async function getSyncHistory(clientId: string): Promise<INPISyncHistory[
 async function logSyncHistory(
   clientId: string,
   status: 'success' | 'error' | 'partial',
-  data: any,
+  data: Json,
   errorMessage: string | null
 ): Promise<void> {
   try {
@@ -761,6 +779,8 @@ async function logSyncHistory(
       sync_date: new Date().toISOString()
     });
   } catch {
+    // ECRIRE LA TRACE NE DOIT JAMAIS FAIRE ECHOUER CE QU'ELLE TRACE. Si la ligne
+    // de journal ne part pas, la synchro elle-meme reste valable.
   }
 }
 
@@ -820,10 +840,10 @@ export async function fetchLegalActsForClient(clientId: string): Promise<LegalAc
       actsCount: data.actsCount,
       acts: data.acts
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      message: error?.message || 'Erreur inattendue lors de la récupération des actes'
+      message: messageErreur(error, 'Erreur inattendue lors de la récupération des actes')
     };
   }
 }
@@ -942,10 +962,10 @@ export async function syncLegalActsToDatabase(clientId: string): Promise<{
       message: `${data?.length || 0} acte(s) synchronisé(s)`,
       insertedCount: data?.length || 0
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      message: error?.message || 'Erreur inattendue lors de la synchronisation'
+      message: messageErreur(error, 'Erreur inattendue lors de la synchronisation')
     };
   }
 }
@@ -983,7 +1003,7 @@ export async function getOfficersForClient(clientId: string): Promise<(OfficerCo
       return [];
     }
 
-    return (data as any) || [];
+    return (data as unknown as (OfficerCompany & { officer: CompanyOfficer })[]) || [];
   } catch {
     return [];
   }
@@ -1004,7 +1024,7 @@ export async function getClientsForOfficer(officerId: string): Promise<(OfficerC
       return [];
     }
 
-    return (data as any) || [];
+    return (data as unknown as (OfficerCompany & { client: Client })[]) || [];
   } catch {
     return [];
   }
@@ -1064,8 +1084,8 @@ export async function downloadStatutsForClient(clientId: string, clientName: str
     URL.revokeObjectURL(url);
 
     return { success: true, message: `Statuts téléchargés pour ${clientName}` };
-  } catch (error: any) {
-    return { success: false, message: error?.message || 'Erreur inattendue lors du téléchargement' };
+  } catch (error) {
+    return { success: false, message: messageErreur(error, 'Erreur inattendue lors du téléchargement') };
   }
 }
 
@@ -1127,10 +1147,10 @@ export async function listLegalDocuments(clientId: string): Promise<{
       message: data.message,
       documents: data.documents
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      message: error?.message || 'Erreur inattendue lors de la récupération des documents'
+      message: messageErreur(error, 'Erreur inattendue lors de la récupération des documents')
     };
   }
 }
@@ -1179,8 +1199,8 @@ export async function downloadActDocument(clientId: string, clientName: string, 
         headers: { 'Content-Type': 'application/json' },
         body,
       });
-    } catch (err: any) {
-      return { success: false, message: err?.message || 'Erreur reseau lors du telechargement' };
+    } catch (err) {
+      return { success: false, message: messageErreur(err, 'Erreur reseau lors du telechargement') };
     }
 
     if (response.status === 401) {
@@ -1199,6 +1219,9 @@ export async function downloadActDocument(clientId: string, clientName: string, 
               return { success: true, message: 'Redirection vers le portail INPI pour consulter le document.' };
             }
           } catch {
+            // `portalUrl` n'est pas une URL analysable : on ne redirige pas, et la
+            // suite propose l'autre voie. Une URL malformee ne doit pas ouvrir
+            // un onglet vers n'importe ou.
           }
         }
         return { success: false, message: data.message || 'Erreur lors du téléchargement' };
@@ -1219,8 +1242,8 @@ export async function downloadActDocument(clientId: string, clientName: string, 
     URL.revokeObjectURL(url);
 
     return { success: true, message: `Document téléchargé pour ${clientName}` };
-  } catch (error: any) {
-    return { success: false, message: error?.message || 'Erreur inattendue lors du téléchargement' };
+  } catch (error) {
+    return { success: false, message: messageErreur(error, 'Erreur inattendue lors du téléchargement') };
   }
 }
 
@@ -1267,7 +1290,7 @@ export async function upsertSyncSettings(settings: {
   sync_hour?: number;
   is_enabled: boolean;
 }, syncType = 'inpi_officers'): Promise<boolean> {
-  const payload: Record<string, any> = {
+  const payload: Record<string, string | number | boolean | null> = {
     sync_type: syncType,
     frequency: settings.frequency,
     is_enabled: settings.is_enabled,
@@ -1378,12 +1401,12 @@ export async function bulkSyncWithINPI(
           success: syncResult.success,
           message: syncResult.message
         });
-      } catch (error: any) {
+      } catch (error) {
         allDetails.push({
           clientId: client.id,
           clientName: client.nom_entreprise,
           success: false,
-          message: error?.message || 'Erreur inattendue'
+          message: messageErreur(error, 'Erreur inattendue')
         });
       }
 

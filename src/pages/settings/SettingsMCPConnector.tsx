@@ -5,6 +5,8 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { messageErreur } from '../../lib/erreurs';
+import { OUTILS_MCP } from '../../lib/outilsMcp';
 import {
   Plug,
   Plus,
@@ -29,6 +31,8 @@ interface MCPKey {
   last_used_at: string | null;
   created_at: string;
   revoked_at: string | null;
+  /** Droit d'ecrire la repartition des parts. Faux par defaut, jamais herite. */
+  peut_ecrire: boolean;
 }
 
 interface NewKeyData {
@@ -61,9 +65,13 @@ export function SettingsMCPConnector() {
     creeLe: string;
     dernierAcces: string | null;
     jetonsActifs: number;
+    /** La case d'ecriture a-t-elle ete accordee a cette autorisation ? */
+    peutEcrire: boolean;
   }
   const [autorisations, setAutorisations] = useState<Autorisation[]>([]);
   const [revocationEnCours, setRevocationEnCours] = useState<string | null>(null);
+  const [porteeEnCours, setPorteeEnCours] = useState<string | null>(null);
+  const [porteeCleEnCours, setPorteeCleEnCours] = useState<string | null>(null);
 
   /**
    * L'adresse du connecteur se DEDUIT, elle ne se demande pas.
@@ -124,6 +132,73 @@ export function SettingsMCPConnector() {
     }
   }
 
+  /**
+   * Accorde ou retire l'ecriture de la repartition des parts.
+   *
+   * ⚠️ CE BOUTON EXISTE PARCE QUE LA CASE DU CONSENTEMENT NE SUFFISAIT PAS.
+   * Elle ne s'affiche qu'a une NOUVELLE autorisation ; un connecteur deja
+   * branche ne la revoit jamais. Sans ce bouton, la seule voie etait de
+   * debrancher puis rebrancher le connecteur cote client, sans qu'aucun ecran
+   * ne dise si le droit avait fini par etre accorde. Constate : deux
+   * tentatives, deux refus, aucune explication.
+   *
+   * ⚠️ ON RECHARGE DEPUIS LE SERVEUR AU LIEU DE BASCULER L'ETAT LOCAL. Un
+   * `setAutorisations` optimiste afficherait « ecriture » meme si le serveur a
+   * refuse — et c'est exactement le genre d'affichage qui a fait perdre ces
+   * deux tours.
+   */
+  async function basculerEcriture(clientId: string, nom: string, voulu: boolean) {
+    setPorteeEnCours(clientId);
+    try {
+      const r = await fetch(
+        `/api/mcp/autorisations/${encodeURIComponent(clientId)}/ecriture`,
+        { method: 'POST', ...OPTIONS_API, body: JSON.stringify({ peutEcrire: voulu }) }
+      );
+      if (!r.ok) {
+        const d = (await r.json().catch(() => ({}))) as { message?: string };
+        throw new Error(d.message || 'Modification impossible');
+      }
+      showToast(
+        voulu
+          ? `« ${nom} » peut desormais ecrire la repartition des parts.`
+          : `« ${nom} » est repasse en lecture seule.`,
+        'success'
+      );
+      await chargerAutorisations();
+    } catch (e) {
+      showToast(messageErreur(e, 'Modification impossible'), 'error');
+    } finally {
+      setPorteeEnCours(null);
+    }
+  }
+
+  /** Le meme geste, pour une cle statique (Claude Code, Cursor). */
+  async function basculerEcritureCle(key: MCPKey) {
+    setPorteeCleEnCours(key.id);
+    try {
+      const r = await fetch('/api/mcp-keys/ecriture', {
+        method: 'POST',
+        ...OPTIONS_API,
+        body: JSON.stringify({ key_id: key.id, peut_ecrire: !key.peut_ecrire }),
+      });
+      if (!r.ok) {
+        const d = (await r.json().catch(() => ({}))) as { error?: string };
+        throw new Error(d.error || 'Modification impossible');
+      }
+      showToast(
+        key.peut_ecrire
+          ? `La cle « ${key.name} » est repassee en lecture seule.`
+          : `La cle « ${key.name} » peut desormais ecrire la repartition des parts.`,
+        'success'
+      );
+      await loadKeys();
+    } catch (e) {
+      showToast(messageErreur(e, 'Modification impossible'), 'error');
+    } finally {
+      setPorteeCleEnCours(null);
+    }
+  }
+
   async function revoquerAutorisation(clientId: string, nom: string) {
     setRevocationEnCours(clientId);
     try {
@@ -160,8 +235,8 @@ export function SettingsMCPConnector() {
       if (!response.ok) throw new Error('Erreur lors du chargement des cles');
       const data = await response.json();
       setKeys(data.keys || []);
-    } catch (err: any) {
-      showToast(err.message || 'Erreur de chargement', 'error');
+    } catch (err) {
+      showToast(messageErreur(err, 'Erreur de chargement'), 'error');
     } finally {
       setLoading(false);
     }
@@ -192,8 +267,8 @@ export function SettingsMCPConnector() {
       setShowSecretModal(true);
       setNewKeyName('');
       loadKeys();
-    } catch (err: any) {
-      showToast(err.message || 'Erreur de generation', 'error');
+    } catch (err) {
+      showToast(messageErreur(err, 'Erreur de generation'), 'error');
     } finally {
       setGenerating(false);
     }
@@ -218,8 +293,8 @@ export function SettingsMCPConnector() {
       setShowRevokeModal(false);
       setRevokeTarget(null);
       loadKeys();
-    } catch (err: any) {
-      showToast(err.message || 'Erreur', 'error');
+    } catch (err) {
+      showToast(messageErreur(err, 'Erreur'), 'error');
     }
   }
 
@@ -276,17 +351,6 @@ export function SettingsMCPConnector() {
         },
       }, null, 2);
 
-  if (!isAdmin) {
-    return (
-      <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <AlertTriangle className="w-5 h-5 text-amber-600" />
-        <p className="text-sm text-amber-800 dark:text-amber-200">
-          Cette fonctionnalite est reservee aux administrateurs du cabinet.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,8 +360,14 @@ export function SettingsMCPConnector() {
           Connecteur IA (MCP)
         </h2>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Connectez un assistant IA (Claude Desktop, Cursor, VS Code) a vos donnees en lecture seule
-          via le protocole MCP (Model Context Protocol).
+          {/* ⚠️ « EN LECTURE SEULE » N'EST PLUS VRAI, et cette phrase l'affirmait
+              encore. Un seul outil ecrit — la repartition des parts — et
+              seulement si on le lui accorde ici, acces par acces. Laisser la
+              promesse d'origine aurait ete la pire des deux erreurs : elle
+              rassure sur ce qui a change. */}
+          Connectez un assistant IA (Claude Desktop, Cursor, VS Code) a vos donnees via le protocole
+          MCP (Model Context Protocol). En lecture par defaut : seule la repartition des parts peut
+          etre ecrite, et uniquement si vous l'autorisez ci-dessous, acces par acces.
         </p>
       </div>
 
@@ -311,8 +381,16 @@ export function SettingsMCPConnector() {
               <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
                 <li>Generez une paire de cles (ID + Secret) ci-dessous</li>
                 <li>Configurez votre client IA avec l'URL et les identifiants</li>
-                <li>L'IA pourra <strong>uniquement consulter</strong> les donnees de votre cabinet</li>
-                <li>Aucune modification n'est possible via ce connecteur</li>
+                <li>L'IA <strong>consulte</strong> les donnees de votre cabinet</li>
+                {/* ⚠️ « AUCUNE MODIFICATION N'EST POSSIBLE » ETAIT ECRIT ICI, et
+                    ne l'etait plus depuis `set_client_repartition`. Une promesse
+                    perimee sur un ecran de securite vaut moins que pas de
+                    promesse du tout. */}
+                <li>
+                  Elle ne peut rien <strong>modifier</strong>, a une exception que vous accordez
+                  vous-meme : la repartition des parts d'un client
+                </li>
+                <li>Aucune suppression, jamais</li>
               </ul>
             </div>
           </div>
@@ -322,7 +400,12 @@ export function SettingsMCPConnector() {
       {/* Keys section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Vos cles d'acces</h3>
+          {/* « Vos » est exact pour un collaborateur, qui ne voit que les siennes ;
+              l'administrateur voit celles de tout le cabinet, et le titre doit le
+              dire plutot que de lui laisser croire qu'il n'a que les siennes. */}
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+            {isAdmin ? "Les cles d'acces du cabinet" : "Vos cles d'acces"}
+          </h3>
           <Button size="sm" onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4 mr-1" />
             Nouvelle cle
@@ -379,9 +462,31 @@ export function SettingsMCPConnector() {
                     </td>
                     <td className="px-4 py-3">
                       {key.is_active ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          Actif
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            Actif
+                          </span>
+                          {/* La portee de la cle, et le geste qui la change.
+                              `peut_ecrire` existait en base sans qu'aucun ecran
+                              ne la montre ni ne la pose : une cle Claude Code ne
+                              pouvait donc pas obtenir l'ecriture. */}
+                          <button
+                            onClick={() => void basculerEcritureCle(key)}
+                            disabled={porteeCleEnCours === key.id}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors disabled:opacity-50 ${
+                              key.peut_ecrire
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                            }`}
+                            title={
+                              key.peut_ecrire
+                                ? "Cette cle peut enregistrer la repartition des parts. Cliquer pour la repasser en lecture seule."
+                                : "Cette cle ne peut rien ecrire. Cliquer pour l'autoriser a enregistrer la repartition des parts."
+                            }
+                          >
+                            {key.peut_ecrire ? 'ecriture des parts' : 'lecture seule'}
+                          </button>
+                        </div>
                       ) : (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                           Revoque
@@ -418,8 +523,9 @@ export function SettingsMCPConnector() {
               Autorisations accordees
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Les assistants qui se sont connectes par OAuth. Revoquer coupe l'acces
-              immediatement — les jetons en cours sont invalides, pas seulement les prochains.
+              {isAdmin
+                ? "Les assistants connectes par OAuth, pour tout le cabinet. Revoquer coupe l'acces immediatement — les jetons en cours sont invalides, pas seulement les prochains, et le client ne peut plus en obtenir de nouveaux."
+                : "Les assistants que VOUS avez autorises. Revoquer coupe votre acces immediatement, sans toucher a celui de vos collegues."}
             </p>
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {autorisations.map((a) => (
@@ -446,6 +552,39 @@ export function SettingsMCPConnector() {
                     >
                       {a.jetonsActifs > 0 ? 'actif' : 'en sommeil'}
                     </span>
+                    {/* La portee accordee, ecrite. C'est ce qui manquait : un
+                        assistant qui se voit refuser une ecriture n'avait aucun
+                        moyen de savoir si la case avait ete cochee. */}
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        a.peutEcrire
+                          ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                      title={
+                        a.peutEcrire
+                          ? "Cet assistant peut enregistrer la repartition des parts d'un client."
+                          : 'Cet assistant peut lire, mais rien enregistrer.'
+                      }
+                    >
+                      {a.peutEcrire ? 'lecture + ecriture des parts' : 'lecture seule'}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => void basculerEcriture(a.clientId, a.nom, !a.peutEcrire)}
+                      disabled={porteeEnCours === a.clientId || a.jetonsActifs === 0}
+                      title={
+                        a.jetonsActifs === 0
+                          ? "Aucun jeton actif : rebranchez le connecteur d'abord."
+                          : undefined
+                      }
+                    >
+                      {porteeEnCours === a.clientId
+                        ? 'Modification...'
+                        : a.peutEcrire
+                          ? "Retirer l'ecriture"
+                          : "Autoriser l'ecriture des parts"}
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() => void revoquerAutorisation(a.clientId, a.nom)}
@@ -547,22 +686,21 @@ export function SettingsMCPConnector() {
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Outils disponibles :</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-              {[
-                { name: 'list_clients', desc: 'Lister les clients' },
-                { name: 'get_client', desc: 'Detail d\'un client' },
-                { name: 'list_tasks', desc: 'Lister les tâches' },
-                { name: 'get_task', desc: 'Détail d\'une tâche' },
-                { name: 'list_fiscal_deadlines', desc: 'Échéances fiscales' },
-                { name: 'list_balance_sheets', desc: 'Bilans comptables' },
-                { name: 'list_opportunities', desc: 'Opportunités' },
-                { name: 'list_collaborators', desc: 'Collaborateurs' },
-                { name: 'list_software', desc: 'Logiciels' },
-                { name: 'list_meeting_notes', desc: 'Notes de RDV' },
-                { name: 'search', desc: 'Recherche globale' },
-              ].map((tool) => (
-                <div key={tool.name} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-teal-700 dark:text-teal-400">{tool.name}</code>
-                  <span>{tool.desc}</span>
+              {OUTILS_MCP.map((tool) => (
+                <div key={tool.nom} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <code
+                    className={`px-1.5 py-0.5 rounded ${
+                      tool.ecrit
+                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
+                        : 'bg-gray-100 dark:bg-gray-800 text-teal-700 dark:text-teal-400'
+                    }`}
+                  >
+                    {tool.nom}
+                  </code>
+                  <span>
+                    {tool.quoi}
+                    {tool.ecrit && ' — le seul qui ecrit'}
+                  </span>
                 </div>
               ))}
             </div>

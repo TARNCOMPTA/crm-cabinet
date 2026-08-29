@@ -16,6 +16,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useCabinetRoles } from '../../hooks/useCabinetRoles';
 import { AVATAR_COLORS } from '../../lib/collaboratorUtils';
 import type { Database } from '../../types/database';
+import { messageErreur } from '../../lib/erreurs';
 
 /**
  * La ligne complete, et non un sous-ensemble ecrit a la main.
@@ -109,8 +110,8 @@ export function SettingsUsers() {
       } else {
         setCodeEnrolement({ email: user.email, code: data.code, expireLe: data.expireLe ?? null });
       }
-    } catch (e: any) {
-      showToast(e?.message || 'Erreur réseau', 'error');
+    } catch (e) {
+      showToast(messageErreur(e, 'Erreur réseau'), 'error');
     } finally {
       setCodeEnCours(null);
     }
@@ -137,7 +138,7 @@ export function SettingsUsers() {
 
       if (error) throw error;
       setUsers(data || []);
-    } catch (error) {
+    } catch {
       setUsers([]);
     } finally {
       setLoading(false);
@@ -170,9 +171,9 @@ export function SettingsUsers() {
 
       if (usersError) throw usersError;
 
-      const usersWithCounts: UserWithAssignments[] = (usersData || []).map((user: any) => {
+      const usersWithCounts: UserWithAssignments[] = (usersData || []).map((user) => {
         const clientNames = (user.client_collaborators || [])
-          .map((cc: any) => cc.client?.nom_entreprise)
+          .map((cc: { client: { nom_entreprise: string } | null }) => cc.client?.nom_entreprise)
           .filter(Boolean) as string[];
         return {
           id: user.id,
@@ -190,7 +191,7 @@ export function SettingsUsers() {
       });
 
       setUsersWithAssignments(usersWithCounts);
-    } catch (error) {
+    } catch {
       setUsersWithAssignments([]);
     } finally {
       setLoadingAssignments(false);
@@ -329,8 +330,8 @@ export function SettingsUsers() {
       if (isAdmin) {
         loadUsersWithAssignments();
       }
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de l\'envoi de l\'invitation', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de l\'envoi de l\'invitation'), 'error');
     }
   }
 

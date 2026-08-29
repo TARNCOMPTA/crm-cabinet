@@ -124,7 +124,7 @@ suite('parcours de bout en bout', () => {
     expect(page.url()).toContain('/dashboard');
   }, 60_000);
 
-  it('ne charge pas les seize sections de paramètres d’un coup', async () => {
+  it('ne charge pas les 18 sections de paramètres d’un coup', async () => {
     recus = [];
     await page.goto(BASE + '/settings', { waitUntil: 'networkidle' });
     // Le champ de recherche plutot qu'un libelle : l'ecran porte aussi un
@@ -217,6 +217,324 @@ suite('parcours de bout en bout', () => {
     expect(await page.getByRole('button', { name: /^Analyser$/ }).isVisible().catch(() => false))
       .toBe(false);
   }, 45_000);
+
+  /**
+   * Les quatre colonnes completees DIRECTEMENT DANS LA LISTE, pour une fiche
+   * qui n'a rien.
+   *
+   * Trois choses qu'aucun test hors navigateur ne verrait : que la case
+   * apparaisse bien à la place du tiret, que quitter le champ enregistre, et
+   * surtout QUE LA VALEUR TIENNE APRÈS RECHARGEMENT — une mise à jour d'état
+   * réussie sur un écrit raté aurait exactement la même apparence.
+   *
+   * Le client « SANS EMAIL SARL » est semé par le job `navigateur` de la CI,
+   * comme le cabinet : la liste doit contenir une fiche sans email pour que la
+   * case existe.
+   */
+  it('permet de completer les champs manquants sans ouvrir la fiche', async () => {
+    await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+
+    // « Mes dossiers » est coche PAR DEFAUT (`profiles.show_my_dossiers`), et la
+    // fiche semee n'est assignee a personne : sans ce decochage la liste est
+    // vide et le test chercherait une ligne qui ne peut pas exister.
+    const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+    await mesDossiers.waitFor({ timeout: 30_000 });
+    if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+
+    // La ligne est reperee par son TEXTE et non par le role « row » : dnd-kit
+    // pose `role="button"` sur le <tr> pour le glisser-deposer au clavier, ce
+    // qui efface le role implicite de ligne de tableau.
+    const ligne = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
+    await ligne.waitFor({ timeout: 30_000 });
+
+    const champ = ligne.getByLabel(/Email du client/i);
+    await expect.poll(() => champ.isVisible(), { timeout: 15_000 }).toBe(true);
+
+    // Un format invalide se dit sur place, et n'enregistre rien.
+    await champ.fill('pas-un-email');
+    await champ.blur();
+    await expect
+      .poll(() => page.getByText(/Format email invalide/i).first().isVisible(), { timeout: 5_000 })
+      .toBe(true);
+
+    // Puis une adresse valable : la cellule doit basculer en lien mailto.
+    await champ.fill('contact@sans-email.invalid');
+    await champ.blur();
+    await expect
+      .poll(
+        () =>
+          ligne
+            .getByRole('link', { name: /contact@sans-email\.invalid/i })
+            .first()
+            .isVisible()
+            .catch(() => false),
+        { timeout: 15_000 }
+      )
+      .toBe(true);
+
+    // --- le numéro de dossier : même geste, autre colonne ---
+    const dossier = ligne.getByLabel(/Numero de dossier du client/i);
+    await dossier.fill('D-2026-001');
+    await dossier.blur();
+    await expect
+      .poll(() => ligne.getByText('D-2026-001').first().isVisible().catch(() => false), {
+        timeout: 15_000,
+      })
+      .toBe(true);
+
+    // --- le régime : un choix, pas une frappe. LA CELLULE DOIT AFFICHER LE
+    //     LIBELLÉ (« IS reel »), pas le code stocké (« IS_REEL ») ---
+    await ligne.getByLabel(/Regime fiscal du client/i).selectOption('IS_REEL');
+    await expect
+      .poll(() => ligne.getByText('IS reel', { exact: true }).first().isVisible().catch(() => false), {
+        timeout: 15_000,
+      })
+      .toBe(true);
+
+    // --- la clôture : un mois, affiché en toutes lettres ---
+    await ligne.getByLabel(/Mois de cloture du client/i).selectOption('06');
+    await expect
+      .poll(() => ligne.getByText('juin', { exact: true }).first().isVisible().catch(() => false), {
+        timeout: 15_000,
+      })
+      .toBe(true);
+
+    // LE POINT QUI COMPTE : après rechargement, les valeurs viennent de la base
+    // et non d'un état local optimiste. Une mise à jour d'état réussie sur un
+    // écrit raté aurait exactement la même apparence.
+    await page.reload({ waitUntil: 'networkidle' });
+    const relue = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
+    await relue.waitFor({ timeout: 30_000 });
+    for (const attendu of ['contact@sans-email.invalid', 'D-2026-001', 'IS reel', 'juin']) {
+      await expect
+        .poll(() => relue.getByText(attendu, { exact: true }).first().isVisible().catch(() => false), {
+          timeout: 15_000,
+        })
+        .toBe(true);
+    }
+  }, 120_000);
+
+  /**
+   * L'onglet « Parts » de la fiche client, sur une fiche vierge.
+   *
+   * ⚠️ CE QUE CE CAS PROTEGE N'EST PAS L'AFFICHAGE, C'EST LE REFUS DE DEVINER.
+   * L'onglet lit `client_associes` et divise par `clients.parts_totales`. Sur
+   * une fiche qui ne porte ni l'un ni l'autre, deux erreurs seraient faciles et
+   * indolores : annoncer « aucun associe » la ou il faut dire « aucune
+   * REPARTITION SAISIE » — une societe a toujours des associes — et afficher
+   * « 0 % » la ou le total est inconnu. Un zero se lit comme un fait ; le
+   * chiffre finirait dans une attestation.
+   *
+   * C'est aussi le PREMIER parcours de cette suite sur la fiche client. Il reste
+   * volontairement modeste : ouvrir, lire, verifier ce qui est dit. Un parcours
+   * de saisie complet y serait fragile — il faudrait semer une personne dans
+   * `company_officers` — et il est couvert ailleurs, sur le harnais local.
+   */
+  it('dit « aucune repartition saisie » sans jamais afficher 0 %', async () => {
+    await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+
+    const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+    await mesDossiers.waitFor({ timeout: 30_000 });
+    if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+
+    const ligne = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
+    await ligne.waitFor({ timeout: 30_000 });
+    await ligne.getByRole('link').first().click();
+    await page.waitForURL(/\/clients\/[0-9a-f-]{36}/, { timeout: 30_000 });
+
+    // `role: 'tab'` depuis que `TabsTrigger` porte le motif ARIA complet. Ce
+    // selecteur EST une assertion : avant, l'onglet se cherchait comme un
+    // `button` faute de mieux, et le commentaire d'alors le disait.
+    const onglet = page.getByRole('tab', { name: 'Parts', exact: true });
+    await onglet.click();
+    // Ce que le lecteur d'ecran annonce apres le clic, et que rien ne disait :
+    // l'onglet est selectionne, et le panneau visible est le sien.
+    await expect.poll(() => onglet.getAttribute('aria-selected'), { timeout: 15_000 }).toBe('true');
+    expect(await page.getByRole('tabpanel').count()).toBe(1);
+
+    // L'etat vide nomme ce qui manque : la SAISIE, et non les associes.
+    await expect
+      .poll(
+        () => page.getByText(/Aucune repartition saisie/i).first().isVisible().catch(() => false),
+        { timeout: 20_000 }
+      )
+      .toBe(true);
+
+    // Et nulle part un pourcentage : sans total declare, il n'y a rien a diviser.
+    const zero = await page
+      .getByText(/0[.,]00\s*%/)
+      .first()
+      .isVisible()
+      .catch(() => false);
+    expect(zero, 'un « 0 % » est affiche la ou le total de parts est inconnu').toBe(false);
+  }, 120_000);
+
+  /**
+   * L'ascenseur horizontal de la liste clients.
+   *
+   * ⚠️ CE CAS NE SE VOIT QUE DANS UN NAVIGATEUR, et il ne se voyait pas du tout
+   * avant qu'on le signale : le `overflow-x-auto` d'origine posait sa barre au
+   * BAS DE SON CONTENU. Avec cinquante lignes, elle se retrouvait des milliers
+   * de pixels sous la fenetre et les colonnes de droite etaient inatteignables
+   * — sauf en filtrant, ce qui raccourcissait la liste et ramenait la barre a
+   * l'ecran. D'ou un defaut qui avait l'air intermittent.
+   *
+   * Le test verifie ce qui compte : que l'ascenseur soit DANS LA FENETRE, et
+   * qu'en le poussant on amene reellement la derniere colonne sous les yeux.
+   */
+  it('donne un ascenseur atteignable pour les colonnes de droite', async () => {
+    await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+
+    const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+    await mesDossiers.waitFor({ timeout: 30_000 });
+    if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+    await page.locator('tbody tr').first().waitFor({ timeout: 30_000 });
+
+    // Le tableau doit deborder, sinon il n'y a rien a prouver ici.
+    const deborde = await page.evaluate(() => {
+      const c = document.querySelector('table')?.closest('div');
+      return c ? c.scrollWidth - c.clientWidth : 0;
+    });
+    expect(deborde).toBeGreaterThan(0);
+
+    const rail = page.locator('[data-ascenseur]').first();
+    await rail.waitFor({ timeout: 15_000 });
+
+    // Le point du test : la barre est visible SANS defiler la page.
+    const dansLaFenetre = await page.evaluate(() => {
+      const r = document.querySelector('[data-ascenseur]')?.getBoundingClientRect();
+      return !!r && r.top >= 0 && r.bottom <= window.innerHeight + 1;
+    });
+    expect(dansLaFenetre).toBe(true);
+
+    // Et en le poussant a droite, la derniere colonne entre dans le champ.
+    const r = await rail.boundingBox();
+    const curseur = await rail.locator('> div').first().boundingBox();
+    if (!r || !curseur) throw new Error('Ascenseur introuvable.');
+    await page.mouse.move(curseur.x + curseur.width / 2, curseur.y + curseur.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width, curseur.y + curseur.height / 2, { steps: 10 });
+    await page.mouse.up();
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const c = document.querySelector('table')?.closest('div');
+            return c ? c.scrollLeft : 0;
+          }),
+        { timeout: 10_000 }
+      )
+      .toBeGreaterThan(0);
+
+    const derniereVisible = await page.evaluate(() => {
+      const th = document.querySelector('thead tr')?.lastElementChild?.getBoundingClientRect();
+      return !!th && th.right <= window.innerWidth + 1;
+    });
+    expect(derniereVisible).toBe(true);
+  }, 120_000);
+
+  /**
+   * Aucune page ne doit defiler HORIZONTALEMENT sur un telephone.
+   *
+   * ⚠️ CE N'EST PAS UN DETAIL D'ESTHETIQUE. Un `flex` de boutons qui ne se
+   * replie pas pousse la page entiere vers la droite : mesure a 157 px sur la
+   * liste clients et 37 px sur les taches, a 390 px de large. C'est TOUTE la
+   * mise en page qui se decale — en-tete et menu compris — et le tableau, lui,
+   * a deja son propre defilement, si bien que le geste de rattrapage ne fait
+   * pas ce qu'on attend.
+   *
+   * Le test regarde le DOCUMENT, jamais les conteneurs internes : un tableau
+   * plus large que l'ecran est normal et voulu, c'est meme ce que l'ascenseur
+   * de la liste clients sert a parcourir.
+   *
+   * 320 px est la largeur retenue parce que c'est le plus petit telephone
+   * courant : ce qui passe la passe partout.
+   */
+  it('ne fait defiler aucune page horizontalement sur un telephone', async () => {
+    const avant = page.viewportSize();
+    try {
+      for (const largeur of [320, 390]) {
+        await page.setViewportSize({ width: largeur, height: 780 });
+        for (const chemin of ['/clients', '/taches', '/dashboard', '/suivi-echeances']) {
+          await page.goto(BASE + chemin, { waitUntil: 'networkidle' });
+          /**
+           * ⚠️ VERIFIER QU'ON N'EST PAS RETOMBE SUR LA CONNEXION. Sans session,
+           * l'application renvoie a la racine — une page courte et etroite, qui
+           * ne deborde jamais. Le test passait alors sans rien mesurer, et il a
+           * fallu une sonde pour s'en apercevoir : le controle qui remettait le
+           * defaut restait vert.
+           *
+           * On ne compare PAS au chemin demande : `/taches` redirige vers
+           * `/tasks`, et l'exiger identique ferait echouer le test sur un alias
+           * de route parfaitement legitime.
+           */
+          expect(new URL(page.url()).pathname, 'renvoye a la connexion depuis ' + chemin).not.toBe(
+            '/'
+          );
+          // ⚠️ PAS DE `expect.poll` ICI, ET C'EST LE POINT. `poll` REESSAIE
+          // JUSQU'A REUSSIR : pendant le chargement, la largeur du document
+          // passe par zero avant que l'en-tete ne soit peint, et le test
+          // passait alors meme avec le defaut remis — verifie, il ne detectait
+          // rien. On laisse la mise en page se poser, puis on lit UNE fois.
+          await page.waitForTimeout(1_200);
+          const deborde = await page.evaluate(
+            () => document.documentElement.scrollWidth - window.innerWidth
+          );
+          expect(deborde, `${chemin} a ${largeur} px`).toBeLessThanOrEqual(0);
+        }
+      }
+    } finally {
+      // Les cas suivants comptent sur la fenetre d'origine.
+      if (avant) await page.setViewportSize(avant);
+    }
+  }, 120_000);
+
+  /**
+   * La liste clients est servie par LA BASE, page par page.
+   *
+   * ⚠️ CE CAS EXISTE PARCE QUE LA PANNE SERAIT SILENCIEUSE. Si
+   * `/api/clients/liste` echouait, l'ecran attraperait l'erreur et afficherait
+   * une liste VIDE — c'est-a-dire, pour un cabinet, « je n'ai plus aucun
+   * client ». Rien ne planterait, aucune erreur ne paraitrait en console, et le
+   * test des erreurs JS juste en dessous resterait vert.
+   *
+   * On verifie donc trois choses d'un coup : que la route repond, qu'elle sert
+   * bien la liste (et non PostgREST), et que le compte annonce vient d'elle.
+   */
+  it('sert la liste clients par la route paginee, et compte juste', async () => {
+    const appels: string[] = [];
+    const surReponse = (r: { url(): string }) => {
+      const u = r.url();
+      if (u.includes('/api/clients/liste') || /\/rest\/v1\/clients\?/.test(u)) appels.push(u);
+    };
+    page.on('response', surReponse);
+    try {
+      await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+
+      // ⚠️ CETTE ATTENTE VIENT EN PREMIER, pour que l'echec DESIGNE la cause.
+      // Sans elle, une route en panne fait tomber le test sur une case a cocher
+      // introuvable — parce que l'ecran bascule sur « Ajoutez votre premier
+      // client » — et le journal accuse la case au lieu de la route.
+      await expect
+        .poll(() => appels.some((u) => u.includes('/api/clients/liste')), { timeout: 30_000 })
+        .toBe(true);
+
+      const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+      await mesDossiers.waitFor({ timeout: 30_000 });
+      if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+      await page.locator('tbody tr').first().waitFor({ timeout: 30_000 });
+
+      // Et le compte affiche correspond aux lignes rendues, le cabinet de
+      // recette tenant sur une seule page.
+      const lignes = await page.locator('tbody tr').count();
+      expect(lignes).toBeGreaterThan(0);
+      const entete = await page.locator('main p').filter({ hasText: /client/ }).first().innerText();
+      expect(entete).toMatch(new RegExp(`^${lignes} client`));
+    } finally {
+      page.off('response', surReponse);
+    }
+  }, 120_000);
 
   it('ne laisse aucune erreur JavaScript en console', () => {
     /**

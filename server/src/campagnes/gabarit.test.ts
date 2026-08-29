@@ -33,6 +33,7 @@ function client(p: Partial<ClientDestinataire> & { id: string }): ClientDestinat
     date_cloture: null,
     regime_fiscal: null,
     email: null,
+    email_2: null,
     ...p,
   };
 }
@@ -150,6 +151,147 @@ describe('resoudreDestinataires', () => {
       new Set()
     );
     expect(s.exclus.map((e) => e.motif)).toEqual(['sans-adresse', 'adresse-invalide']);
+  });
+
+  /**
+   * ⭐ LA SECONDE ADRESSE. Ce qui suit fige le contrat annonce en tete de
+   * `resoudreDestinataires` : les retenus se comptent EN ADRESSES, les exclus EN
+   * CLIENTS QUI NE RECOIVENT RIEN.
+   */
+  it('sert les deux adresses d une meme fiche, la premiere d abord', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', nom_entreprise: 'DEUX', email: 'a@b.fr', email_2: 'c@d.fr' })],
+      new Set()
+    );
+    expect(s.retenus.map((c) => c.email)).toEqual(['a@b.fr', 'c@d.fr']);
+    // Deux courriels, un seul client : c'est le nombre d'ADRESSES qui compte.
+    expect(s.retenus).toHaveLength(2);
+    expect(s.exclus).toHaveLength(0);
+  });
+
+  /**
+   * Le cas le PLUS FREQUENT d'une seconde adresse : la meme, recopiee. Elle ne
+   * doit produire ni second courriel, ni ligne d'exclusion — le client est
+   * servi, il n'y a rien a signaler.
+   */
+  it('absorbe en silence une seconde adresse identique a la premiere', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: 'a@b.fr', email_2: '  A@B.FR ' })],
+      new Set()
+    );
+    expect(s.retenus.map((c) => c.email)).toEqual(['a@b.fr']);
+    expect(s.exclus).toHaveLength(0);
+  });
+
+  it('sert une fiche qui n a QUE la seconde adresse', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: null, email_2: 'c@d.fr' })],
+      new Set()
+    );
+    expect(s.retenus.map((c) => c.email)).toEqual(['c@d.fr']);
+    expect(s.exclus).toHaveLength(0);
+  });
+
+  /**
+   * Le corollaire assume : une seconde adresse fausse n'exclut pas un client que
+   * sa premiere rend joignable. L'inscrire dans `exclus` ferait mentir le
+   * compteur « n ecarte(s) », qui designerait alors des clients servis.
+   */
+  it('n exclut pas un client dont seule la seconde adresse est invalide', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: 'a@b.fr', email_2: 'pasdarobase' })],
+      new Set()
+    );
+    expect(s.retenus.map((c) => c.email)).toEqual(['a@b.fr']);
+    expect(s.exclus).toHaveLength(0);
+  });
+
+  it('annonce « adresse invalide » quand AUCUNE des deux ne tient', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: 'pasdarobase', email_2: 'a@b' })],
+      new Set()
+    );
+    expect(s.retenus).toHaveLength(0);
+    expect(s.exclus).toEqual([
+      { clientId: '1', nom: '(sans nom)', motif: 'adresse-invalide' },
+    ]);
+  });
+
+  it('annonce « sans adresse » quand les deux champs sont vides', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: '  ', email_2: null })],
+      new Set()
+    );
+    expect(s.exclus.map((e) => e.motif)).toEqual(['sans-adresse']);
+  });
+
+  /**
+   * ⭐ CE QUE LA SECONDE ADRESSE CHANGE AU DEDOUBLONNAGE, et le cas qui aurait
+   * ete faux avec un simple « une ligne par client ».
+   *
+   * Deux societes d'un groupe partagent l'adresse du dirigeant ; la seconde en a
+   * une AUTRE en plus. Elle etait auparavant ecartee comme doublon et ne recevait
+   * rien. Elle est desormais servie sur son adresse propre — et n'apparait plus
+   * dans les exclus, puisqu'elle recoit.
+   */
+  it('sert la jumelle sur sa seconde adresse au lieu de l ecarter', () => {
+    const s = resoudreDestinataires(
+      [
+        client({ id: '1', nom_entreprise: 'PREMIERE', email: 'groupe@exemple.fr' }),
+        client({
+          id: '2',
+          nom_entreprise: 'SECONDE',
+          email: 'groupe@exemple.fr',
+          email_2: 'propre@exemple.fr',
+        }),
+      ],
+      new Set()
+    );
+    expect(s.retenus.map((c) => [c.id, c.email])).toEqual([
+      ['1', 'groupe@exemple.fr'],
+      ['2', 'propre@exemple.fr'],
+    ]);
+    expect(s.exclus).toHaveLength(0);
+  });
+
+  it('ecarte le client dont LES DEUX adresses sont deja servies', () => {
+    const s = resoudreDestinataires(
+      [
+        client({ id: '1', nom_entreprise: 'PREMIERE', email: 'a@b.fr', email_2: 'c@d.fr' }),
+        client({ id: '2', nom_entreprise: 'SECONDE', email: 'c@d.fr', email_2: 'a@b.fr' }),
+      ],
+      new Set()
+    );
+    expect(s.retenus.map((c) => c.email)).toEqual(['a@b.fr', 'c@d.fr']);
+    expect(s.exclus).toEqual([
+      { clientId: '2', nom: 'SECONDE', motif: 'doublon', auProfitDe: 'PREMIERE' },
+    ]);
+  });
+
+  /**
+   * La desinscription est celle du CLIENT, pas d'une adresse : le lien du
+   * courriel signe un identifiant de client (`urlDesinscription`), et
+   * `accepte_mailings` vit sur la fiche. Se desinscrire depuis l'une des deux
+   * adresses coupe donc les deux — c'est la seule lecture defendable d'un « je ne
+   * veux plus recevoir ».
+   */
+  it('coupe LES DEUX adresses d un desinscrit', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: 'a@b.fr', email_2: 'c@d.fr' })],
+      new Set(['1'])
+    );
+    expect(s.retenus).toHaveLength(0);
+    expect(s.exclus.map((e) => e.motif)).toEqual(['desinscrit']);
+  });
+
+  it('retire LES DEUX adresses d un client retire a la main', () => {
+    const s = resoudreDestinataires(
+      [client({ id: '1', email: 'a@b.fr', email_2: 'c@d.fr' })],
+      new Set(),
+      new Set(['1'])
+    );
+    expect(s.retenus).toHaveLength(0);
+    expect(s.exclus.map((e) => e.motif)).toEqual(['retire-a-la-main']);
   });
 });
 

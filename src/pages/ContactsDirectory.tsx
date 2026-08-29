@@ -72,7 +72,7 @@ export function ContactsDirectory() {
       </div>
 
       <Tabs defaultValue="companies" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
+        <TabsList aria-label="Type de contacts">
           <TabsTrigger value="companies">
             <span className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />

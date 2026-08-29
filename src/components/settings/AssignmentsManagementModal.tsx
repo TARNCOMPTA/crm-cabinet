@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Database } from '../../types/database';
 import { useToast } from '../../contexts/ToastContext';
+import { messageEchecAffectation } from '../../lib/erreursAffectations';
 import { Badge } from '../ui/Badge';
 import { useRegimesFiscaux } from '../../hooks/useRegimesFiscaux';
 import { useSortableTable } from '../../hooks/useSortableTable';
@@ -15,6 +16,22 @@ import { SortableTableWrapper } from '../ui/SortableTableWrapper';
 import { SortableRow } from '../ui/SortableRow';
 
 type Client = Database['public']['Tables']['clients']['Row'];
+
+/**
+ * Lève l'erreur d'une réponse PostgREST EN GARDANT SON STATUT HTTP.
+ *
+ * ⚠️ `throw error` — la forme d'origine, et celle du reste du dossier — perd le
+ * statut : `postgrest-js` le rend À CÔTÉ de l'erreur (`{ data, error, status }`)
+ * et non dedans. Une session expirée arrivait donc à l'affichage sous la seule
+ * forme de son message brut, « JWT expired », et une coupure réseau sous celle
+ * de « TypeError: Failed to fetch ». Constaté dans un navigateur, pas déduit.
+ */
+function lever(reponse: { error: unknown; status?: number }): void {
+  if (!reponse.error) return;
+  throw typeof reponse.error === 'object'
+    ? Object.assign(reponse.error, { status: reponse.status })
+    : reponse.error;
+}
 
 interface AssignmentsManagementModalProps {
   isOpen: boolean;
@@ -77,8 +94,8 @@ export function AssignmentsManagementModal({
           .eq('user_id', userId)
       ]);
 
-      if (clientsResult.error) throw clientsResult.error;
-      if (assignmentsResult.error) throw assignmentsResult.error;
+      lever(clientsResult);
+      lever(assignmentsResult);
 
       setClients(clientsResult.data || []);
 
@@ -87,8 +104,8 @@ export function AssignmentsManagementModal({
       );
       setAssignments(assignedIds);
       setInitialAssignments(assignedIds);
-    } catch (error) {
-      showToast('Erreur lors du chargement des données', 'error');
+    } catch (e) {
+      showToast(messageEchecAffectation(e, 'Erreur lors du chargement des données'), 'error');
     } finally {
       setLoading(false);
     }
@@ -132,7 +149,33 @@ export function AssignmentsManagementModal({
     });
   };
 
+  /**
+   * Relit le point de depart depuis la base, SANS toucher a la selection.
+   *
+   * ⚠️ UNE SAUVEGARDE PEUT S'ARRETER AU MILIEU : les retraits partent en
+   * premier, les ajouts ensuite, et rien ne les reunit en une transaction —
+   * PostgREST ne l'offre pas sur deux requetes. Si l'ajout echoue, les retraits
+   * sont deja faits, et `initialAssignments` decrit alors un etat de la base qui
+   * n'existe plus. La fenetre annoncerait « modifications non sauvegardees »
+   * pour des retraits deja enregistres, et un second essai les redemanderait.
+   *
+   * Ce qui est relu, c'est le POINT DE DEPART. La selection de l'utilisateur est
+   * son intention : elle lui appartient, on ne l'ecrase pas.
+   */
+  async function resynchroniserPointDeDepart() {
+    const { data, error } = await supabase
+      .from('client_collaborators')
+      .select('client_id')
+      .eq('user_id', userId);
+    if (error || !data) return;
+    setInitialAssignments(new Set(data.map(a => a.client_id)));
+  }
+
   const handleSave = async () => {
+    // Nomme l'etape en cours, pour que le message dise ce qui a ete fait avant
+    // l'echec plutot que de laisser croire que rien n'a bouge.
+    let etape: 'retrait' | 'ajout' = 'retrait';
+    let retraitsFaits = false;
     try {
       setSaving(true);
 
@@ -140,15 +183,15 @@ export function AssignmentsManagementModal({
       const toRemove = Array.from(initialAssignments).filter(id => !assignments.has(id));
 
       if (toRemove.length > 0) {
-        const { error } = await supabase
+        lever(await supabase
           .from('client_collaborators')
           .delete()
           .eq('user_id', userId)
-          .in('client_id', toRemove);
-
-        if (error) throw error;
+          .in('client_id', toRemove));
+        retraitsFaits = true;
       }
 
+      etape = 'ajout';
       if (toAdd.length > 0) {
         const inserts = toAdd.map(clientId => ({
           client_id: clientId,
@@ -156,18 +199,24 @@ export function AssignmentsManagementModal({
           role: 'assistant'
         }));
 
-        const { error } = await supabase
+        lever(await supabase
           .from('client_collaborators')
-          .insert(inserts);
-
-        if (error) throw error;
+          .insert(inserts));
       }
 
       showToast('Affectations mises à jour avec succès', 'success');
       onUpdate();
       onClose();
-    } catch (error: any) {
-      showToast('Erreur lors de la sauvegarde', 'error');
+    } catch (e) {
+      const quoi = etape === 'retrait' ? 'Retrait impossible' : 'Ajout impossible';
+      const partiel = etape === 'ajout' && retraitsFaits
+        ? ' (les retraits, eux, sont enregistrés)'
+        : '';
+      showToast(`${quoi}${partiel} — ${messageEchecAffectation(e, 'erreur inconnue')}`, 'error');
+      // La liste de gauche doit redire l'etat reel : la fenetre reste ouverte,
+      // et ce qu'elle affiche comme « non sauvegarde » doit etre vrai.
+      await resynchroniserPointDeDepart();
+      onUpdate();
     } finally {
       setSaving(false);
     }

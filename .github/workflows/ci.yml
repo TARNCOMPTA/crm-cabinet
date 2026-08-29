@@ -8,10 +8,95 @@ name: CI
 # ni le garde-fou de secrets. Une CI qui ne s'execute pas sur la branche de
 # travail ne protege rien, et son silence se lit comme un feu vert.
 on:
+  # ⚠️ `push` SUR `main` SEULEMENT, ET C'EST LE PLUS GROS LEVIER DE COÛT.
+  #
+  # Avec `branches: ['**']`, chaque changement faisait tourner cette CI DEUX
+  # FOIS SUR LE MÊME COMMIT : une fois à la poussée de la branche de travail,
+  # une seconde quand `main` avançait dessus en fast-forward. Vingt minutes
+  # facturées pour un seul état du code. Ce dépôt est privé : les minutes
+  # Actions y sont payées, et le 2026-08-29 au matin le compte avait atteint sa
+  # limite de dépense — plus aucun job ne démarrait, sur aucune branche.
+  #
+  # Ce que cela change à la manière de travailler, et qu'il faut assumer :
+  #   · un changement ordinaire se commite sur `main` — une exécution ;
+  #   · un changement risqué passe par une demande de fusion, qui déclenche
+  #     `pull_request` — une exécution avant, une après la fusion. Deux, donc,
+  #     mais choisies.
+  # Pousser une branche sans demande de fusion ne déclenche plus rien : c'est
+  # voulu, et c'est exactement la dépense qu'on supprime.
+  #
+  # Les branches Dependabot sont couvertes par `pull_request`, une seule fois —
+  # elles n'existent que pour porter une demande de fusion. Le 2026-08-28 au
+  # soir, leur activation avait produit 20 exécutions sur 10 branches, dont 10
+  # en pure perte.
   push:
-    branches: ['**']
+    branches: [main]
     tags: ['v*']
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Le jeton `GITHUB_TOKEN` de CHAQUE job, reduit a la lecture.
+#
+# ⚠️ SANS CE BLOC, LE DEFAUT DU DEPOT S'APPLIQUE — et sur un depot cree il y a
+# quelques annees, ce defaut est « lecture et ecriture ». Chaque job de cette CI
+# disposait donc d'un jeton capable d'ecrire dans le depot : huit occasions, dont
+# celles qui executent `npm ci` et donc du code de dependances.
+#
+# Le job `image` redeclare ses propres permissions (`packages: write`) : une
+# declaration au niveau d'un job REMPLACE celle-ci, elle ne s'y ajoute pas. C'est
+# le seul job qui pousse quelque chose, et le seul qui en a besoin.
+permissions:
+  contents: read
+
+# TOUTES LES ACTIONS SONT SUR NODE 24. AUCUNE NE DOIT REDESCENDRE.
+#
+# Elles etaient toutes sur Node 20 — les trois `actions/*` en v4 comme les
+# quatre `docker/*` — un runtime que GitHub a deprecie, et chaque job affichait
+# donc son avertissement. Ne monter que les `actions/*` aurait laisse
+# l'avertissement en place : c'est le fichier entier qui bascule.
+#
+#   actions/checkout        v4 -> v7      docker/setup-buildx-action  v3 -> v4
+#   actions/setup-node      v4 -> v7      docker/build-push-action    v6 -> v7
+#   actions/upload-artifact v4 -> v7      docker/metadata-action      v5 -> v6
+#                                         docker/login-action         v3 -> v4
+#
+# Les ruptures annoncees ont ete relevees une a une, et aucune ne nous atteint :
+#
+#   · `checkout` v7 refuse la tete d'une PR de fork sous `pull_request_target`
+#     et `workflow_run`. Ce fichier ne declenche sur aucun des deux — `push`,
+#     les tags, et `pull_request`, qui lui n'est pas vise.
+#   · `setup-node` v5 pose un cache DE LUI-MEME quand `package.json` declare
+#     `packageManager`. Le notre ne le declare pas, et chaque appel ci-dessous
+#     fixe deja `cache: npm` explicitement.
+#   · `upload-artifact` v7 ajoute `archive`, sans effet tant qu'on ne l'ecrit
+#     pas. Le seul televersement ne passe que `name`, `path`, `retention-days`.
+#   · `build-push-action` v7 supprime `DOCKER_BUILD_NO_SUMMARY` et
+#     `DOCKER_BUILD_EXPORT_RETENTION_DAYS` : ni l'une ni l'autre n'est posee ici.
+#   · `setup-buildx-action` v4 cesse de creer les alias `docker build`. Sans
+#     effet : rien dans ce depot n'appelle `docker build` en direct, tout passe
+#     par `build-push-action`.
+#   · `metadata-action` v6 traite les `#` dans les entrees-listes. Les deux seuls
+#     `#` du bloc `tags` sont des commentaires YAML pleine ligne, retires par le
+#     parseur bien avant l'action.
+#
+# ⚠️ DEUX DE CES ACTIONS NE SONT PAS EXERCEES PAR UNE POUSSEE DE BRANCHE.
+# `login-action` et `metadata-action` ne vivent que dans le job `image`, pose
+# derriere `startsWith(github.ref, 'refs/tags/v')` : la CI d'une branche ne les
+# execute jamais. Leur montee de version se verifiera au prochain tag, et c'est
+# precisement le job qui publie l'image dont les cabinets tirent leur mise a
+# jour. `setup-buildx-action` et `build-push-action`, eux, tournent a chaque
+# poussee dans `image-construction` : ceux-la sont couverts.
+#
+# ⚠️ CE QU'IL FAUDRA REVERIFIER LE JOUR OU UNE ACTION IRA SUR L'AUTO-HEBERGE.
+# Une action Node 24 exige un runner >= 2.327.1. Ici la question ne se pose
+# pas : tous les jobs de ce fichier tournent sur `ubuntu-latest`, dont GitHub
+# tient le runner a jour, et `deploiement.yml` — le seul a viser le VPS —
+# n'utilise AUCUNE action, il n'enchaine que des commandes. Ajouter un
+# `actions/checkout` la-bas, c'est se donner l'obligation de tenir le runner du
+# serveur a niveau, faute de quoi le deploiement casse.
 
 jobs:
   # Le build est bloquant : c'est le seul indicateur qui passe au vert aujourd'hui,
@@ -20,88 +105,46 @@ jobs:
   # Aucun secret n'est necessaire, et ce n'est plus une chance : il n'existe plus
   # aucune variable VITE_* dans le projet. Le front ne lit rien de
   # l'environnement de compilation, il demande sa configuration au serveur.
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
-
-  # L'IMAGE SE CONSTRUIT A CHAQUE POUSSEE, sans etre publiee.
+  # Un seul job pour les quatre contrôles qui partagent la même installation.
   #
-  # Le job `build` ci-dessus compile le front dans le depot COMPLET : tout ce qui
-  # traine a la racine y est lisible. Le Dockerfile, lui, ne copie qu'une liste
-  # nommee de fichiers — et c'est cette liste qui se perime en silence.
+  # ⚠️ GITHUB FACTURE CHAQUE JOB ARRONDI À LA MINUTE SUPÉRIEURE, et ce dépôt est
+  # privé. `build`, `serveur`, `quality` et `test` duraient 25 s, 25 s, 49 s et
+  # 79 s — trois minutes de travail réel, quatre minutes facturées, plus quatre
+  # `checkout`, quatre installations de Node et cinq `npm ci` refaits à
+  # l'identique. Relevé sur l'exécution du 2026-08-28 : 8 jobs, 7 minutes
+  # réelles, 10 minutes facturées.
   #
-  # Le defaut qui a impose ce job : `vite.config.ts` a commence a lire
-  # `version.json` pour figer la version dans le bundle, et ce fichier n'etait pas
-  # dans la liste. Les six jobs etaient verts, le premier deploiement a echoue sur
-  # « ENOENT: open './version.json' ». La construction n'etait exercee que par le
-  # job `image`, declenche uniquement par un tag : le trou se decouvrait donc au
-  # moment de publier, c'est-a-dire au pire moment.
+  # Réunis, ils partagent une installation et un arrondi. Ce qui est perdu, et
+  # qu'il faut assumer : le voyant passe de quatre couleurs à une, et la
+  # première étape en échec arrête les suivantes — un typecheck rouge masque
+  # désormais l'état des tests. C'est le prix, et il est modeste : on relance
+  # après correction, et la CI complète dure moins de cinq minutes.
   #
-  # Ce job ne pousse RIEN — `push: false`. Il ne remplace pas `image`, il en fait
-  # la repetition.
-  image-construction:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Les tests sont bloquants des maintenant : la suite demarre a zero, donc
-  # elle doit rester verte.
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-
-  # Cliquet qualite.
+  # L'ORDRE N'EST PAS ARBITRAIRE : du plus rapide à dire au plus long à
+  # produire. Les cliquets (typecheck, eslint, secrets) attrapent la majorité
+  # des régressions en moins d'une minute ; la construction du front, la plus
+  # lente, vient en dernier.
   #
-  # Le depot heritait de 388 erreurs tsc a l'audit du 2026-07-29. Rendre ces
-  # controles bloquants d'emblee aurait bloque tout le chantier ; les ignorer
-  # aurait laisse la derive s'installer. D'ou ce compromis : les compteurs sont
-  # des PLAFONDS, la CI echoue si le nombre AUGMENTE, et on les abaisse a mesure.
-  #
-  # Ce que ce cliquet ne sait pas faire, et qu'il faut avoir en tete : il compte,
-  # il ne compare pas. Corriger cinq erreurs et en introduire cinq laisse le
-  # total inchange, donc passe. Il protege de la derive en volume, pas de
-  # l'echange. Sur tsc, la question ne se pose plus : le plafond est a zero.
-  #
-  # Ce qu'il valait a ete demontre le 2026-08-01 : quatre defauts de la mise en
-  # production dormaient dans ces erreurs, dont le plantage de la fiche client —
-  # un « TS2554: Expected 4 arguments, but got 2 » signale depuis des semaines,
-  # invisible au milieu du bruit. La resorption complete en a sorti dix autres,
-  # tous des defauts d'execution que rien d'autre ne voyait : une prop `text`
-  # passee a un composant qui attend `value` (bouton copier inerte), un
-  # `onClick` sur `Card` que React ne transmettait pas (cartes du kanban muettes),
-  # un filtre sur une colonne `status` qui n'existe sur aucune des trois tables
-  # visees (reattribution des dossiers d'un partant sans effet), une modale
-  # `size="large"` inconnue du composant, un `Bearer undefined` envoye a l'API
-  # des cles MCP, et un `profile?.loadLegalActs` qui ne designait rien.
-  quality:
+  # `navigateur`, `schema` et `image-construction` restent à part : ils ne
+  # partagent pas cette installation (Chromium, un PostgreSQL de service, un
+  # démon Docker) et les réunir allongerait le chemin critique sans rien
+  # économiser.
+  verification:
     runs-on: ubuntu-latest
     env:
+      # Ce que le service worker precharge, en Ko.
+      #
+      # Il valait 3 190 Ko : TOUT le bundle, y compris les morceaux que le code
+      # ne charge qu'a la demande. Le tableur (420 Ko), l'export PDF d'une fiche
+      # (424 Ko) et son moteur de capture (200 Ko) etaient donc telecharges par
+      # chaque appareil A CHAQUE MISE A JOUR de l'instance, alors que la plupart
+      # des collaborateurs ne les ouvrent jamais. Les exclure a ramene le
+      # precache a 2 151 Ko.
+      #
+      # Le plafond est pose juste au-dessus, comme les cliquets de `quality` :
+      # il attrape aussi bien un motif `globIgnores` devenu obsolete apres un
+      # renommage de morceau qu'un nouveau poids lourd ajoute sans y penser.
+      MAX_PRECACHE_KO: 2300
       # tsc : ZERO, atteint le 2026-08-02 depuis 136.
       #
       # Le plafond n'est plus un plafond mais une exigence : toute erreur
@@ -114,17 +157,54 @@ jobs:
       # eslint ignore `server`, qui a son propre job exigeant zero erreur. Sans
       # cela le compteur valait 195 ou 198 selon que `server/dist` existait ou
       # non — un plafond ne peut pas dependre de ce qui traine sur le disque de
-      # l'executeur. Il reste 191 erreurs de style a resorber, sans rapport avec
-      # les types.
+      # l'executeur.
+      #
+      # eslint : ZERO A SON TOUR, atteint le 2026-08-24 depuis 189.
+      #
+      # Chemin : 189 -> 144 (les `catch (error)` inutilises deviennent `catch`,
+      # et la convention `_` est enfin declaree dans eslint.config.js) -> 134
+      # (dix blocs vides recoivent la raison de leur silence) -> 127 (const,
+      # interfaces de props vides) -> 79 (les `catch (e: any)` passent par
+      # lib/erreurs.ts) -> 0, en typant les `any` restants fichier par fichier.
+      #
+      # ⚠️ CE N'ETAIT PAS UN NETTOYAGE COSMETIQUE. Le compilateur, une fois
+      # `any` retire, a signale des defauts REELS : une adresse jamais
+      # pre-remplie a la selection d'un client, une date de synchronisation
+      # affichee au 1er janvier 1970, une taille de piece jointe en « NaN o »,
+      # une date de dernier import faussee par une ligne sans horodatage. Tous
+      # etaient invisibles tant que le type disait `any`.
       MAX_TSC_ERRORS: 0
-      MAX_ESLINT_ERRORS: 189
+      MAX_ESLINT_ERRORS: 0
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
+          # LES DEUX VERROUS. Le job `serveur` posait
+          # `cache-dependency-path: server/package-lock.json` et les autres
+          # celui de la racine ; réunis, il faut les deux, sans quoi le cache
+          # ignorerait la moitié des dépendances installées ici.
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
       - run: npm ci
+      # ⚠️ LES DEPENDANCES DU SERVEUR AUSSI, ET C'EST INDISPENSABLE.
+      #
+      # `vitest.config.ts` inclut deliberement `server/src/**` : la regle d'acces
+      # du proxy PostgREST y vit, et elle porte seule les droits d'ecriture. Mais
+      # ce job n'installait que la racine. Tant que les modules serveur couverts
+      # n'importaient rien (`rest-droits.ts` ne depend de RIEN, c'est ecrit dans
+      # son en-tete), personne ne s'en apercevait.
+      #
+      # `server/src/mcp/outils.test.ts` a rompu le silence en tirant `unpdf` par
+      # `inpi/statuts-texte.ts` : « Failed to resolve import "unpdf" ». En local
+      # la resolution trouvait `server/node_modules` et masquait le manque — le
+      # meme piege que celui deja documente dans `server/tsconfig.json` pour
+      # `vitest` lui-meme, en sens inverse.
+      - name: Dependances du serveur
+        working-directory: server
+        run: npm ci
 
       - name: Typecheck (cliquet)
         run: |
@@ -176,6 +256,135 @@ jobs:
           fi
           echo "Aucun secret en dur."
 
+      - name: Typecheck (zero erreur exigee)
+        working-directory: server
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Build
+        working-directory: server
+        run: npm run build
+
+      - run: npm test
+
+      - run: npm run build
+
+      - name: Poids du precache (cliquet)
+        run: node scripts/poids-precache.mjs "$MAX_PRECACHE_KO"
+
+      # ⚠️ CE CONTROLE EXISTE PARCE QUE LE DEFAUT ETAIT MUET. En passant a
+      # Vite 8, qui empaquette avec Rolldown, le decoupage manuel a d'abord
+      # echoue franchement — puis, une fois reecrit, il a CONSTRUIT SANS ERREUR
+      # EN GROUPANT FAUX : `vendor-react` tombe de 176 a 39 Ko, `vendor-dnd`
+      # passe a 183 Ko et porteur de `react-dom`. Aucun job rouge, un bundle
+      # simplement mal decoupe, donc un cache qui s'invalide de travers.
+      - name: Decoupage du bundle (contenu conforme aux noms)
+        run: node scripts/verifier-decoupage.mjs
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # L'IMAGE SE CONSTRUIT A CHAQUE POUSSEE, sans etre publiee.
+  #
+  # Le job `build` ci-dessus compile le front dans le depot COMPLET : tout ce qui
+  # traine a la racine y est lisible. Le Dockerfile, lui, ne copie qu'une liste
+  # nommee de fichiers — et c'est cette liste qui se perime en silence.
+  #
+  # Le defaut qui a impose ce job : `vite.config.ts` a commence a lire
+  # `version.json` pour figer la version dans le bundle, et ce fichier n'etait pas
+  # dans la liste. Les six jobs etaient verts, le premier deploiement a echoue sur
+  # « ENOENT: open './version.json' ». La construction n'etait exercee que par le
+  # job `image`, declenche uniquement par un tag : le trou se decouvrait donc au
+  # moment de publier, c'est-a-dire au pire moment.
+  #
+  # Ce job ne pousse RIEN — `push: false`. Il ne remplace pas `image`, il en fait
+  # la repetition.
+  image-construction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          push: false
+          # `load` charge l'image dans le docker du runner : sans lui elle
+          # reste dans le cache de buildx et les controles ci-dessous n'ont
+          # rien a lancer.
+          load: true
+          tags: crmcabinet:essai
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ⚠️ CES TROIS CONTROLES EXISTENT PARCE QU'ILS NE SONT PAS VERIFIABLES
+      # AILLEURS. Le passage du conteneur en non-root se joue entierement a
+      # l'execution : un `USER` dans le Dockerfile ne prouve pas que
+      # l'application peut encore ecrire ses pieces jointes, et se tromper la
+      # ne se voit qu'au PREMIER FICHIER DEPOSE, chez le cabinet, longtemps
+      # apres le deploiement.
+      - name: L'image ne tourne pas en root
+        run: |
+          uid=$(docker run --rm --entrypoint id crmcabinet:essai -u)
+          echo "uid dans le conteneur : $uid"
+          test "$uid" = "10001" || { echo "::error::attendu 10001, obtenu $uid"; exit 1; }
+
+      - name: Un volume prepare par preparer-data.sh est ecrivable
+        run: |
+          sudo sh installation/preparer-data.sh "$RUNNER_TEMP/instance"
+          docker run --rm -v "$RUNNER_TEMP/instance/data:/app/data" \
+            --entrypoint sh crmcabinet:essai -c '
+              set -e
+              mkdir -p /app/data/storage/essai
+              echo depose > /app/data/storage/essai/piece.txt
+              cat /app/data/storage/essai/piece.txt'
+
+      # Le controle precedent ne prouverait rien si un volume QUELCONQUE etait
+      # ecrivable : il faut voir echouer le cas non prepare.
+      - name: Un volume NON prepare est refuse
+        run: |
+          mkdir -p "$RUNNER_TEMP/brute/data"
+          if docker run --rm -v "$RUNNER_TEMP/brute/data:/app/data" \
+               --entrypoint sh crmcabinet:essai -c 'mkdir -p /app/data/x' 2>/dev/null; then
+            echo "::error::un volume non prepare est ecrivable : le controle precedent ne prouve rien"
+            exit 1
+          fi
+          echo "refuse, comme attendu"
+
+      # Le Caddyfile n'etait valide par rien. Il sert HTTPS pour toute
+      # l'instance : une faute de frappe empeche Caddy de demarrer, donc rend
+      # le CRM injoignable — et cela ne se decouvre qu'au deploiement.
+      - name: Le Caddyfile est valide
+        run: |
+          docker run --rm -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -e DOMAIN=exemple.test -e ACME_EMAIL=zz@exemple.test \
+            caddy:2 caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+
+  # Les tests sont bloquants des maintenant : la suite demarre a zero, donc
+  # elle doit rester verte.
+  # Cliquet qualite.
+  #
+  # Le depot heritait de 388 erreurs tsc a l'audit du 2026-07-29. Rendre ces
+  # controles bloquants d'emblee aurait bloque tout le chantier ; les ignorer
+  # aurait laisse la derive s'installer. D'ou ce compromis : les compteurs sont
+  # des PLAFONDS, la CI echoue si le nombre AUGMENTE, et on les abaisse a mesure.
+  #
+  # Ce que ce cliquet ne sait pas faire, et qu'il faut avoir en tete : il compte,
+  # il ne compare pas. Corriger cinq erreurs et en introduire cinq laisse le
+  # total inchange, donc passe. Il protege de la derive en volume, pas de
+  # l'echange. Sur tsc, la question ne se pose plus : le plafond est a zero.
+  #
+  # Ce qu'il valait a ete demontre le 2026-08-01 : quatre defauts de la mise en
+  # production dormaient dans ces erreurs, dont le plantage de la fiche client —
+  # un « TS2554: Expected 4 arguments, but got 2 » signale depuis des semaines,
+  # invisible au milieu du bruit. La resorption complete en a sorti dix autres,
+  # tous des defauts d'execution que rien d'autre ne voyait : une prop `text`
+  # passee a un composant qui attend `value` (bouton copier inerte), un
+  # `onClick` sur `Card` que React ne transmettait pas (cartes du kanban muettes),
+  # un filtre sur une colonne `status` qui n'existe sur aucune des trois tables
+  # visees (reattribution des dossiers d'un partant sans effet), une modale
+  # `size="large"` inconnue du composant, un `Bearer undefined` envoye a l'API
+  # des cles MCP, et un `profile?.loadLegalActs` qui ne designait rien.
   # ---------------------------------------------------------------------------
   # Le schema, applique a un vrai PostgreSQL.
   #
@@ -205,14 +414,39 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - name: Le schema doit s'appliquer et tenir ses invariants
-        run: npx vitest run tests/schema.test.ts --reporter=basic
+        # `--reporter=dot` et non `basic` : ce rapporteur A ETE SUPPRIME dans
+        # Vitest 4, ou il n'est plus reconnu comme un nom mais cherche comme un
+        # MODULE — d'ou un « Failed to load url basic » qui ressemble a une
+        # panne de schema alors que le schema n'y est pour rien. `dot` donne la
+        # meme sortie compacte.
+        #
+        # ⚠️ CE DRAPEAU NE VIT QUE DANS CE JOB : aucun essai local ne
+        # l'exercait, et la montee de version l'a donc casse sans que rien ne le
+        # montre avant la CI.
+        run: npx vitest run tests/schema.test.ts --reporter=dot
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/schema_test
+
+      # ⚠️ UNE ETAPE A PART, ET NON LE MEME `vitest run` QUE CI-DESSUS. Les deux
+      # suites partagent la base, et chacune commence par
+      # `DROP SCHEMA public CASCADE`. Vitest execute les fichiers EN PARALLELE :
+      # reunies dans un seul appel, elles s'arracheraient le schema l'une a
+      # l'autre et echoueraient au hasard.
+      - name: Les requetes SQL du connecteur MCP doivent s'analyser
+        # Ce qu'elle a trouve le jour de son ecriture : CINQ outils du
+        # connecteur demandaient des colonnes anglaises (`title`, `status`,
+        # `meeting_date`, `amount`, `license_type`) a des tables qui les nomment
+        # en francais. Ils echouaient a chaque appel depuis leur mise en
+        # service, et rien dans le depot ne pouvait le voir — une chaine SQL
+        # n'est relue par personne avant son execution.
+        run: npx vitest run tests/mcp-sql.test.ts --reporter=dot
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/schema_test
 
@@ -256,8 +490,8 @@ jobs:
       SESSION_SECRET: secret-de-ci-sans-valeur-hors-de-ce-job-32c
       DATABASE_URL: postgres://crm:crm@localhost:5432/crmcabinet
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -272,6 +506,14 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f schema/cible.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f schema/auth-interne.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c             "INSERT INTO cabinets (nom) VALUES ('Cabinet de recette');"
+          # Une fiche VIDE DE TOUT : ni email, ni numero de dossier, ni regime,
+          # ni cloture. C'est la condition d'existence des quatre cases de saisie
+          # testees par « permet de completer les champs manquants ».
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c             "INSERT INTO clients (nom_entreprise) VALUES ('SANS EMAIL SARL');"
+          # ⚠️ SANS AU MOINS UN REGIME, LE SELECTEUR SERAIT VIDE et le test ne
+          # prouverait rien. Les regimes ne sont pas semes par le schema : chaque
+          # cabinet definit les siens dans Reglages.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c             "INSERT INTO regimes_fiscaux (value, label, description, position, is_active)              VALUES ('IS_REEL', 'IS reel', 'Impot sur les societes, regime reel', 1, true);"
 
       - name: Construction
         run: |
@@ -279,8 +521,25 @@ jobs:
           npm run build --prefix server
 
       - name: PostgREST
+        # ⚠️ LA MEME VERSION QUE `docker-compose.yml`, ET C'EST TOUT L'OBJET DE
+        # CE JOB. Il monte la pile pour exercer le produit tel qu'un cabinet
+        # l'execute ; le faire contre un PostgREST que personne n'installe
+        # validerait une semantique qui n'est pas celle de la production. Le
+        # front compte 70 requetes qui reposent sur cette semantique — filtres
+        # `or`, selections imbriquees, `count=exact` — et une divergence s'y
+        # verrait au pire endroit : chez le cabinet, jamais ici.
+        #
+        # Ce job a tourne en v14.16 pendant que la production tournait en
+        # v12.2.3. Rien n'a casse, et c'est precisement ce qui rend l'ecart
+        # dangereux : il ne se signale pas.
+        #
+        # Changer ce numero VEUT DIRE changer les deux `docker-compose*.yml`
+        # d'abord. Attention au nom de l'archive au passage : la v12 la publie
+        # en `-linux-static-x64`, la v14 en `-linux-static-x86-64`. Recopier le
+        # numero sans relire le nom donne un 404, donc un job rouge sur une
+        # etape qui n'a rien a voir avec le code propose.
         run: |
-          curl -fsSL -o postgrest.tar.xz             https://github.com/PostgREST/postgrest/releases/download/v14.16/postgrest-v14.16-linux-static-x86-64.tar.xz
+          curl -fsSL -o postgrest.tar.xz             https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz
           tar -xJf postgrest.tar.xz
           PGRST_DB_URI="$DATABASE_URL"           PGRST_DB_SCHEMAS=public           PGRST_DB_ANON_ROLE=           PGRST_JWT_SECRET="$SESSION_SECRET"           PGRST_SERVER_PORT=3001           ./postgrest > postgrest.log 2>&1 &
           for i in $(seq 1 30); do
@@ -326,25 +585,6 @@ jobs:
   # Verification du serveur. Separee du front : deux package.json distincts, et
   # le serveur n'a pas de cliquet — il part de zero erreur et doit y rester.
   # ---------------------------------------------------------------------------
-  serveur:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-      - name: Dependances
-        working-directory: server
-        run: npm ci
-      - name: Typecheck (zero erreur exigee)
-        working-directory: server
-        run: npx tsc --noEmit -p tsconfig.json
-      - name: Build
-        working-directory: server
-        run: npm run build
-
   # ---------------------------------------------------------------------------
   # Publication de l'image sur GHCR, uniquement sur tag de version.
   #
@@ -388,13 +628,13 @@ jobs:
   # ---------------------------------------------------------------------------
   image:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, image-construction, test, quality, schema, serveur, navigateur]
+    needs: [verification, image-construction, schema, navigateur]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: La version du tag doit correspondre a version.json
         run: |
@@ -416,16 +656,16 @@ jobs:
             exit 1
           fi
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: ghcr.io/${{ github.repository }}
           # `latest` ne bouge que sur une version stable : une prerelease ne doit
@@ -435,7 +675,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           push: true

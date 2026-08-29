@@ -17,7 +17,7 @@ export function CopyButton({ value, label = 'Valeur' }: CopyButtonProps) {
       setCopied(true);
       showToast(`${label} copié`, 'success');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la copie', 'error');
     }
   }

@@ -56,8 +56,8 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
   const moisTraites = (card.mois_traites || []).slice().sort((a, b) => a - b);
 
   const sortedItems = card.checklist_items?.slice().sort((a, b) => {
-    const posA = (a.template as any)?.position ?? 0;
-    const posB = (b.template as any)?.position ?? 0;
+    const posA = a.template?.position ?? 0;
+    const posB = b.template?.position ?? 0;
     return posA - posB;
   });
 
@@ -184,7 +184,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
                     >
                       {item.template?.name || 'Element'}
                     </span>
-                    {((item as any).attachments?.length || 0) > 0 && (
+                    {(item.attachments?.length || 0) > 0 && (
                       <Paperclip className="w-3 h-3 text-gray-400 shrink-0 ml-auto" />
                     )}
                   </div>

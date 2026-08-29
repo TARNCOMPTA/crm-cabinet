@@ -5,7 +5,6 @@ import {
   UserCheck,
   CheckSquare,
   BarChart3,
-  Calendar,
   Shield,
   Percent,
   TrendingUp,
@@ -64,12 +63,6 @@ const MODULE_CONFIG: Record<
     link: '/balance-sheets',
     borderColor: 'border-l-emerald-500',
   },
-  fiscal_deadlines: {
-    title: 'Échéances fiscales',
-    icon: Calendar,
-    link: '/fiscal-deadlines',
-    borderColor: 'border-l-orange-500',
-  },
   habilitations: {
     title: 'Habilitations',
     icon: Shield,
@@ -87,12 +80,6 @@ const MODULE_CONFIG: Record<
     icon: TrendingUp,
     link: '/opportunities',
     borderColor: 'border-l-sky-500',
-  },
-  documents: {
-    title: 'Documents generes',
-    icon: FileText,
-    link: '/documents',
-    borderColor: 'border-l-slate-500',
   },
   software: {
     title: 'Logiciels',
@@ -114,17 +101,29 @@ const MODULE_CONFIG: Record<
   },
 };
 
+/**
+ * L'ordre d'affichage, et le SEUL endroit qui decide qu'un module existe.
+ *
+ * `activeModules` filtre sur les donnees reellement rendues par
+ * `fetchClientCrossReferences` : une cle qui n'y figure pas ne s'affiche jamais.
+ * Deux entrees en profitaient pour survivre sans rien montrer —
+ * « Echeances fiscales » (`/fiscal-deadlines`) et « Documents generes »
+ * (`/documents`), toutes deux pointant vers des ecrans RETIRES du produit. Leur
+ * carte ne pouvait pas apparaitre, donc leur lien mort ne pouvait pas etre
+ * clique : personne ne les signalait, et elles donnaient a lire une liste de
+ * modules qui n'existent plus.
+ *
+ * Ajouter une cle ici sans que le service la produise reproduit exactement cela.
+ */
 const MODULE_ORDER = [
   'legal_acts',
   'assemblies',
   'officers',
   'tasks',
   'bilans',
-  'fiscal_deadlines',
   'habilitations',
   'exemptions',
   'opportunities',
-  'documents',
   'software',
   'depot_comptes',
   'meeting_notes',

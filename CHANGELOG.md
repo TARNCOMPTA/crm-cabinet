@@ -5,6 +5,103 @@ signale un changement qui demande une action de votre part.
 
 ---
 
+## 2.3.0 — 2026-08-29
+
+Cette version ouvre le CRM aux cabinets qui ne sont pas TARN COMPTA — au sens
+propre : **l'installation était impossible pour eux**. Cinq renvois visaient le
+dépôt privé, la commande du README répondait 404, et `install.sh` clonait un
+dépôt auquel personne d'autre n'a accès. Un logiciel sous licence MIT que
+personne ne pouvait installer.
+
+Elle apporte aussi la répartition des parts, rend lisibles les statuts scannés,
+et met l'application à un niveau de sécurité qu'on peut assumer chez un
+confrère.
+
+### La répartition des parts
+
+Les statuts déposés au greffe ne reflètent pas les cessions postérieures : ils
+disent qui détenait quoi au jour du dépôt, parfois vingt ans plus tôt. Le CRM ne
+rattrapait pas — `officer_companies` ne portait ni nombre de parts ni
+pourcentage. Une attestation juste demandait de relire le PDF.
+
+- **Un onglet « Parts »** dans la fiche client, avec l'état courant de la
+  détention : associé, nombre de parts, pourcentage, démembrement, date d'effet
+  et acte source.
+- **Cinq états, jamais confondus.** « Aucune répartition saisie » n'est pas
+  « aucun associé » ; un total inconnu n'affiche pas 0 % mais un tiret. La
+  comparaison porte sur les parts, jamais sur les pourcentages arrondis — trois
+  associés à 33,33 % somment à 99,99 %, et une répartition juste s'annoncerait
+  incomplète.
+- **L'usufruit ne se somme pas avec la pleine propriété**, et
+  `demembrement` entre dans la clé d'unicité : « 250 parts en nue-propriété et
+  100 en pleine propriété » est courant en SCI familiale, et les confondre rend
+  une attestation fausse.
+- **Un import de fichier** pour remplir la table sans la saisir à la main.
+
+### Les statuts scannés, enfin lisibles
+
+Un dépôt de greffe est un document MIXTE : des pages en texte, d'autres
+numérisées. La bibliothèque employée jusqu'ici n'embarquait ni le décodeur
+d'images ni son repli — elle échouait sans le dire, et l'outil concluait
+« illisible » sur des documents parfaitement exploitables. Le décodeur est
+installé et éprouvé.
+
+### Le connecteur MCP
+
+- **Cinq outils sur seize ne s'exécutaient pas** depuis leur mise en service :
+  ils demandaient des colonnes anglaises à des tables nommées en français. Un
+  test prépare désormais les 59 requêtes du connecteur contre un vrai
+  PostgreSQL — une chaîne SQL n'est vérifiée par rien d'autre avant son
+  exécution.
+- **Les dates étaient décalées d'un jour** sur les colonnes `date`, sous
+  Europe/Paris.
+- **Lecture des statuts** d'une société, et **écriture de la répartition**,
+  avec un droit d'écriture explicite, visible et révocable — jamais hérité.
+
+### Accessibilité
+
+- **Les onglets n'étaient pas des onglets** : des boutons sans rôle. Un lecteur
+  d'écran annonçait « bouton Parts » au lieu de « onglet Parts, 3 sur 7 ».
+- **Les fenêtres n'étaient pas des dialogues** : le focus restait derrière,
+  Échap ne fermait rien, et la tabulation promenait dans la page masquée.
+- **Les bandeaux de notification n'étaient annoncés par rien** — alors que tout
+  le retour du logiciel y passe. Les barres de progression, elles, restent
+  volontairement muettes : annoncer un compteur qui défile rend le logiciel
+  inutilisable.
+
+### Sécurité
+
+- **Le conteneur ne tourne plus en root.** Un serveur qui accepte des fichiers
+  déposés et va chercher des PDF sur Internet n'a rien à y faire.
+- **Les journaux ne contiennent plus les données des clients.** Le front
+  interroge la base par l'URL : filtres et noms y étaient écrits en clair, avec
+  la signature des liens de téléchargement. Les noms de paramètres sont
+  conservés, leurs valeurs jetées. Les journaux sont désormais plafonnés.
+- **L'image de base et les actions GitHub sont figées** par digest et par
+  commit, avec Dependabot pour proposer les mises à jour.
+- **L'algorithme du jeton de session est nommé** au lieu d'être déduit, et le
+  contenu du jeton est vérifié au lieu d'être affirmé.
+
+### Déploiement et exploitation
+
+- Le déploiement **refuse un commit dont la CI n'est pas verte**, et **refuse
+  avant le premier geste** si une modification locale du serveur se trouve en
+  travers de la mise à jour.
+- `maj.sh` **reprend sur sa propre nouvelle version** quand le `git pull` l'a
+  remplacé en cours d'exécution. Sans cela, toute correction apportée à ses
+  dernières étapes ne prenait effet qu'au déploiement suivant, en silence — ce
+  qui a coûté une panne de dépôt de pièces jointes le 2026-08-28.
+
+### Liste clients et échéances
+
+- Filtrage, tri et pagination **faits par la base** et non plus en mémoire.
+- Un ascenseur horizontal **atteignable**, et plus aucune page qui déborde sur
+  un téléphone.
+- Suivi des échéances en trois onglets — TVA, Bilan, Autres.
+- Une **seconde adresse électronique** sur la fiche client.
+
+---
+
 ## 2.2.0 — 2026-08-10
 
 Cette version répare un angle mort du suivi des échéances : **un cabinet qui

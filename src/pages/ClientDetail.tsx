@@ -28,7 +28,7 @@ import { ClientCollaboratorAssignModal } from '../components/clients/ClientColla
 import {
   ArrowLeft, Building, FileText, Users, MapPin, Save, Clock,
   MoreVertical, Archive, RotateCcw, Trash2, ExternalLink,
-  Plus, Calculator, FileDown, Loader2, Package,
+  Plus, Calculator, FileDown, Loader2, Package, PieChart,
 } from 'lucide-react';
 import { ClientDirectoryContacts } from '../components/clients/ClientDirectoryContacts';
 import { ClientStatutsCard } from '../components/clients/ClientStatutsCard';
@@ -36,12 +36,14 @@ import { ClientSynthesisTab } from '../components/clients/ClientSynthesisTab';
 import { ClientMeetingNotesTab } from '../components/clients/ClientMeetingNotesTab';
 import { ClientARDTab } from '../components/clients/ClientARDTab';
 import { ClientSoftwareTab } from '../components/clients/ClientSoftwareTab';
+import { ClientPartsTab } from '../components/clients/ClientPartsTab';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
 import { useRegimesFiscaux } from '../hooks/useRegimesFiscaux';
 import { useCabinetRoles } from '../hooks/useCabinetRoles';
-import { getRoleColorClasses } from '../lib/cabinetRolesService';
+import { getRoleColorClasses, type CabinetCollaboratorRole } from '../lib/cabinetRolesService';
 import { getSyncHistory } from '../lib/inpiService';
 import { syncCardRegimeForClient } from '../lib/bilanService';
+import { messageErreur } from '../lib/erreurs';
 import {
   getClientDeletionStats, archiveClient, restoreClient,
   deleteClientPermanently, getClientDeletionPermissions, DeletionStats,
@@ -261,8 +263,8 @@ export function ClientDetail() {
       // fait apparaitre `adresse` et `nom_entreprise` telles que les
       // declencheurs viennent de les recomposer.
       await loadClient();
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la mise a jour', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la mise a jour'), 'error');
     } finally {
       setSaving(false);
     }
@@ -282,8 +284,8 @@ export function ClientDetail() {
       const { exportClientToPdf } = await import('../lib/clientPdfExportService');
       await exportClientToPdf({ clientId: id});
       showToast('Fiche client exportee', 'success');
-    } catch (error: any) {
-      showToast(error?.message || "Erreur lors de l'export PDF", 'error');
+    } catch (error) {
+      showToast(messageErreur(error, "Erreur lors de l'export PDF"), 'error');
     } finally {
       setExportingPdf(false);
     }
@@ -296,8 +298,8 @@ export function ClientDetail() {
       await archiveClient(id, profile.id);
       showToast('Client archive avec succes', 'success');
       navigate('/clients');
-    } catch (error: any) {
-      showToast(error.message || "Erreur lors de l'archivage", 'error');
+    } catch (error) {
+      showToast(messageErreur(error, "Erreur lors de l'archivage"), 'error');
     } finally {
       setIsPerformingAction(false);
     }
@@ -310,8 +312,8 @@ export function ClientDetail() {
       await restoreClient(id, profile.id);
       showToast('Client restaure avec succes', 'success');
       await loadClient();
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la restauration', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la restauration'), 'error');
     } finally {
       setIsPerformingAction(false);
     }
@@ -324,8 +326,8 @@ export function ClientDetail() {
       await deleteClientPermanently(id, profile.id, deletionStats);
       showToast('Client supprime definitivement', 'success');
       navigate('/clients');
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la suppression', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la suppression'), 'error');
     } finally {
       setIsPerformingAction(false);
     }
@@ -610,6 +612,17 @@ export function ClientDetail() {
     },
     { label: 'Code APE', value: client.code_ape, copyable: true, editField: 'input' as const, editValue: formData.code_ape, onChange: (v: string) => setFormData({ ...formData, code_ape: v }) },
     { label: 'Capital social', value: client.capital_social ? `${client.capital_social} EUR` : null, editField: 'number' as const, editValue: formData.capital_social, onChange: (v: string) => setFormData({ ...formData, capital_social: parseFloat(v) || null }) },
+    {
+      // Le denominateur de l'onglet « Parts ». Il se saisit ICI et nulle part
+      // ailleurs : c'est une colonne de `clients`, elle appartient donc au mode
+      // edition de la fiche. L'onglet la lit.
+      label: 'Nombre total de parts',
+      value: client.parts_totales !== null ? String(client.parts_totales) : null,
+      editField: 'number' as const,
+      editValue: formData.parts_totales,
+      onChange: (v: string) => setFormData({ ...formData, parts_totales: parseFloat(v) || null }),
+      helperText: 'Nombre de parts ou d’actions composant le capital. Sans lui, aucun pourcentage de detention n’est calculable.',
+    },
     { label: 'Dirigeant', value: client.dirigeant, copyable: true, editField: 'input' as const, editValue: formData.dirigeant, onChange: (v: string) => setFormData({ ...formData, dirigeant: v }) },
     { label: 'Date de creation', value: formatDate(client.date_creation_entreprise), editField: 'date' as const, editValue: formData.date_creation_entreprise, onChange: (v: string) => setFormData({ ...formData, date_creation_entreprise: v }) },
     {
@@ -684,6 +697,7 @@ export function ClientDetail() {
       ),
     },
     { label: 'Email', value: client.email, customDisplay: !editMode && client.email?.trim() ? <EmailLink email={client.email} /> : undefined, copyable: !editMode, editField: 'input' as const, editValue: formData.email, onChange: (v: string) => setFormData({ ...formData, email: v }) },
+    { label: 'Email 2', value: client.email_2, customDisplay: !editMode && client.email_2?.trim() ? <EmailLink email={client.email_2} /> : undefined, copyable: !editMode, editField: 'input' as const, editValue: formData.email_2, onChange: (v: string) => setFormData({ ...formData, email_2: v }) },
     { label: 'Telephone', value: client.telephone, customDisplay: !editMode && client.telephone?.trim() ? <PhoneLink phone={client.telephone} /> : undefined, copyable: !editMode, editField: 'input' as const, editValue: formData.telephone, onChange: (v: string) => setFormData({ ...formData, telephone: v }) },
     { label: 'Telephone 2', value: client.telephone_2, customDisplay: !editMode && client.telephone_2?.trim() ? <PhoneLink phone={client.telephone_2} /> : undefined, copyable: !editMode, editField: 'input' as const, editValue: formData.telephone_2, onChange: (v: string) => setFormData({ ...formData, telephone_2: v }) },
     { label: 'Contact principal', value: client.contact_principal, copyable: true, editField: 'input' as const, editValue: formData.contact_principal, onChange: (v: string) => setFormData({ ...formData, contact_principal: v }) },
@@ -761,9 +775,15 @@ export function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="informations">
-        <TabsList>
+        <TabsList aria-label="Sections de la fiche client">
           <TabsTrigger value="informations">Informations</TabsTrigger>
           <TabsTrigger value="rdv">Comptes-rendus</TabsTrigger>
+          {/* Sans condition sur la forme juridique, DELIBEREMENT : masquer
+              l'onglet quand `forme_juridique` est vide le cacherait justement
+              aux fiches incompletes, celles qui ont le plus besoin d'etre
+              renseignees. Un particulier y verra « aucune repartition saisie »,
+              ce qui est exact. */}
+          <TabsTrigger value="parts" className="flex items-center gap-1.5"><PieChart className="w-3.5 h-3.5" />Parts</TabsTrigger>
           <TabsTrigger value="logiciels" className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5" />Logiciels</TabsTrigger>
           {client.is_lmnp && <TabsTrigger value="outils" className="flex items-center gap-1.5"><Calculator className="w-3.5 h-3.5" />Outils</TabsTrigger>}
           <TabsTrigger value="synthese">Synthese</TabsTrigger>
@@ -789,6 +809,20 @@ export function ClientDetail() {
               <SyncHistoryCard syncHistory={syncHistory} />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="parts" className="mt-6">
+          {/* `parts_totales`, `capital_social` et `forme_juridique` viennent de
+              la fiche : c'est elle qui les possede et qui les edite. L'onglet
+              les lit, il ne les ecrit jamais — deux proprietaires pour un meme
+              champ finissent toujours par se contredire. */}
+          <ClientPartsTab
+            clientId={client.id}
+            nomClient={client.nom_entreprise}
+            partsTotales={client.parts_totales}
+            capitalSocial={client.capital_social}
+            formeJuridique={client.forme_juridique}
+          />
         </TabsContent>
 
         <TabsContent value="rdv" className="mt-6">
@@ -841,7 +875,11 @@ function InfoSection({ icon: Icon, title, rows, editMode }: {
   );
 }
 
-function CollaboratorsCard({ collaborators, resolveRole, onAdd }: { collaborators: any[]; resolveRole: (key: string) => any; onAdd: () => void }) {
+function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
+  collaborators: ClientCollaborator[];
+  resolveRole: (key: string | null | undefined) => CabinetCollaboratorRole | null;
+  onAdd: () => void;
+}) {
   return (
     <Card>
       <CardContent className="py-6">
@@ -850,7 +888,10 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: { collaborator
             <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Collaborateurs</h2>
           </div>
-          <button type="button" onClick={onAdd} className="w-7 h-7 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors">
+          {/* Un bouton a icone seule n'a AUCUN nom accessible : ni une aide
+              technique ni un test ne peuvent le designer. C'est exactement le
+              defaut que le parcours de bout en bout a ete ecrit pour attraper. */}
+          <button type="button" onClick={onAdd} aria-label="Gerer les collaborateurs" title="Gerer les collaborateurs" className="w-7 h-7 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -900,7 +941,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: { collaborator
   );
 }
 
-function SyncHistoryCard({ syncHistory }: { syncHistory: any[] }) {
+function SyncHistoryCard({ syncHistory }: { syncHistory: INPISyncHistory[] }) {
   return (
     <Card>
       <CardContent className="py-6">
@@ -913,7 +954,11 @@ function SyncHistoryCard({ syncHistory }: { syncHistory: any[] }) {
             syncHistory.slice(0, 5).map((sync) => (
               <div key={sync.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">{new Date(sync.sync_date).toLocaleString('fr-FR')}</p>
+                  {/* `sync_date` est nullable : `new Date(null)` aurait affiche le 1er janvier
+                      1970 comme une vraie date de synchronisation. */}
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    {sync.sync_date ? new Date(sync.sync_date).toLocaleString('fr-FR') : 'Date inconnue'}
+                  </p>
                   {sync.error_message && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{sync.error_message}</p>}
                 </div>
                 <Badge variant={sync.status === 'success' ? 'success' : sync.status === 'error' ? 'danger' : 'orange'}>{sync.status}</Badge>

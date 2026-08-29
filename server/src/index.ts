@@ -35,10 +35,12 @@ import { enregistrerRoutesMcpCles } from './routes/mcp-cles.js';
 import { enregistrerRoutesMcp } from './routes/mcp.js';
 import { enregistrerRoutesMcpOauth } from './routes/mcp-oauth.js';
 import { enregistrerRoutesCampagnes } from './routes/campagnes.js';
+import { enregistrerRoutesClients } from './routes/clients.js';
 import { demarrerPlanificateur, arreterPlanificateur, listerTaches, declencher } from './planificateur.js';
 import { etatVersion, versionLocale } from './version.js';
 import { exigerAdmin } from './gardes.js';
 import { fermer as fermerSmtp } from './mail.js';
+import { serialiserRequete } from './journal.js';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +49,23 @@ async function demarrer() {
     logger: {
       level: config.env === 'production' ? 'info' : 'debug',
       transport: config.env === 'production' ? undefined : { target: 'pino-pretty' },
+      // Ce que le journal a le droit de retenir d'une requete : voir
+      // `journal.ts`, qui porte le raisonnement. En deux mots : l'URL complete
+      // y ecrivait les donnees des clients du cabinet, parce que le front
+      // interroge PostgREST par l'URL.
+      serializers: { req: serialiserRequete },
+      // Ceinture, en plus du serialiseur : `redact` couvre les endroits ou un
+      // objet requete serait journalise a la main, hors du chemin ci-dessus.
+      // Le cookie de session EST le jeton — le journaliser reviendrait a
+      // deposer des sessions valides dans un fichier.
+      redact: {
+        paths: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+          'res.headers["set-cookie"]',
+        ],
+        remove: true,
+      },
     },
     // Le front peut deposer des fichiers de 10 Mo : la limite par defaut de
     // Fastify (1 Mo) les refuserait.
@@ -112,7 +131,7 @@ async function demarrer() {
   app.get('/api/taches', async (request, reply) => {
     const session = await exigerAdmin(request, reply);
     if (!session) return;
-    return { taches: listerTaches() };
+    return { taches: await listerTaches() };
   });
 
   app.post<{ Params: { nom: string } }>('/api/taches/:nom', async (request, reply) => {
@@ -139,6 +158,7 @@ async function demarrer() {
   // Avant le service statique : /desinscription est un chemin racine, il doit
   // primer sur le repli SPA.
   enregistrerRoutesCampagnes(app);
+  enregistrerRoutesClients(app);
   await enregistrerRoutesStorage(app);
   enregistrerProxyRest(app);
 

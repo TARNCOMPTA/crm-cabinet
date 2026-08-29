@@ -42,7 +42,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config.js';
 import { requete, requeteUne } from '../db.js';
 import { lireSession } from '../auth/session.js';
-import { exigerAdmin } from '../gardes.js';
+import { exigerSession } from '../gardes.js';
 import { acquitter, souscontrole } from '../limiteur.js';
 import {
   echapperHtml,
@@ -51,8 +51,26 @@ import {
   verifierPkce,
 } from '../mcp/oauth-regles.js';
 
-/** Un seul droit : lire. Le connecteur MCP n'ecrit rien. */
-const SCOPE = 'mcp:read';
+/**
+ * Les deux droits du connecteur.
+ * ---------------------------------------------------------------------------
+ * Il n'y en avait qu'un, et ce fichier disait « Un seul droit : lire. Le
+ * connecteur MCP n'ecrit rien. » Ce n'est plus vrai : `set_client_repartition`
+ * ecrit la repartition des parts d'un client.
+ *
+ * ⚠️ L'ECRITURE EST UN SECOND DROIT, ET NON UN ELARGISSEMENT DU PREMIER, pour
+ * une raison qui n'est pas de principe : sans lui, TOUT JETON DEJA EMIS POUR
+ * LIRE gagnerait l'ecriture le jour du deploiement. Personne ne l'aurait
+ * demande, personne ne le saurait, et la page de consentement que ces jetons
+ * ont fait afficher promettait noir sur blanc « ce connecteur n'ecrit rien ».
+ *
+ * Les jetons existants portent `mcp:read` seul et restent donc en lecture. Pour
+ * ecrire, il faut reautoriser le connecteur et cocher la case — c'est-a-dire
+ * relire la page de consentement, qui dit alors autre chose.
+ */
+const SCOPE_LECTURE = 'mcp:read';
+const SCOPE_ECRITURE = 'mcp:write';
+const SCOPES_CONNUS = new Set([SCOPE_LECTURE, SCOPE_ECRITURE]);
 
 const VIE_ACCES_S = 3600;
 const VIE_RAFRAICHIR_MS = 30 * 24 * 3600 * 1000;
@@ -96,6 +114,8 @@ export interface JetonValide {
   tokenId: string;
   clientId: string;
   userId: string;
+  /** Vrai si la personne a coche l'ecriture au consentement. Jamais deduit d'autre chose. */
+  peutEcrire: boolean;
 }
 
 /**
@@ -109,9 +129,10 @@ export async function validerJetonAcces(valeur: string): Promise<JetonValide | n
     id: string;
     client_id: string;
     user_id: string;
+    scope: string;
     acces_hash: string;
   }>(
-    `SELECT id, client_id, user_id, acces_hash
+    `SELECT id, client_id, user_id, scope, acces_hash
        FROM mcp_oauth_tokens
       WHERE acces_hash = $1
         AND revoque_le IS NULL
@@ -128,7 +149,13 @@ export async function validerJetonAcces(valeur: string): Promise<JetonValide | n
     () => undefined
   );
 
-  return { tokenId: ligne.id, clientId: ligne.client_id, userId: ligne.user_id };
+  return {
+    tokenId: ligne.id,
+    clientId: ligne.client_id,
+    userId: ligne.user_id,
+    // La portee telle qu'elle a ete ACCORDEE, pas telle qu'elle est demandee.
+    peutEcrire: ligne.scope.split(/\s+/).includes(SCOPE_ECRITURE),
+  };
 }
 
 // -------------------------------------------------------------------- affichage
@@ -150,6 +177,11 @@ function page(titre: string, corps: string, code = 200): { code: number; html: s
   h1 { margin:0 0 12px; font-size:1.35rem; color:#7c2d5e }
   p { margin:0 0 14px; color:#44403c }
   ul { margin:0 0 18px; padding-left:20px; color:#44403c }
+  .ecriture { margin-top:18px; padding:14px 16px; border:1px solid #d8d8d8;
+        border-radius:10px; background:#fafafa }
+  .ecriture label { display:flex; gap:10px; align-items:flex-start; cursor:pointer }
+  .ecriture input { margin-top:3px; width:18px; height:18px; flex:0 0 auto }
+  .ecriture .fin { margin:8px 0 0 28px; font-size:.9em; color:#555 }
   .boutons { display:flex; gap:12px; flex-wrap:wrap; margin-top:22px }
   button, a.bouton { min-height:44px; padding:0 20px; border-radius:10px; border:0;
         font:inherit; font-weight:600; cursor:pointer; display:inline-flex;
@@ -264,8 +296,14 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
    * aucun hache, aucun jeton, aucune URI de redirection compromettante.
    */
   app.get('/api/mcp/autorisations', async (request, reply) => {
-    const session = await exigerAdmin(request, reply);
+    const session = await exigerSession(request, reply);
     if (!session) return;
+
+    // Un collaborateur ne voit que les clients pour lesquels IL a des jetons, et
+    // les compteurs ne comptent que les siens. L'administrateur voit tout : le
+    // jour d'un depart, il faut pouvoir constater puis couper sans le concours
+    // de l'interesse.
+    const sien = session.roleApp === 'admin' ? null : session.sub;
 
     const lignes = await requete<{
       client_id: string;
@@ -274,17 +312,35 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
       last_used_at: string | null;
       jetons_actifs: string;
       dernier_appel: string | null;
+      peut_ecrire: boolean | null;
     }>(
       `SELECT c.client_id, c.client_name, c.created_at, c.last_used_at,
               count(t.id) FILTER (
                 WHERE t.revoque_le IS NULL AND t.acces_expire_le > now()
               )::text AS jetons_actifs,
-              max(t.last_used_at) AS dernier_appel
+              max(t.last_used_at) AS dernier_appel,
+              -- ⚠️ LA PORTEE ACCORDEE, AFFICHEE. Sans elle, personne — pas meme
+              -- celui qui a consenti — ne pouvait savoir si la case d'ecriture
+              -- avait ete cochee : l'outil refusait, l'ecran se taisait, et il
+              -- ne restait qu'a refaire l'autorisation en esperant. Constate.
+              bool_or($2 = ANY (string_to_array(t.scope, ' '))) FILTER (
+                WHERE t.revoque_le IS NULL AND t.acces_expire_le > now()
+              ) AS peut_ecrire
          FROM mcp_oauth_clients c
-         LEFT JOIN mcp_oauth_tokens t ON t.client_id = c.client_id
+         -- Le filtre porte sur la JOINTURE et non sur le WHERE : en le mettant
+         -- au WHERE, un client sans jeton a soi disparaitrait pour
+         -- l'administrateur aussi, la jointure externe devenant interne.
+         LEFT JOIN mcp_oauth_tokens t
+                ON t.client_id = c.client_id
+               AND ($1::uuid IS NULL OR t.user_id = $1)
         WHERE c.is_active
+          -- Un collaborateur ne voit un client que s'il y a consenti lui-meme.
+          AND ($1::uuid IS NULL OR EXISTS (
+                SELECT 1 FROM mcp_oauth_tokens s
+                 WHERE s.client_id = c.client_id AND s.user_id = $1))
         GROUP BY c.client_id, c.client_name, c.created_at, c.last_used_at
-        ORDER BY c.created_at DESC`
+        ORDER BY c.created_at DESC`,
+      [sien, SCOPE_ECRITURE]
     );
 
     return {
@@ -294,47 +350,149 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         creeLe: l.created_at,
         dernierAcces: l.dernier_appel ?? l.last_used_at,
         jetonsActifs: Number(l.jetons_actifs),
+        peutEcrire: l.peut_ecrire === true,
       })),
     };
   });
 
   /**
-   * Revoque une autorisation : le client ET tous ses jetons.
+   * Accorde — ou retire — l'ecriture a une autorisation DEJA DONNEE.
    *
-   * Les deux, et pas seulement le client : desactiver l'enregistrement empeche
-   * d'obtenir un NOUVEAU jeton, mais laisserait vivre ceux deja emis jusqu'a leur
-   * expiration. Revoquer doit couper l'acces maintenant.
+   * ⚠️ POURQUOI CETTE ROUTE EXISTE, ALORS QUE LA CASE DU CONSENTEMENT SUFFIT
+   * EN THEORIE. Elle ne suffisait pas en pratique. La case ne s'affiche qu'a
+   * une NOUVELLE autorisation : un connecteur deja branche ne la revoit jamais,
+   * et le rafraichissement d'un jeton reconduit sa portee sans l'elargir — a
+   * dessein. Restait donc, pour passer en ecriture, a debrancher puis rebrancher
+   * le connecteur cote client en esperant tomber sur la bonne case. Constate a
+   * l'usage : deux tentatives, deux refus, et aucun ecran ne disait pourquoi.
+   *
+   * Ce geste-ci n'affaiblit pas le consentement, il le ramene la ou sont les
+   * autres reglages :
+   *   - c'est la MEME personne, authentifiee par sa session, qui accorde ;
+   *   - elle ne touche QUE SES PROPRES jetons — jamais ceux d'un collegue, et
+   *     l'administrateur lui-meme ne peut pas elargir a la place d'autrui ;
+   *   - le retrait, lui, est ouvert a l'administrateur : refermer une porte ne
+   *     demande pas l'accord de celui qui l'a ouverte.
+   *
+   * Ce qui reste interdit, et qui etait tout l'objet du second scope : qu'une
+   * MISE A JOUR DU LOGICIEL donne l'ecriture a des jetons emis pour lire. Ici
+   * rien n'est deduit — quelqu'un a clique.
+   */
+  app.post<{ Params: { clientId: string }; Body: { peutEcrire?: unknown } }>(
+    '/api/mcp/autorisations/:clientId/ecriture',
+    async (request, reply) => {
+      const session = await exigerSession(request, reply);
+      if (!session) return;
+
+      const voulu = request.body?.peutEcrire;
+      if (typeof voulu !== 'boolean') {
+        return reply.code(400).send({ message: 'peutEcrire (booleen) requis.' });
+      }
+
+      const { clientId } = request.params;
+      const portee = voulu ? `${SCOPE_LECTURE} ${SCOPE_ECRITURE}` : SCOPE_LECTURE;
+
+      // Accorder : ses jetons a soi, sans exception. Retirer : les siens, ou
+      // tous si l'on est administrateur.
+      const cible = !voulu && session.roleApp === 'admin' ? null : session.sub;
+
+      const touches = await requete<{ id: string }>(
+        `UPDATE mcp_oauth_tokens
+            SET scope = $3
+          WHERE client_id = $1
+            AND revoque_le IS NULL
+            AND ($2::uuid IS NULL OR user_id = $2)
+            AND scope IS DISTINCT FROM $3
+          RETURNING id`,
+        [clientId, cible, portee]
+      );
+
+      /**
+       * Zero ligne touchee n'est PAS forcement un echec : la portee pouvait
+       * deja etre la bonne. On le verifie plutot que de rendre un 404 qui
+       * ferait croire a une autorisation disparue.
+       */
+      if (touches.length === 0) {
+        const existe = await requeteUne<{ n: string }>(
+          `SELECT count(*)::text AS n
+             FROM mcp_oauth_tokens
+            WHERE client_id = $1
+              AND revoque_le IS NULL
+              AND ($2::uuid IS NULL OR user_id = $2)`,
+          [clientId, cible]
+        );
+        if (!existe || existe.n === '0') {
+          return reply.code(404).send({ message: 'Aucun jeton actif pour cette autorisation.' });
+        }
+      }
+
+      return { peutEcrire: voulu, jetonsMisAJour: touches.length };
+    }
+  );
+
+  /**
+   * Revoque une autorisation. La PORTEE DEPEND DE QUI DEMANDE.
+   *
+   * ⚠️ UN COLLABORATEUR NE DESACTIVE PAS LE CLIENT. `mcp_oauth_clients` est
+   * l'enregistrement de claude.ai pour TOUT le cabinet : le desactiver
+   * couperait l'acces de chacun, et interdirait meme d'en obtenir un nouveau.
+   * Laisser ce geste a un collaborateur qui veut seulement debrancher SON poste
+   * serait une panne collective declenchee par un clic individuel.
+   *
+   * Il revoque donc ses jetons, et eux seuls. L'administrateur, lui, garde le
+   * geste complet — client, jetons de tous, codes en vol — parce que c'est le
+   * seul moyen de fermer la porte le jour ou il le faut.
+   *
+   * Dans les deux cas les codes non echanges sont neutralises : un code en vol
+   * reste valable une minute, ce qui suffirait a obtenir un jeton APRES la
+   * revocation.
    */
   app.delete<{ Params: { clientId: string } }>(
     '/api/mcp/autorisations/:clientId',
     async (request, reply) => {
-      const session = await exigerAdmin(request, reply);
+      const session = await exigerSession(request, reply);
       if (!session) return;
 
       const { clientId } = request.params;
-      const maj = await requete(
-        `UPDATE mcp_oauth_clients SET is_active = false, revoked_at = now()
-          WHERE client_id = $1 AND is_active RETURNING client_id`,
-        [clientId]
-      );
-      if (maj.length === 0) {
-        return reply.code(404).send({ message: 'Autorisation inconnue ou deja revoquee.' });
+      const admin = session.roleApp === 'admin';
+
+      if (admin) {
+        const maj = await requete(
+          `UPDATE mcp_oauth_clients SET is_active = false, revoked_at = now()
+            WHERE client_id = $1 AND is_active RETURNING client_id`,
+          [clientId]
+        );
+        if (maj.length === 0) {
+          return reply.code(404).send({ message: 'Autorisation inconnue ou deja revoquee.' });
+        }
       }
 
       const jetons = await requete(
         `UPDATE mcp_oauth_tokens SET revoque_le = now()
-          WHERE client_id = $1 AND revoque_le IS NULL RETURNING id`,
-        [clientId]
-      );
-      // Les codes non encore echanges aussi : un code en vol resterait valable
-      // une minute, ce qui suffirait a obtenir un jeton apres la revocation.
-      await requete(
-        `UPDATE mcp_oauth_codes SET utilise_le = now()
-          WHERE client_id = $1 AND utilise_le IS NULL`,
-        [clientId]
+          WHERE client_id = $1 AND revoque_le IS NULL
+            AND ($2::uuid IS NULL OR user_id = $2)
+          RETURNING id`,
+        [clientId, admin ? null : session.sub]
       );
 
-      request.log.info({ clientId, jetons: jetons.length }, '[oauth] autorisation revoquee');
+      // Pour un collaborateur, rien a revoquer signifie qu'il n'avait rien ici :
+      // meme reponse que pour un client inconnu, afin de ne pas transformer
+      // cette route en revelateur des connexions des collegues.
+      if (!admin && jetons.length === 0) {
+        return reply.code(404).send({ message: 'Autorisation inconnue ou deja revoquee.' });
+      }
+
+      await requete(
+        `UPDATE mcp_oauth_codes SET utilise_le = now()
+          WHERE client_id = $1 AND utilise_le IS NULL
+            AND ($2::uuid IS NULL OR user_id = $2)`,
+        [clientId, admin ? null : session.sub]
+      );
+
+      request.log.info(
+        { clientId, jetons: jetons.length, portee: admin ? 'cabinet' : 'personnelle' },
+        '[oauth] autorisation revoquee'
+      );
       return { ok: true, jetonsRevoques: jetons.length };
     }
   );
@@ -352,7 +510,7 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
   const metadonneesRessource = async () => ({
     resource: `${base()}/mcp`,
     authorization_servers: [base()],
-    scopes_supported: [SCOPE],
+    scopes_supported: [...SCOPES_CONNUS],
     bearer_methods_supported: ['header'],
   });
   app.get('/.well-known/oauth-protected-resource', metadonneesRessource);
@@ -366,7 +524,7 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
     authorization_endpoint: `${base()}/oauth/authorize`,
     token_endpoint: `${base()}/oauth/token`,
     registration_endpoint: `${base()}/oauth/register`,
-    scopes_supported: [SCOPE],
+    scopes_supported: [...SCOPES_CONNUS],
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
@@ -480,8 +638,11 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
     if ((p.code_challenge_method ?? '') !== 'S256') {
       return refus('invalid_request', 'code_challenge_method doit valoir S256.');
     }
-    if (p.scope && p.scope.split(/\s+/).some((s) => s && s !== SCOPE)) {
-      return refus('invalid_scope', `Seul le scope ${SCOPE} existe.`);
+    if (p.scope && p.scope.split(/\s+/).some((s) => s && !SCOPES_CONNUS.has(s))) {
+      return refus(
+        'invalid_scope',
+        `Scopes connus : ${[...SCOPES_CONNUS].join(', ')}.`
+      );
     }
 
     return { type: 'ok', client, uri };
@@ -511,18 +672,11 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         )
       );
     }
-    if (session.roleApp !== 'admin') {
-      return rendre(
-        reply,
-        page(
-          'Reserve aux administrateurs',
-          `<h1>Reserve aux administrateurs</h1>
-           <p>Le connecteur MCP donne acces en lecture a l'ensemble du portefeuille du cabinet.
-              Seul un administrateur peut l'autoriser, comme pour les cles.</p>`,
-          403
-        )
-      );
-    }
+    // Aucun controle de role ici : ce refus existait, et c'etait le TROISIEME
+    // verrou du meme parcours — apres l'entree de menu masquee et le POST de
+    // consentement. Le connecteur ne donne acces qu'a ce que ce collaborateur
+    // consulte deja a l'ecran ; lui faire consentir pour lui-meme est le sens
+    // meme d'OAuth. La page ci-dessous le lui dit maintenant en toutes lettres.
 
     const champs = [
       ['client_id', p.client_id],
@@ -549,10 +703,26 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
          <p><strong>${echapperHtml(v.client.client_name)}</strong> demande a lire les donnees de ton cabinet
             via le connecteur MCP.</p>
          <ul>
-           <li>Lecture seule : ce connecteur n'ecrit rien, ne supprime rien.</li>
-           <li>Portee : clients, dossiers, taches, echeances — tout ce que le connecteur expose.</li>
+           <li>Lecture : clients, dossiers, taches, echeances — ce que tu consultes deja a l'ecran,
+               ni plus ni moins.</li>
+           <li>Aucune suppression, jamais.</li>
+           <li>C'est TON acces que tu accordes, et lui seul : revoquer ne coupera que le tien.</li>
            <li>Revocable a tout moment dans <code>Parametres → Connecteur MCP</code>.</li>
          </ul>
+         <!-- ⚠️ DECROCHEE PAR DEFAUT, ET CE N'EST PAS UN DETAIL D'INTERFACE.
+              Autoriser sans y toucher donne exactement ce que ce connecteur a
+              toujours donne : la lecture. L'ecriture se demande, elle ne
+              s'herite pas. -->
+         <div class="ecriture">
+           <label>
+             <input type="checkbox" name="ecriture" value="oui" />
+             <strong>Autoriser aussi l'ecriture de la repartition des parts</strong>
+           </label>
+           <p class="fin">Facultatif. Permet a l'assistant d'enregistrer les associes et leur
+              nombre de parts dans une fiche client, apres t'avoir montre ce qu'il va poser.
+              Il ne peut rien ecrire d'autre : ni les clients, ni les taches, ni les bilans.
+              Laisse decoche si tu ne veux qu'une lecture.</p>
+         </div>
          <p>Retour vers <code>${echapperHtml(v.uri)}</code></p>
          <form method="post" action="${echapperHtml(base())}/oauth/authorize">
            ${champs}
@@ -566,21 +736,48 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
   });
 
   /** La decision. Tout est REVALIDE : les champs caches ne sont pas de confiance. */
-  app.post<{ Body: ParamsAutorisation & { accord?: string } }>(
+  app.post<{ Body: ParamsAutorisation & { accord?: string; ecriture?: string } }>(
     '/oauth/authorize',
     async (request, reply) => {
-      const p = (request.body ?? {}) as ParamsAutorisation & { accord?: string };
+      const p = (request.body ?? {}) as ParamsAutorisation & {
+        accord?: string;
+        ecriture?: string;
+      };
       const v = await valider(p);
       if (v.type === 'page') return rendre(reply, v.page);
       if (v.type === 'erreur') return redirigerErreur(reply, v.uri, v.erreur, v.description, p.state);
 
+      /**
+       * ⚠️ TOUT COLLABORATEUR CONNECTE PEUT CONSENTIR — ce test exigeait un
+       * administrateur, et c'etait LE verrou qui empechait les autres de
+       * brancher claude.ai : la page de consentement s'affichait, puis le clic
+       * sur « Autoriser » repartait en `access_denied`, sans rien expliquer.
+       *
+       * Le jeton emis vaut ce que vaut celui qui l'a demande : il porte
+       * `user_id` et n'ouvre que les treize outils en LECTURE SEULE du
+       * connecteur, sur des tables que ce collaborateur lit deja dans
+       * l'application. Consentir n'accorde donc rien de plus que sa propre
+       * session — c'est le sens meme d'un consentement OAuth.
+       */
       const session = lireSession(request);
-      if (!session || session.roleApp !== 'admin') {
-        return redirigerErreur(reply, v.uri, 'access_denied', 'Session absente ou non administrateur.', p.state);
+      if (!session) {
+        return redirigerErreur(reply, v.uri, 'access_denied', 'Session absente.', p.state);
       }
       if (p.accord !== 'oui') {
         return redirigerErreur(reply, v.uri, 'access_denied', 'Autorisation refusee par l utilisateur.', p.state);
       }
+
+      /**
+       * La portee accordee, et rien de plus.
+       *
+       * ⚠️ ELLE SORT DE LA CASE COCHEE, PAS DE CE QUE LE CLIENT A DEMANDE. Un
+       * client OAuth qui reclamerait `mcp:write` dans son URL n'obtient rien de
+       * plus : c'est la personne devant l'ecran qui accorde, apres avoir lu ce
+       * qu'elle accorde. Une case non cochee — le cas par defaut — rend
+       * exactement l'acces en lecture que ce connecteur a toujours donne.
+       */
+      const portee =
+        p.ecriture === 'oui' ? `${SCOPE_LECTURE} ${SCOPE_ECRITURE}` : SCOPE_LECTURE;
 
       const code = secretAleatoire('mcpc');
       await requete(
@@ -592,7 +789,7 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
           v.client.client_id,
           v.uri,
           p.code_challenge,
-          SCOPE,
+          portee,
           session.sub,
           String(VIE_CODE_MS),
         ]
@@ -623,6 +820,8 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
     clientId: string;
     userId: string;
     resource: string;
+    /** La portee ACCORDEE, reprise du code ou du jeton precedent. Jamais une constante. */
+    portee: string;
   }) {
     const acces = secretAleatoire('mcpa');
     const rafraichir = secretAleatoire('mcpr');
@@ -639,7 +838,7 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         hacher(rafraichir),
         opts.clientId,
         opts.userId,
-        SCOPE,
+        opts.portee,
         opts.resource,
         String(VIE_ACCES_S),
         String(VIE_RAFRAICHIR_MS),
@@ -650,7 +849,7 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
       token_type: 'Bearer',
       expires_in: VIE_ACCES_S,
       refresh_token: rafraichir,
-      scope: SCOPE,
+      scope: opts.portee,
     };
   }
 
@@ -691,10 +890,11 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         code_challenge_method: string;
         user_id: string;
         expire_le: string;
+        scope: string;
         utilise_le: string | null;
       }>(
         `SELECT id, client_id, redirect_uri, code_challenge, code_challenge_method,
-                user_id, expire_le, utilise_le
+                user_id, scope, expire_le, utilise_le
            FROM mcp_oauth_codes WHERE code_hash = $1`,
         [hacher(b.code)]
       );
@@ -737,6 +937,8 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         clientId: ligne.client_id,
         userId: ligne.user_id,
         resource: b.resource ?? `${base()}/mcp`,
+        // La portee vient du CODE, donc de la case cochee au consentement.
+        portee: ligne.scope,
       });
       return reply.header('Cache-Control', 'no-store').send(jetons);
     }
@@ -752,11 +954,12 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         client_id: string;
         user_id: string;
         resource: string;
+        scope: string;
         rafraichir_expire_le: string | null;
         remplace_le: string | null;
         revoque_le: string | null;
       }>(
-        `SELECT id, chaine, client_id, user_id, resource,
+        `SELECT id, chaine, client_id, user_id, resource, scope,
                 rafraichir_expire_le, remplace_le, revoque_le
            FROM mcp_oauth_tokens WHERE rafraichir_hash = $1`,
         [hacher(b.refresh_token)]
@@ -792,6 +995,11 @@ export function enregistrerRoutesMcpOauth(app: FastifyInstance): void {
         clientId: ligne.client_id,
         userId: ligne.user_id,
         resource: ligne.resource,
+        // ⚠️ LE RAFRAICHISSEMENT RECONDUIT, IL N'ELARGIT PAS. Reprendre une
+        // constante ici donnerait l'ecriture a une chaine de jetons nee d'un
+        // consentement en lecture seule — au premier renouvellement, sans que
+        // personne l'ait demande.
+        portee: ligne.scope,
       });
       return reply.header('Cache-Control', 'no-store').send(jetons);
     }

@@ -31,7 +31,7 @@ un bon choix ; `crm-test.moncabinet.fr` en est un mauvais.
 ## Installation
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crmcabinet/main/installation/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/installation/install.sh -o install.sh
 sudo sh install.sh
 ```
 
@@ -254,4 +254,4 @@ relayer. Aucune requête n'atteint la base sans être passée par ce contrôle.
 MIT. Vous pouvez l'utiliser, le modifier et le redistribuer librement, y compris
 commercialement. Aucune garantie n'est fournie.
 
-Dépôt : <https://github.com/TARNCOMPTA/crmcabinet>
+Dépôt : <https://github.com/TARNCOMPTA/crm-cabinet>

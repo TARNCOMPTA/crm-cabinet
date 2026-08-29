@@ -20,6 +20,7 @@ import { Badge } from '../ui/Badge';
 import { searchCompaniesByName, CompanySearchResult } from '../../lib/inpiService';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { messageErreur } from '../../lib/erreurs';
 
 type SortKey =
   | 'relevance'
@@ -230,8 +231,8 @@ export function CompanySearch() {
       const list = res.results || [];
       setResults(list);
       void persistHistory(target, list.length);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur inattendue');
+    } catch (err) {
+      setError(messageErreur(err, 'Erreur inattendue'));
       setResults([]);
     } finally {
       setLoading(false);

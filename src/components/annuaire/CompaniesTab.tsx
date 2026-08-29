@@ -17,7 +17,10 @@ function loadViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'grid' || stored === 'list' || stored === 'table') return stored;
-  } catch {}
+  } catch {
+    // localStorage inaccessible (navigation privee, cookies bloques) : le mode
+    // d'affichage par defaut fera l'affaire.
+  }
   return 'grid';
 }
 
@@ -90,7 +93,9 @@ export function CompaniesTab({ companies, contacts, loading, onRefresh, highligh
 
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
-    try { localStorage.setItem(STORAGE_KEY, mode); } catch {}
+    // Memoriser le mode est un confort : si localStorage refuse, l'affichage
+    // change quand meme, il ne sera juste pas retenu.
+    try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* vide */ }
   }
 
   const handleToggleSelect = useCallback((id: string) => {

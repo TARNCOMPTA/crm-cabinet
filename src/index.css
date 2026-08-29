@@ -90,6 +90,22 @@
     background-clip: content-box;
   }
 
+  /*
+     Le conteneur dont l'ascenseur est DÉPORTÉ plus bas — voir
+     `DefilementHorizontal`. Sans cela, deux barres se superposeraient dès que
+     le bas de la carte entre dans la fenêtre : celle du conteneur et celle,
+     collante, qui existe justement parce que la première est hors d'atteinte.
+
+     Le conteneur reste un vrai conteneur de défilement : molette, pavé tactile
+     et clavier continuent d'y fonctionner, il n'a simplement plus de barre.
+  */
+  .sans-ascenseur {
+    scrollbar-width: none; /* Firefox */
+  }
+  .sans-ascenseur::-webkit-scrollbar {
+    display: none;
+  }
+
   html[data-theme='dark'] *:focus-visible {
     outline: 2px solid rgba(208, 107, 162, 0.6); /* --teal (sombre) */
     outline-offset: 2px;

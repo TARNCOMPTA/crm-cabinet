@@ -18,8 +18,16 @@ export interface DataTableRow {
   customDisplay?: ReactNode;
   customEditDisplay?: ReactNode;
   editField?: 'input' | 'select' | 'date' | 'number' | 'textarea';
-  editValue?: any;
-  onChange?: (value: any) => void;
+  /**
+   * Ce que le champ contient, et ce qu'il rend.
+   *
+   * `editField` decide du composant — texte, date, nombre, liste, zone de
+   * texte — et chacun ne produit qu'une chaine ou un nombre. `any` autorisait
+   * a brancher un objet sur un `<input>`, ce qui aurait affiche « [object
+   * Object] » sans que rien ne le signale.
+   */
+  editValue?: string | number | null;
+  onChange?: (value: string) => void;
   selectOptions?: { value: string; label: string }[];
   /**
    * Identite stable de la ligne.

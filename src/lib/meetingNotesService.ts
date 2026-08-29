@@ -42,7 +42,7 @@ export async function fetchMeetingNotes(clientId: string): Promise<MeetingNoteWi
 
   const authorIds = [...new Set(notes.map(n => n.created_by).filter(Boolean))] as string[];
 
-  let authorsMap: Record<string, { prenom: string | null; nom: string | null }> = {};
+  const authorsMap: Record<string, { prenom: string | null; nom: string | null }> = {};
   if (authorIds.length > 0) {
     const { data: authors } = await supabase
       .from('profiles')

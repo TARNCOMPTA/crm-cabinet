@@ -1,0 +1,85 @@
+# ============================================================================
+# Dependabot — les mises à jour de sécurité, proposées automatiquement.
+#
+# ⚠️ CE FICHIER EST LA MOITIÉ D'UN COUPLE. L'autre moitié est l'épinglage : les
+# actions GitHub sont figées sur un SHA de commit et l'image de base sur un
+# digest (voir `.github/workflows/ci.yml` et `Dockerfile`). Épingler sans
+# Dependabot fige les failles avec le reste ; Dependabot sans épinglage laisse
+# une étiquette mobile faire entrer n'importe quoi. Retirer l'un des deux annule
+# l'autre.
+#
+# Le rythme est hebdomadaire et le nombre de demandes ouvertes limité : ce dépôt
+# a un seul relecteur, et une file de trente propositions ne serait pas lue.
+#
+# ⚠️ CES LIMITES ONT UN COÛT EN EUROS, PAS SEULEMENT EN ATTENTION. Chaque
+# demande ouverte déclenche la CI complète — construction d'image et parcours
+# navigateur compris —, et les minutes Actions d'un dépôt privé sont facturées.
+# La première volée, le 2026-08-28, a ouvert dix demandes d'un coup : le
+# lendemain matin, le compte avait atteint sa limite de dépense et plus aucun
+# job ne démarrait. Les limites ci-dessous sont donc basses à dessein, et
+# `.github/workflows/ci.yml` ne construit plus ces branches deux fois.
+# ============================================================================
+version: 2
+updates:
+  # Les actions GitHub : c'est le vecteur qui compte le plus ici. Une action
+  # tierce s'exécute sur le runner AVEC le jeton du workflow ; une étiquette
+  # repointée sur un commit hostile n'a rien à forcer.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: 'CI'
+
+  # L'image de base du conteneur applicatif.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: 'Docker'
+
+  # Les dépendances du front et du serveur, séparément : ce sont deux
+  # `package.json` et deux verrous distincts.
+  #
+  # ⚠️ REGROUPÉES PAR LOT. Une proposition par paquet donnerait une dizaine de
+  # demandes par semaine sur un dépôt qui n'en absorbe pas deux. Les mises à
+  # jour de SÉCURITÉ, elles, restent hors lot et hors limite : Dependabot les
+  # ouvre séparément, immédiatement, et c'est le comportement voulu.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 3
+    groups:
+      front:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: 'Front'
+
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 3
+    groups:
+      serveur:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: 'Serveur'

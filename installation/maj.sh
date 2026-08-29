@@ -28,6 +28,31 @@ for argument in "$@"; do
   esac
 done
 
+# ⚠️ CE SCRIPT SE FAIT REMPLACER SOUS SES PIEDS PAR SON PROPRE `git pull`.
+#
+# Le shell ne relit pas un script en cours d'exécution : il travaille sur ce
+# qu'il en a déjà lu. Quand l'étape 3 ramène une nouvelle version de ce
+# fichier, la suite continue donc sur L'ANCIENNE — celle d'avant la mise à
+# jour. Toute correction apportée aux étapes 4 et 5 ne prend effet qu'au
+# déploiement SUIVANT, et rien ne le signale.
+#
+# Vécu le 2026-08-28, en production. Le déploiement qui faisait passer le
+# conteneur en non-root ajoutait, en étape 4, un appel à `preparer-data.sh`
+# donnant `data/` à l'utilisateur du conteneur. L'appel n'a pas été exécuté :
+# l'image est passée en uid 10001 sur un `data/` resté à root, et le premier
+# dépôt de pièce jointe a échoué en « accès refusé ». Le journal du
+# déploiement ne montrait rien — l'absence d'une ligne ne se remarque pas.
+#
+# La reprise ci-dessous rejoue le script DEPUIS SA NOUVELLE VERSION dès que le
+# `pull` l'a modifié. `exec` remplace le processus : il n'y a pas de retour, et
+# donc pas de risque d'exécuter deux fois la suite.
+#
+# Ce qui a déjà été fait est transmis par l'environnement, parce que la
+# nouvelle version ne peut pas le redécouvrir : après le `pull`, `HEAD` est la
+# révision d'ARRIVÉE, et relire la révision de départ donnerait « déjà à
+# jour ». La sauvegarde, elle, ne doit pas être refaite.
+REPRISE=${MAJ_REPRISE:-0}
+
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$DIR"
 
@@ -71,8 +96,20 @@ echo "=== CRM Cabinet — mise à jour ==="
 echo ""
 
 echo "--- 1/5 Version actuelle ---"
-AVANT=$(git rev-parse --short HEAD)
-echo "Révision : $AVANT"
+if [ "$REPRISE" = 1 ]; then
+  # `HEAD` est déjà la révision d'arrivée : la révision de départ vient de
+  # l'exécution précédente, sans quoi la comparaison plus bas dirait « déjà à
+  # jour » et le script s'arrêterait sans rien reconstruire.
+  AVANT=$MAJ_AVANT
+  FICHIER=$MAJ_SAUVEGARDE
+  echo "Révision : $AVANT (reprise avec le maj.sh mis à jour)"
+else
+  AVANT=$(git rev-parse --short HEAD)
+  echo "Révision : $AVANT"
+fi
+
+# L'empreinte de CE fichier, avant que le `pull` ne puisse le remplacer.
+EMPREINTE_MAJ=$(sha256sum "$0" | cut -d' ' -f1)
 
 # ⚠️ UN `.env` MODIFIÉ DOIT DÉCLENCHER UNE RECONSTRUCTION, et il ne le faisait pas.
 #
@@ -98,6 +135,9 @@ fi
 
 echo ""
 echo "--- 2/5 Sauvegarde de la base ---"
+if [ "$REPRISE" = 1 ]; then
+  echo "Déjà faite avant la reprise : $FICHIER"
+else
 # pg_dump depuis le conteneur applicatif : postgresql-client y est installé, et
 # la base n'est joignable que depuis le réseau interne de compose.
 docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > "$FICHIER"
@@ -113,10 +153,26 @@ OCTETS=$(wc -c < "$FICHIER")
   exit 1
 }
 echo "Sauvegarde : $FICHIER ($TAILLE)"
+fi
 
 echo ""
 echo "--- 3/5 Récupération du code ---"
-git pull
+if [ "$REPRISE" = 1 ]; then
+  echo "Déjà faite avant la reprise."
+else
+  git pull
+
+  # Le `pull` vient peut-être de réécrire CE fichier. Si c'est le cas, tout ce
+  # qui suit doit venir de la nouvelle version, pas de celle que le shell a en
+  # mémoire. Voir l'explication en tête de fichier.
+  if [ "$EMPREINTE_MAJ" != "$(sha256sum "$0" | cut -d' ' -f1)" ]; then
+    echo ""
+    echo "installation/maj.sh a été mis à jour par ce « git pull »."
+    echo "Reprise de la mise à jour avec la nouvelle version."
+    MAJ_REPRISE=1 MAJ_AVANT="$AVANT" MAJ_SAUVEGARDE="$FICHIER" \
+      exec sh "$0" "$@"
+  fi
+fi
 
 APRES=$(git rev-parse --short HEAD)
 if [ "$AVANT" = "$APRES" ] && [ "$FORCER" -eq 0 ] && [ "$ENV_CHANGE" -eq 0 ]; then
@@ -133,6 +189,38 @@ echo "Révision : $AVANT → $APRES"
 
 echo ""
 echo "--- 4/5 Reconstruction et redémarrage ---"
+
+# ⚠️ LE RÉSEAU DE LECTURE EST CRÉÉ S'IL MANQUE — ET LUI SEUL.
+#
+# `docker-compose.partage.yml` y branche PostgREST pour qu'une autre
+# application du serveur l'interroge sans passer par le réseau du Caddy, où
+# TOUT ce qui est hébergé se voit. Il y est déclaré `external` : si personne ne
+# l'a créé, `docker compose up` s'arrête sur « network … declared as external,
+# but could not be found » — c'est-à-dire ICI, après la sauvegarde, au milieu
+# d'une mise à jour.
+#
+# Le créer est sans effet de bord : un réseau vide ne branche rien et n'ouvre
+# rien. C'est l'inverse exact du réseau du Caddy, qu'on ne crée JAMAIS d'office
+# — en poser un vide rendrait l'application injoignable en ayant l'air d'aller
+# bien, et masquerait la vraie panne (le Caddy qui ne tourne pas).
+#
+# `config --networks` n'a besoin d'aucun démon : il lit les fichiers de compose
+# tels que cette instance les utilise. Sur un VPS dédié, `lecture` n'y figure
+# pas et rien n'est créé.
+if docker compose config --networks 2>/dev/null | grep -qx 'lecture'; then
+  RESEAU_LECTURE=$(lire_env RESEAU_LECTURE)
+  RESEAU_LECTURE=${RESEAU_LECTURE:-crmcabinet_lecture}
+  if ! docker network inspect "$RESEAU_LECTURE" >/dev/null 2>&1; then
+    echo "Réseau de lecture « $RESEAU_LECTURE » absent : création."
+    docker network create "$RESEAU_LECTURE" >/dev/null
+  fi
+fi
+
+# Le conteneur applicatif tourne sous l'uid 10001 : `data/` doit lui appartenir,
+# sans quoi le premier fichier depose echoue en EACCES. Voir le script, qui
+# porte le raisonnement. Sans effet si c'est deja fait.
+sh "$DIR/installation/preparer-data.sh" "$DIR"
+
 docker compose up -d --build
 
 echo ""

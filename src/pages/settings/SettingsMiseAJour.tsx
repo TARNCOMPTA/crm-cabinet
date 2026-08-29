@@ -194,7 +194,7 @@ export function SettingsMiseAJour() {
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{etat.notes}</p>
                 )}
                 <a
-                  href="https://github.com/TARNCOMPTA/crmcabinet/blob/main/CHANGELOG.md"
+                  href="https://github.com/TARNCOMPTA/crm-cabinet/blob/main/CHANGELOG.md"
                   target="_blank"
                   rel="noreferrer noopener"
                   className="inline-flex items-center gap-1.5 text-sm text-teal-600 dark:text-teal-400 hover:underline mt-2"

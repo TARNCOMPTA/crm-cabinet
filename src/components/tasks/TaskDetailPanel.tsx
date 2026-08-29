@@ -117,7 +117,7 @@ export function TaskDetailPanel({
     try {
       const data = await loadTaskComments(task.id);
       setComments(data);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des commentaires', 'error');
     }
   }
@@ -214,7 +214,7 @@ export function TaskDetailPanel({
       usersToNotify.forEach((uid) => {
         createNotification(uid, 'task_commented', 'Nouveau commentaire', `${commenterName} a commente la tache "${task.titre}"`, '/tasks');
       });
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de l\'ajout du commentaire', 'error');
     }
   }
@@ -225,7 +225,7 @@ export function TaskDetailPanel({
       setComments(comments.filter((c) => c.id !== commentId));
       setDeleteCommentId(null);
       showToast('Commentaire supprimé', 'success');
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la suppression du commentaire', 'error');
     }
   }
@@ -251,7 +251,7 @@ export function TaskDetailPanel({
       setIsEditing(false);
       showToast('Tache mise à jour', 'success');
       onUpdate();
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la mise à jour', 'error');
     } finally {
       setIsSaving(false);
@@ -270,7 +270,7 @@ export function TaskDetailPanel({
 
       showToast(`Statut changé : ${STATUT_LABELS[newStatus]}`, 'success');
       onUpdate();
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du changement de statut', 'error');
     }
   }
@@ -284,7 +284,7 @@ export function TaskDetailPanel({
       setShowDeleteConfirm(false);
       onDelete();
       onClose();
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la suppression', 'error');
     }
   }

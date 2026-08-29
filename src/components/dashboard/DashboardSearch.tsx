@@ -21,8 +21,6 @@ import {
   type SearchCategory,
 } from '../../lib/globalSearchService';
 
-interface DashboardSearchProps {
-}
 
 const CATEGORY_META: Record<SearchCategory, { label: string; icon: typeof Search }> = {
   clients: { label: 'Clients', icon: Briefcase },
@@ -46,7 +44,7 @@ const CATEGORY_ORDER: SearchCategory[] = [
   'software',
 ];
 
-export function DashboardSearch({}: DashboardSearchProps) {
+export function DashboardSearch() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResults | null>(null);

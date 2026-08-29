@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { etatCellule, sirenDe, type LigneTeletransmission } from './etat.js';
+import {
+  decoupageDe,
+  etatCellule,
+  familleDe,
+  periodiciteDe,
+  sirenDe,
+  type LigneTeletransmission,
+} from './etat.js';
 import { pieceLisible } from './prudence.js';
 
 /**
@@ -353,5 +360,172 @@ describe('etatCellule — un refus ne s efface pas par un autre destinataire', (
       ligne({ nature: 'ARS', resultat: 'acceptée', destinataire: 'LCL', date_avis: '2026-06-16' }),
     ]);
     expect(e?.etat).toBe('vert');
+  });
+});
+
+/**
+ * La périodicité, déduite de la période déclarée.
+ * ---------------------------------------------------------------------------
+ * Elle décide dans LEQUEL des trois tableaux de TVA une société apparaît. Se
+ * tromper ne casse rien de visible : la ligne va simplement dans le mauvais
+ * onglet, et un client au régime trimestriel se lit comme un mensuel en retard
+ * deux mois sur trois.
+ *
+ * La fourchette est large à dessein. Un trimestre déclaré ne fait pas toujours
+ * trois mois pleins — une création ou une cessation en cours de trimestre en
+ * donne deux, ou quatre à cheval.
+ */
+describe('periodiciteDe', () => {
+  it('un mois plein est mensuel', () => {
+    expect(periodiciteDe('2026-06-01', '2026-06-30')).toBe('mensuelle');
+    expect(periodiciteDe('2026-02-01', '2026-02-28')).toBe('mensuelle');
+  });
+
+  it('un trimestre est trimestriel', () => {
+    expect(periodiciteDe('2026-01-01', '2026-03-31')).toBe('trimestrielle');
+    expect(periodiciteDe('2026-10-01', '2026-12-31')).toBe('trimestrielle');
+  });
+
+  it('une annee est annuelle', () => {
+    expect(periodiciteDe('2026-01-01', '2026-12-31')).toBe('annuelle');
+  });
+
+  /** Une periode a cheval sur deux annees compte quand meme ses mois. */
+  it('compte les mois par-dela le changement d annee', () => {
+    expect(periodiciteDe('2025-12-01', '2026-02-28')).toBe('trimestrielle');
+    expect(periodiciteDe('2025-07-01', '2026-06-30')).toBe('annuelle');
+  });
+
+  /** Creation ou cessation en cours de trimestre : deux ou quatre mois. */
+  it('reste trimestriel sur un trimestre incomplet ou a cheval', () => {
+    expect(periodiciteDe('2026-02-15', '2026-03-31')).toBe('trimestrielle');
+    expect(periodiciteDe('2026-01-01', '2026-04-30')).toBe('trimestrielle');
+  });
+
+  /**
+   * Sans bornes exploitables, on ne devine pas : la ligne reste dans le tableau
+   * du type, sans periodicite. Une periodicite inventee vaudrait moins que pas
+   * de periodicite du tout — elle rangerait un client ailleurs qu'ou il est.
+   */
+  it('rend null plutot que de deviner', () => {
+    for (const [d, f] of [
+      ['', '2026-06-30'],
+      ['2026-06-01', ''],
+      ['', ''],
+      [null, null],
+      [undefined, undefined],
+      ['pas une date', '2026-06-30'],
+      // Bornes inversees : la donnee se contredit.
+      ['2026-06-30', '2026-01-01'],
+    ] as [string | null | undefined, string | null | undefined][]) {
+      expect(periodiciteDe(d, f), `${d} → ${f}`).toBeNull();
+    }
+  });
+});
+
+/**
+ * Le classement en onglets : TVA, Bilan, Autres.
+ * ---------------------------------------------------------------------------
+ * Il decide de l'onglet ou une declaration se trouve, et il est deduit de la
+ * SEULE teleprocedure : aucun code fiscal (`IDT`, `IS`, `ILF`) n'est ecrit dans
+ * le classement. Ces tests exercent donc la regle, pas un referentiel.
+ *
+ * Les teleprocedures employees ici sont celles que jedeclare renvoie
+ * reellement — voir `TELEPROCEDURES` dans `client.ts`.
+ */
+describe('familleDe — l onglet ou une declaration se range', () => {
+  it('range la TVA en TVA', () => {
+    expect(familleDe(['EDI-TVA'])).toBe('tva');
+  });
+
+  /**
+   * `EDI-TDFC` porte la liasse : la declaration fiscale (`IDF`), l'IS, et la
+   * copie envoyee aux banques du client (`ILF`). Les trois vont dans le meme
+   * onglet, c'est le meme moment de production.
+   */
+  it('range la liasse et l IS en Bilan', () => {
+    expect(familleDe(['EDI-TDFC'])).toBe('bilan');
+  });
+
+  it('range tout le reste en Autres', () => {
+    for (const p of ['DSN', 'EDI-PAIE', 'EDI-IR', 'EDI-OGA', 'DUCS', 'BPIJ', 'RELEVE']) {
+      expect(familleDe([p]), p).toBe('autres');
+    }
+  });
+
+  /**
+   * Un groupe sans procedure exploitable ne disparait pas : il se range dans
+   * « Autres ». L'ecarter le ferait sortir des onglets sans que rien ne le dise,
+   * alors que ses declarations comptent toujours dans les totaux de la page.
+   */
+  it('range en Autres ce qui n a aucune procedure', () => {
+    expect(familleDe([])).toBe('autres');
+    expect(familleDe([''])).toBe('autres');
+  });
+
+  /**
+   * ⚠️ LA PRIORITE NE DOIT PAS DEPENDRE DE L ORDRE. Les procedures arrivent
+   * dans un `Set` alimente par l'ordre des accuses : sans priorite explicite, un
+   * meme portefeuille rangerait le tableau tantot en TVA, tantot en Bilan, selon
+   * l'ordre d'analyse.
+   */
+  it('donne la TVA gagnante quand les deux procedures coexistent, dans les deux sens', () => {
+    expect(familleDe(['EDI-TVA', 'EDI-TDFC'])).toBe('tva');
+    expect(familleDe(['EDI-TDFC', 'EDI-TVA'])).toBe('tva');
+  });
+
+  it('lit un Set aussi bien qu un tableau — c est ce que lui passe le pivot', () => {
+    expect(familleDe(new Set(['DSN', 'EDI-TDFC']))).toBe('bilan');
+  });
+});
+
+/**
+ * Le pas des colonnes de la grille.
+ * ---------------------------------------------------------------------------
+ * Ce qui est verifie ici n'est pas un gout d'affichage mais une regle de
+ * lecture : une colonne vide par construction — le mois ou une societe au
+ * trimestriel n'a par definition rien a declarer — se lit comme du retard.
+ * Regrouper au bon pas est ce qui fait disparaitre ces faux trous.
+ */
+describe('decoupageDe — le pas des colonnes de la grille', () => {
+  it('met la TVA trimestrielle au trimestre', () => {
+    expect(decoupageDe('tva', 'trimestrielle')).toBe('trimestre');
+  });
+
+  it('met la TVA annuelle a l annee', () => {
+    expect(decoupageDe('tva', 'annuelle')).toBe('annee');
+  });
+
+  it('laisse la TVA mensuelle au mois', () => {
+    expect(decoupageDe('tva', 'mensuelle')).toBe('mois');
+  });
+
+  /**
+   * Le bilan est annuel PAR SA FAMILLE, sans passer par la periodicite : elle
+   * n'est calculee que pour la TVA, et une liasse n'a pas cette question.
+   */
+  it('met tout le Bilan a l annee, meme sans periodicite', () => {
+    expect(decoupageDe('bilan')).toBe('annee');
+    expect(decoupageDe('bilan', null)).toBe('annee');
+    expect(decoupageDe('bilan', 'mensuelle')).toBe('annee');
+  });
+
+  /**
+   * « Autres » melange des rythmes — DSN mensuelle, DUCS, IR annuel. Un
+   * decoupage devine y afficherait des trimestres faux ; le mois ne ment pas.
+   */
+  it('laisse Autres au mois', () => {
+    expect(decoupageDe('autres')).toBe('mois');
+    expect(decoupageDe('autres', 'trimestrielle')).toBe('mois');
+  });
+
+  /**
+   * ⚠️ LE CAS QUI COMPTE : une TVA dont les bornes ne donnent aucune
+   * periodicite. La ranger d'office au trimestre ferait passer une inconnue
+   * pour une certitude, et regrouperait des mois qui n'ont rien a voir.
+   */
+  it('laisse au mois une TVA sans periodicite exploitable', () => {
+    expect(decoupageDe('tva')).toBe('mois');
+    expect(decoupageDe('tva', null)).toBe('mois');
   });
 });

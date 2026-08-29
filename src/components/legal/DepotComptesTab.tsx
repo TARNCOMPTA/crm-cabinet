@@ -21,6 +21,7 @@ import { syncBodaccForClient, ClientDepotComptes } from '../../lib/bodaccService
 import { useSortableTable } from '../../hooks/useSortableTable';
 import { SortableTableWrapper } from '../ui/SortableTableWrapper';
 import { SortableCardRow } from '../ui/SortableRow';
+import { messageErreur } from '../../lib/erreurs';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 
@@ -163,9 +164,9 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
         'success'
       );
       await onReload();
-    } catch (err: any) {
+    } catch (err) {
       showToast(
-        `Erreur pour ${client.nom_entreprise}: ${err?.message || 'Erreur inconnue'}`,
+        `Erreur pour ${client.nom_entreprise}: ${messageErreur(err, 'Erreur inconnue')}`,
         'error'
       );
     } finally {

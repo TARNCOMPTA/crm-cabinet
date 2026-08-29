@@ -465,7 +465,50 @@ CREATE TABLE "clients" (
   "nom_commercial" text,
   "date_immatriculation" date,
   "greffe" text,
+  -- ---- Surcharge du jour d'échéance TVA (increments/009) -------------------
+  --
+  -- Reporté depuis schema/increments/009 : même contrat de parité que ci-dessus.
+  --
+  -- NULL est la valeur NORMALE, et veut dire « applique la règle CA3 » — 16 ou
+  -- 19 selon l'initiale pour un entrepreneur individuel, 21 pour les sociétés
+  -- autres que par actions, 24 pour les SA et assimilées. La colonne n'existe
+  -- que pour les cas où cette déduction se trompe : forme juridique absente de
+  -- la fiche, fiche pas à jour, ou situation connue du seul cabinet.
+  --
+  -- Une valeur ici PRIME SUR LA RÈGLE et n'est jamais recalculée : c'est un
+  -- arbitrage humain, pas un cache. Rien ne la réécrit automatiquement.
+  "tva_jour_echeance" smallint,
+  -- ---- Seconde adresse électronique (increments/012) -----------------------
+  --
+  -- Reporté depuis schema/increments/012 : même contrat de parité que ci-dessus.
+  --
+  -- Le pendant de `telephone_2`, pour la même raison : l'adresse du dirigeant
+  -- n'est pas celle du secrétariat. Elle N'ÉLARGIT AUCUN ENVOI — les campagnes
+  -- lisent `email` seul, et un second destinataire est une décision d'envoi,
+  -- pas un champ de saisie.
+  --
+  -- Ni CHECK de format ni défaut, comme `email` : refuser à la seconde adresse
+  -- ce que la première accepte, sur la même fiche, ne se défendrait pas.
+  "email_2" text,
+  -- ---- Nombre total de parts (increments/013) ------------------------------
+  --
+  -- Reporté depuis schema/increments/013 : même contrat de parité que ci-dessus.
+  --
+  -- Le dénominateur de la répartition des parts (`client_associes`).
+  -- `capital_social` est un montant, pas un nombre de titres : « N parts sur T »
+  -- a besoin de T, et T ne se déduit pas du capital sans la valeur nominale.
+  --
+  -- ⚠️ IL EST DÉCLARÉ, ET NON DÉDUIT DE LA SOMME DES PARTS SAISIES, et c'est
+  -- tout son intérêt. Sommer `client_associes.nb_parts` pour obtenir le total
+  -- ferait tomber juste une répartition à moitié saisie — 100 % répartis entre
+  -- deux associés sur les cinq que compte la société. Avec un total déclaré,
+  -- l'écart se voit.
+  --
+  -- Ni NOT NULL ni défaut : un `0` mentirait, en ayant l'air d'une saisie.
+  "parts_totales" numeric,
   CONSTRAINT "clients_pkey" PRIMARY KEY (id),
+  CONSTRAINT "clients_tva_jour_echeance_check"
+    CHECK (tva_jour_echeance IS NULL OR (tva_jour_echeance BETWEEN 1 AND 31)),
   CONSTRAINT "clients_habilitation_avancement_check" CHECK ((habilitation_avancement = ANY (ARRAY['a_faire'::text, 'demande'::text, 'complet'::text]))),
   CONSTRAINT "clients_sortie_after_entree" CHECK (((date_sortie_cabinet IS NULL) OR (date_entree_cabinet IS NULL) OR (date_sortie_cabinet >= date_entree_cabinet))),
   CONSTRAINT "clients_statut_check" CHECK ((statut = ANY (ARRAY['actif'::text, 'inactif'::text, 'prospect'::text, 'archive'::text]))),
@@ -819,6 +862,19 @@ CREATE TABLE "mcp_api_keys" (
   "created_by" uuid,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "revoked_at" timestamp with time zone,
+  -- ---- Droit d'ecriture (increments/014) -----------------------------------
+  --
+  -- Reporte depuis schema/increments/014, qui porte le raisonnement complet.
+  --
+  -- Une cle statique est un PORTEUR : qui la detient fait ce qu'elle permet.
+  -- Jusqu'a l'ouverture de l'ecriture au connecteur, elle ne permettait que
+  -- lire, et la question ne se posait pas.
+  --
+  -- ⚠️ `DEFAULT false` EST LE POINT ENTIER DE LA COLONNE. Une cle qui gagnerait
+  -- l'ecriture parce qu'on a deploye une version serait exactement l'effet de
+  -- bord contre lequel le connecteur se premunit. L'accorder est un geste
+  -- explicite, cle par cle.
+  "peut_ecrire" boolean DEFAULT false NOT NULL,
   CONSTRAINT "mcp_api_keys_pkey" PRIMARY KEY (id),
   CONSTRAINT "mcp_api_keys_client_id_key" UNIQUE (client_id)
 );
@@ -1099,6 +1155,28 @@ CREATE TABLE "sync_settings" (
   CONSTRAINT "sync_settings_frequency_check" CHECK ((frequency = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text]))),
   CONSTRAINT "sync_settings_last_sync_status_check" CHECK ((last_sync_status = ANY (ARRAY['never'::text, 'success'::text, 'error'::text, 'running'::text, 'partial'::text]))),
   CONSTRAINT "sync_settings_sync_hour_check" CHECK (((sync_hour >= 0) AND (sync_hour <= 23)))
+);
+
+CREATE TABLE "taches_planifiees" (
+  -- Le NOM est la cle : une ligne par tache, pas un historique. La question a
+  -- laquelle cette table repond est « la tache de 2 h a-t-elle tourne cette
+  -- nuit, et bien ? » — un journal complet demanderait une purge, et personne
+  -- ne relit la 400e execution de la file d'emails.
+  "nom" text NOT NULL,
+  "derniere_execution" timestamp with time zone NOT NULL,
+  -- Distinct de `derniere_execution` A DESSEIN : pour une tache nocturne, savoir
+  -- QUAND elle a fonctionne pour la derniere fois vaut souvent plus que de
+  -- savoir qu'elle vient d'echouer. Les confondre effacerait le dernier succes
+  -- au premier echec.
+  "dernier_succes" timestamp with time zone,
+  "duree_ms" integer NOT NULL,
+  "statut" text NOT NULL,
+  -- Le compte rendu de la tache, ou le message d'erreur. Beaucoup de tours ne
+  -- rendent rien a dire : la colonne est alors nulle, et l'ecran affiche
+  -- simplement l'heure.
+  "detail" text,
+  CONSTRAINT "taches_planifiees_pkey" PRIMARY KEY (nom),
+  CONSTRAINT "taches_planifiees_statut_check" CHECK ((statut = ANY (ARRAY['succes'::text, 'echec'::text])))
 );
 
 CREATE TABLE "task_attachments" (
@@ -1506,11 +1584,38 @@ CREATE OR REPLACE FUNCTION public.build_notification_email_html(p_type text, p_t
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
+-- ⚠️ TITRE, MESSAGE ET LIEN SONT DU TEXTE, PAS DU HTML.
+--
+-- Les trois etaient concatenes tels quels dans le corps du courriel, et le lien
+-- directement dans un attribut `href`. Deux chemins y menaient :
+--
+--   · le plus discret : `notify_task_assigned` compose le message avec le TITRE
+--     DE LA TACHE et le nom de son auteur. Nommer une tache « <img src=x
+--     onerror=...> » suffisait donc a injecter du balisage dans le courriel de
+--     son collegue, sans aucun outil ;
+--   · le plus grave : `create_notification` etait appelable par tout
+--     collaborateur via le proxy PostgREST (corrige dans rest-droits.ts), avec
+--     titre, message et lien libres.
+--
+-- Les trois valeurs sont donc echappees. L'ordre compte : `&` EN PREMIER, sinon
+-- les entites produites par les remplacements suivants seraient re-echappees.
+--
+-- LE LIEN EST EN OUTRE RESTREINT AUX SCHEMAS SURS. Echapper ne suffit pas pour
+-- un `href` : `javascript:` ou `data:` restent des liens vivants une fois
+-- echappes. Seuls sont acceptes http(s) et les chemins relatifs — ces derniers
+-- parce que les notifications reelles en posent (« /tasks?id=... »). `//hote`
+-- est refuse : il est relatif au protocole, donc il sort du domaine.
 DECLARE
 type_label text;
 type_color text;
 btn_html text := '';
+titre_sur text;
+message_sur text;
+lien_sur text;
 BEGIN
+titre_sur := replace(replace(replace(replace(replace(coalesce(p_title, ''),'&','&amp;'),'<','&lt;'),'>','&gt;'),'"','&quot;'),'''','&#39;');
+message_sur := replace(replace(replace(replace(replace(coalesce(p_message, ''),'&','&amp;'),'<','&lt;'),'>','&gt;'),'"','&quot;'),'''','&#39;');
+
 CASE p_type
 WHEN 'task_assigned' THEN type_label := 'Tache attribuee'; type_color := '#0d9488';
 WHEN 'task_commented' THEN type_label := 'Nouveau commentaire'; type_color := '#0891b2';
@@ -1522,8 +1627,9 @@ WHEN 'legal_alert_critical' THEN type_label := 'Alerte juridique critique'; type
 ELSE type_label := 'Notification'; type_color := '#0d9488';
 END CASE;
 
-IF p_link IS NOT NULL THEN
-btn_html := '<tr><td style="padding:24px 0 0 0;"><a href="' || p_link || '" style="display:inline-block;padding:12px 28px;background-color:' || type_color || ';color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Voir le detail</a></td></tr>';
+IF p_link IS NOT NULL AND (p_link ~ '^https?://' OR (p_link ~ '^/' AND p_link !~ '^//')) THEN
+lien_sur := replace(replace(replace(replace(replace(coalesce(p_link, ''),'&','&amp;'),'<','&lt;'),'>','&gt;'),'"','&quot;'),'''','&#39;');
+btn_html := '<tr><td style="padding:24px 0 0 0;"><a href="' || lien_sur || '" style="display:inline-block;padding:12px 28px;background-color:' || type_color || ';color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Voir le detail</a></td></tr>';
 END IF;
 
 RETURN '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
@@ -1534,8 +1640,8 @@ RETURN '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="v
 || '<tr><td style="background-color:' || type_color || ';padding:20px 32px;"><span style="color:#ffffff;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">' || type_label || '</span></td></tr>'
 || '<tr><td style="padding:32px;">'
 || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-|| '<tr><td style="font-size:20px;font-weight:700;color:#111827;padding-bottom:12px;">' || p_title || '</td></tr>'
-|| '<tr><td style="font-size:15px;color:#4b5563;line-height:1.6;">' || p_message || '</td></tr>'
+|| '<tr><td style="font-size:20px;font-weight:700;color:#111827;padding-bottom:12px;">' || titre_sur || '</td></tr>'
+|| '<tr><td style="font-size:15px;color:#4b5563;line-height:1.6;">' || message_sur || '</td></tr>'
 || btn_html
 || '</table></td></tr>'
 || '<tr><td style="padding:20px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb;">'
@@ -2086,6 +2192,53 @@ p_client_id,
 item->>'role'
 FROM jsonb_array_elements(p_collaborators) AS item;
 END IF;
+END;
+$function$
+;
+
+-- Remplacer une repartition d'un seul coup. Repris de
+-- schema/increments/014-repartition-ecriture.sql, qui porte le raisonnement.
+--
+-- ⚠️ DEUX APPELS POSTGREST FERAIENT DEUX TRANSACTIONS : si la seconde echoue,
+-- le client se retrouve sans aucun associe. Une repartition a moitie remplacee
+-- est pire que pas de repartition — elle a l'air d'en etre une. Meme motif que
+-- `replace_client_collaborators`, et pour la meme raison.
+--
+-- Pas de SECURITY DEFINER : `authenticated` a deja ces droits sur la table.
+-- A inscrire dans RPC_OUVERTES (server/src/rest-droits.ts) pour etre appelable.
+CREATE OR REPLACE FUNCTION public.replace_client_associes(
+  p_client_id uuid,
+  p_lignes jsonb,
+  p_source text DEFAULT 'manual'
+)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF p_client_id IS NULL THEN
+    RAISE EXCEPTION 'p_client_id is required';
+  END IF;
+  IF p_source IS NULL OR p_source NOT IN ('manual', 'statuts') THEN
+    RAISE EXCEPTION 'p_source doit valoir manual ou statuts';
+  END IF;
+
+  DELETE FROM client_associes WHERE client_id = p_client_id;
+
+  IF p_lignes IS NOT NULL AND jsonb_array_length(p_lignes) > 0 THEN
+    INSERT INTO client_associes
+      (client_id, officer_id, nb_parts, demembrement, date_effet, acte_source, notes, source)
+    SELECT
+      p_client_id,
+      (item->>'officer_id')::uuid,
+      (item->>'nb_parts')::numeric,
+      COALESCE(item->>'demembrement', 'pleine-propriete'),
+      NULLIF(item->>'date_effet', '')::date,
+      NULLIF(item->>'acte_source', ''),
+      NULLIF(item->>'notes', ''),
+      p_source
+    FROM jsonb_array_elements(p_lignes) AS item;
+  END IF;
 END;
 $function$
 ;
@@ -2667,3 +2820,87 @@ CREATE INDEX IF NOT EXISTS "idx_mailing_destinataires_campagne"
 CREATE INDEX IF NOT EXISTS "idx_mailing_destinataires_client"
   ON "mailing_destinataires" (client_id);
 
+
+
+-- ===========================================================================
+-- Répartition des parts sociales. Repris de
+-- schema/increments/013-repartition-parts.sql, qui porte le raisonnement
+-- complet. Tout y est idempotent (IF NOT EXISTS), donc rejouable.
+--
+-- La colonne `clients.parts_totales` du même incrément est, elle, déclarée
+-- directement dans le CREATE TABLE des clients plus haut — comme `email_2` et
+-- `tva_jour_echeance` avant elle.
+-- ===========================================================================
+
+-- Une ligne = ce qu'un associé détient AUJOURD'HUI, avec depuis quand et par
+-- quel acte. Pas un journal des mouvements : l'historique reste dans les actes.
+--
+-- Cette table est la réponse à la réserve que porte le lecteur de statuts
+-- (`server/src/inpi/statuts-texte.ts`) : les statuts déposés ne reflètent pas
+-- les cessions postérieures au dépôt. Ce qui est saisi ici fait autorité là où
+-- le greffe ne fait que témoigner d'une date.
+CREATE TABLE IF NOT EXISTS "client_associes" (
+  "id"           uuid DEFAULT gen_random_uuid() NOT NULL,
+  "client_id"    uuid NOT NULL,
+  -- L'identité passe par `company_officers` et jamais par un nom libre : deux
+  -- orthographes du même associé ne se rapprocheraient jamais.
+  "officer_id"   uuid NOT NULL,
+  "nb_parts"     numeric NOT NULL,
+  -- « 250 parts en nue-propriété et 100 en pleine propriété » est le cas
+  -- ordinaire d'une SCI familiale après donation, d'où la présence de cette
+  -- colonne dans la clé d'unicité.
+  "demembrement" text DEFAULT 'pleine-propriete'::text NOT NULL,
+  -- Nullable : une reprise de portefeuille connaît souvent la détention sans la
+  -- date, et une date inventée ne se voit pas.
+  "date_effet"   date,
+  "legal_act_id" uuid,
+  -- En texte, À CÔTÉ de `legal_act_id` et non à sa place : la plupart des
+  -- cessions de parts sont notariées et ne sont jamais déposées au greffe,
+  -- donc absentes de `legal_acts`.
+  "acte_source"  text,
+  -- ---- Origine de la ligne (increments/014) --------------------------------
+  --
+  -- `manual`  : saisie ou relue par le cabinet. Elle engage.
+  -- `statuts` : deduite du document depose au greffe, sans relecture. Elle date
+  --             du depot et reste a confirmer.
+  --
+  -- ⚠️ Sans cette colonne les deux seraient indiscernables, et un chiffre de
+  -- 2004 se rangerait a cote d'un chiffre verifie hier. `acte_source` ne suffit
+  -- pas : c'est un champ libre. Une provenance doit etre contrainte.
+  "source"       text DEFAULT 'manual'::text NOT NULL,
+  "notes"        text,
+  "created_at"   timestamp with time zone DEFAULT now() NOT NULL,
+  "updated_at"   timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "client_associes_pkey" PRIMARY KEY (id),
+  CONSTRAINT "client_associes_client_id_fkey"
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+  -- CASCADE aussi sur la personne, comme `officer_companies` : une détention
+  -- orpheline désignerait un associé sans nom.
+  CONSTRAINT "client_associes_officer_id_fkey"
+    FOREIGN KEY (officer_id) REFERENCES company_officers(id) ON DELETE CASCADE,
+  -- SET NULL, et non CASCADE : purger un acte ne doit pas effacer la détention
+  -- qu'il justifiait. `acte_source` reste, en texte.
+  CONSTRAINT "client_associes_legal_act_id_fkey"
+    FOREIGN KEY (legal_act_id) REFERENCES legal_acts(id) ON DELETE SET NULL,
+  CONSTRAINT "client_associes_client_officer_demembrement_key"
+    UNIQUE (client_id, officer_id, demembrement),
+  -- Une détention nulle n'existe pas : c'est une ligne à supprimer, pas une
+  -- ligne à zéro.
+  CONSTRAINT "client_associes_nb_parts_check" CHECK ((nb_parts > (0)::numeric)),
+  CONSTRAINT "client_associes_source_check"
+    CHECK ((source = ANY (ARRAY['manual'::text, 'statuts'::text]))),
+  CONSTRAINT "client_associes_demembrement_check"
+    CHECK ((demembrement = ANY (ARRAY['pleine-propriete'::text, 'nue-propriete'::text, 'usufruit'::text])))
+);
+
+CREATE INDEX IF NOT EXISTS "idx_client_associes_client"
+  ON "client_associes" (client_id);
+CREATE INDEX IF NOT EXISTS "idx_client_associes_officer"
+  ON "client_associes" (officer_id);
+CREATE INDEX IF NOT EXISTS "idx_client_associes_legal_act"
+  ON "client_associes" (legal_act_id);
+
+DROP TRIGGER IF EXISTS update_client_associes_updated_at ON public.client_associes;
+CREATE TRIGGER update_client_associes_updated_at
+  BEFORE UPDATE ON public.client_associes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

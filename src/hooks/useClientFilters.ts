@@ -1,16 +1,15 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useDeferredValue } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { Database } from '../types/database';
 
-type Client = Database['public']['Tables']['clients']['Row'] & {
-  collaborators?: Array<{
-    id: string;
-    user_id: string;
-    // `client_collaborators.role` : DEFAULT sans NOT NULL, donc nullable.
-    role: string | null;
-    user?: { prenom: string | null; nom: string | null; avatar_color?: string | null } | null;
-  }>;
-};
+import type { ClientListe } from '../components/clients/colonnesListe';
+
+/**
+ * ⚠️ CE TYPE EST PLUS ÉTROIT QUE LA LIGNE COMPLÈTE, ET C'EST LE POINT. La liste
+ * ne demande à la base que les colonnes qu'elle affiche ; lire ici une colonne
+ * absente de `COLONNES_LISTE` ne compile pas, au lieu d'arriver `undefined` à
+ * l'écran. Voir `colonnesListe.ts`.
+ */
+type Client = ClientListe;
 
 export type SortField = 'nom_entreprise' | 'dirigeant' | 'numero_dossier' | 'siren' | 'siret' | 'ville' | 'regime_fiscal' | 'date_cloture' | 'collaborators';
 
@@ -107,17 +106,52 @@ export function useClientFilters(clients: Client[], userId?: string, showMyDossi
   }, []);
 
   // Filter & sort
+  /**
+   * LA RECHERCHE EST DIFFÉRÉE, LE CHAMP NE L'EST PAS.
+   *
+   * `useDeferredValue` ne rend rien plus rapide : il change QUI ATTEND. Le champ
+   * se peint tout de suite avec la frappe, et React recalcule la liste dans une
+   * passe de moindre priorité, qu'une frappe suivante peut interrompre. Une
+   * temporisation aurait figé le champ pendant le délai ; ici la lettre paraît
+   * quoi qu'il arrive.
+   *
+   * MESURÉ, avec témoin, à 403 dossiers — chronométrage DANS la page, car les
+   * aller-retours d'un pilote de navigateur ajoutent des dizaines de
+   * millisecondes et avaient d'abord fait conclure à un défaut deux fois plus
+   * gros qu'il n'est :
+   *
+   *                        sans différé   avec
+   *     réponse du champ      48 ms       38 ms   (1re frappe : 120 → 55)
+   *     liste posée           86 ms       73 ms   (1re frappe : 182 → 96)
+   *
+   * Le gain est donc MODESTE en régime, net sur la première frappe — celle où
+   * la liste se réduit d'un coup, et la seule que l'on remarque vraiment.
+   *
+   * ⚠️ CE N'EST PAS LE FILTRAGE QUI COÛTE, et il ne sert à rien de l'optimiser :
+   * chronométré à part, filtrer et trier 403 clients prend 0,15 ms. Le temps
+   * part dans le rendu des cinquante lignes, soit 5 300 nœuds. Ce qui le
+   * réduirait vraiment — mémoïser la ligne, ne pas monter dnd-kit quand le
+   * glisser-déposer est éteint — demande une refonte du tableau, écartée tant
+   * que la réponse du champ reste sous les 50 ms.
+   *
+   * ⚠️ LE RESTE DE L'ÉCRAN LIT TOUJOURS `searchTerm`, pas cette valeur : l'URL
+   * partageable et le compteur de filtres actifs doivent suivre la frappe, pas
+   * le rendu.
+   */
+  const rechercheDifferee = useDeferredValue(searchTerm);
+
   const filteredClients = useMemo(() => {
+    const terme = rechercheDifferee;
     const filtered = clients.filter((client) => {
       const matchesSearch =
-        client.nom_entreprise.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.siret?.includes(searchTerm) ||
-        client.numero_dossier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.contact_principal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.dirigeant?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.nom_entreprise.toLowerCase().includes(terme.toLowerCase()) ||
+        client.siret?.includes(terme) ||
+        client.numero_dossier?.toLowerCase().includes(terme.toLowerCase()) ||
+        client.contact_principal?.toLowerCase().includes(terme.toLowerCase()) ||
+        client.dirigeant?.toLowerCase().includes(terme.toLowerCase()) ||
         // « Gaillac » etait introuvable : la ville n'existait que noyee dans la
         // chaine d'adresse, que cette recherche ne regardait pas.
-        client.ville?.toLowerCase().includes(searchTerm.toLowerCase());
+        client.ville?.toLowerCase().includes(terme.toLowerCase());
 
       const matchesStatus = filterStatus === 'all' || client.statut === filterStatus;
       const matchesRegime = filterRegime === 'all' || client.regime_fiscal === filterRegime;
@@ -163,7 +197,7 @@ export function useClientFilters(clients: Client[], userId?: string, showMyDossi
     });
 
     return filtered;
-  }, [clients, searchTerm, filterStatus, filterRegime, showArchived, filterCloture, filterCollaboratorIds, showMyDossiers, sortField, sortDirection, userId]);
+  }, [clients, rechercheDifferee, filterStatus, filterRegime, showArchived, filterCloture, filterCollaboratorIds, showMyDossiers, sortField, sortDirection, userId]);
 
   return {
     // State

@@ -1,5 +1,18 @@
 import { supabase } from './supabase';
 
+/**
+ * Les lignes des quatre recherches, taillees sur leur `select`.
+ *
+ * Toutes joignent `clients(nom_entreprise)` : une relation PLUSIEURS-VERS-UN,
+ * donc un objet. C'est ce que le code lit deja avec `?.nom_entreprise`.
+ */
+interface AvecClient { clients: { nom_entreprise: string | null } | null }
+interface LigneTache extends AvecClient { id: string; titre: string | null; statut: string | null }
+interface LigneActe extends AvecClient { id: string; act_type: string | null; act_category: string | null; act_date: string | null }
+interface LigneHabilitation extends AvecClient { id: string; siren: string | null; service: string | null; etat: string | null }
+interface LigneOpportunite { id: string; prospect_name: string | null; source: string | null; montant_estime: number | string | null; clients: { nom_entreprise: string | null; siren: string | null } | null }
+
+
 export interface SearchResultItem {
   id: string;
   label: string;
@@ -115,7 +128,7 @@ async function searchTasks(q: string): Promise<SearchResultItem[]> {
     .limit(LIMIT);
 
   if (error || !data) return [];
-  return data.map((t: any) => ({
+  return data.map((t: LigneTache) => ({
     id: t.id,
     label: t.titre || 'Tache',
     sublabel: [t.statut, t.clients?.nom_entreprise].filter(Boolean).join(' - '),
@@ -133,7 +146,7 @@ async function searchLegalActs(q: string): Promise<SearchResultItem[]> {
     .limit(LIMIT);
 
   if (error || !data) return [];
-  return data.map((a: any) => ({
+  return data.map((a: LigneActe) => ({
     id: a.id,
     label: a.act_type || 'Acte',
     sublabel: [a.act_category, a.clients?.nom_entreprise, a.act_date].filter(Boolean).join(' - '),
@@ -151,7 +164,7 @@ async function searchHabilitations(q: string): Promise<SearchResultItem[]> {
     .limit(LIMIT);
 
   if (error || !data) return [];
-  return data.map((h: any) => ({
+  return data.map((h: LigneHabilitation) => ({
     id: h.id,
     label: h.service || 'Habilitation',
     sublabel: [h.siren, h.clients?.nom_entreprise, h.etat].filter(Boolean).join(' - '),
@@ -192,7 +205,7 @@ async function searchOpportunities(q: string): Promise<SearchResultItem[]> {
     .limit(LIMIT);
 
   if (error || !data) return [];
-  return data.map((o: any) => ({
+  return data.map((o: LigneOpportunite) => ({
     id: o.id,
     label: o.clients?.nom_entreprise || o.prospect_name || 'Opportunite',
     sublabel: [o.source, o.montant_estime ? `${o.montant_estime} EUR` : null].filter(Boolean).join(' - '),

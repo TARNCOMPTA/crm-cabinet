@@ -89,6 +89,18 @@ function memeHache(a: string, b: string): boolean {
 interface CleValide {
   id: string;
   nom: string;
+  /**
+   * Le droit d'ecrire, et il ne se deduit de rien d'autre : la case cochee au
+   * consentement pour un jeton OAuth, la colonne `peut_ecrire` pour une cle
+   * statique. Faux par defaut dans les deux cas.
+   */
+  peutEcrire: boolean;
+  /**
+   * A qui attribuer une ecriture. L'utilisateur du jeton OAuth, ou le createur
+   * de la cle statique. `null` quand la cle n'a pas de createur connu — une
+   * ecriture non attribuable est alors refusee plutot que journalisee a vide.
+   */
+  userId: string | null;
 }
 
 /**
@@ -116,7 +128,14 @@ async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
   const separateur = valeur.indexOf(':');
   if (separateur < 0) {
     const jeton = await validerJetonAcces(valeur);
-    return jeton ? { id: jeton.tokenId, nom: `OAuth ${jeton.clientId}` } : null;
+    return jeton
+      ? {
+          id: jeton.tokenId,
+          nom: `OAuth ${jeton.clientId}`,
+          peutEcrire: jeton.peutEcrire,
+          userId: jeton.userId,
+        }
+      : null;
   }
   if (separateur === 0) return null;
 
@@ -124,8 +143,14 @@ async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
   const secret = valeur.slice(separateur + 1);
   if (!secret) return null;
 
-  const ligne = await requeteUne<{ id: string; name: string; client_secret_hash: string }>(
-    `SELECT id, name, client_secret_hash
+  const ligne = await requeteUne<{
+    id: string;
+    name: string;
+    client_secret_hash: string;
+    peut_ecrire: boolean;
+    created_by: string | null;
+  }>(
+    `SELECT id, name, client_secret_hash, peut_ecrire, created_by
        FROM mcp_api_keys
       WHERE client_id = $1 AND is_active`,
     [clientId]
@@ -141,7 +166,53 @@ async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
     () => undefined
   );
 
-  return { id: ligne.id, nom: ligne.name };
+  /**
+   * ⚠️ UNE CLE STATIQUE N'ECRIT QUE SI ON LE LUI A ACCORDE, cle par cle. La
+   * colonne vaut `false` par defaut (increment 014) : le deploiement de cette
+   * version n'a donc donne l'ecriture a aucune cle deja emise.
+   *
+   * `created_by` sert a attribuer l'ecriture dans `audit_logs` : une cle est un
+   * porteur, mais quelqu'un l'a creee, et c'est la seule personne qu'on puisse
+   * honnetement designer.
+   */
+  return {
+    id: ligne.id,
+    nom: ligne.name,
+    peutEcrire: ligne.peut_ecrire,
+    userId: ligne.created_by,
+  };
+}
+
+/**
+ * Ce qu'un outil rend, mis dans l'enveloppe du protocole.
+ *
+ * ⚠️ UN OUTIL PEUT RENDRE AUTRE CHOSE QUE DU TEXTE, et un seul s'en sert :
+ * `get_client_statuts` sur un document SCANNE. Sa page n'a pas de couche texte
+ * — c'est une image — et le seul moyen pour un modele de la lire est de la
+ * VOIR.
+ *
+ * La convention est etroite EXPRES. Un outil qui rend un objet muni de
+ * `blocsMcp` en prend la responsabilite entiere ; tout le reste continue d'etre
+ * serialise en un unique bloc de texte, comme depuis l'origine. Laisser chaque
+ * outil composer son enveloppe aurait ete le meilleur moyen d'en voir un rendre
+ * au client un contenu que le protocole refuse.
+ *
+ * Extraite et exportee pour etre testee seule : c'est une decision, et une
+ * decision qu'aucun test ne peut atteindre est une decision que personne ne
+ * verifie.
+ */
+export function enveloppeMcp(donnees: unknown): Record<string, unknown>[] {
+  if (
+    donnees !== null &&
+    typeof donnees === 'object' &&
+    Array.isArray((donnees as { blocsMcp?: unknown }).blocsMcp)
+  ) {
+    const blocs = (donnees as { blocsMcp: unknown[] }).blocsMcp;
+    // Un tableau vide rendrait une reponse sans contenu, que le client affiche
+    // comme un silence. Mieux vaut retomber sur le texte.
+    if (blocs.length > 0) return blocs as Record<string, unknown>[];
+  }
+  return [{ type: 'text', text: JSON.stringify(donnees, null, 2) }];
 }
 
 export function enregistrerRoutesMcp(app: FastifyInstance): void {
@@ -208,10 +279,27 @@ export function enregistrerRoutesMcp(app: FastifyInstance): void {
         }
 
         try {
-          const donnees = await outil.executer(args);
-          return resultatRpc(id, {
-            content: [{ type: 'text', text: JSON.stringify(donnees, null, 2) }],
+          // Le contexte de l'appelant descend jusqu'a l'outil : c'est la seule
+          // facon qu'un outil d'ecriture a de savoir s'il a le droit d'ecrire,
+          // et a qui attribuer ce qu'il ecrit.
+          const donnees = await outil.executer(args, {
+            peutEcrire: cle.peutEcrire,
+            userId: cle.userId,
+            cle: cle.nom,
           });
+          /**
+           * ⚠️ UN OUTIL PEUT DÉSORMAIS RENDRE AUTRE CHOSE QUE DU TEXTE, et un
+           * seul s'en sert : `get_client_statuts` sur un document SCANNÉ. Sa
+           * page n'a pas de couche texte — c'est une image — et le seul moyen
+           * pour un modèle de la lire est de la VOIR.
+           *
+           * La convention est étroite exprès : un outil qui rend un objet muni
+           * de `blocsMcp` en prend la responsabilité entière, tout le reste
+           * continue d'être sérialisé en un unique bloc de texte. Laisser
+           * chaque outil composer son enveloppe aurait été le meilleur moyen
+           * d'en voir un rendre du JSON mal formé au client.
+           */
+          return resultatRpc(id, { content: enveloppeMcp(donnees) });
         } catch (e) {
           // L'erreur est rendue dans le contenu et non en erreur JSON-RPC : le
           // client peut alors l'afficher à l'utilisateur au lieu d'interrompre

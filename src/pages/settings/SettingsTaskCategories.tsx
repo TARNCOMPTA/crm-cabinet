@@ -15,6 +15,7 @@ import {
   deleteTaskCategory,
 } from '../../lib/taskService';
 import { Database } from '../../types/database';
+import { codeErreur } from '../../lib/erreurs';
 
 type TaskCategory = Database['public']['Tables']['task_categories']['Row'];
 
@@ -78,7 +79,7 @@ export function SettingsTaskCategories() {
     try {
       const data = await loadTaskCategories();
       setCategories(data);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des catégories', 'error');
       setCategories([]);
     } finally {
@@ -132,7 +133,7 @@ export function SettingsTaskCategories() {
       }
       setShowModal(false);
       loadData();
-    } catch (error) {
+    } catch {
       showToast(
         editingCategory ? 'Erreur lors de la mise à jour' : 'Erreur lors de la création',
         'error'
@@ -146,8 +147,8 @@ export function SettingsTaskCategories() {
       showToast('Catégorie supprimée', 'success');
       setDeleteConfirm(null);
       loadData();
-    } catch (error: any) {
-      if (error?.code === '23503') {
+    } catch (error) {
+      if (codeErreur(error) === '23503') {
         showToast('Impossible de supprimer : des tâches ou templates utilisent cette catégorie', 'error');
       } else {
         showToast('Erreur lors de la suppression', 'error');

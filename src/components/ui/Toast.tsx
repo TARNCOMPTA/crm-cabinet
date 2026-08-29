@@ -26,11 +26,35 @@ const iconColors: Record<ToastType, string> = {
   progress: 'text-teal-600 dark:text-teal-400 animate-spin',
 };
 
+/**
+ * Les bandeaux de notification.
+ * ---------------------------------------------------------------------------
+ * ⚠️ RIEN ICI N'ÉTAIT ANNONCÉ. Le conteneur n'avait ni `role` ni `aria-live` :
+ * un bandeau apparaissait, restait cinq secondes, disparaissait — et un lecteur
+ * d'écran n'en disait pas un mot. Or c'est par là que passe TOUT le retour du
+ * logiciel : « Affectations mises à jour », « Droits insuffisants », « Serveur
+ * injoignable ». Un utilisateur non voyant cliquait « Sauvegarder » et
+ * n'apprenait jamais si ça avait marché.
+ *
+ * Le conteneur est rendu en permanence, même vide, et c'est la condition pour
+ * que ça marche : une région live doit exister AVANT que son contenu n'arrive.
+ * Créer la région et le message en même temps ne déclenche aucune annonce.
+ */
 export function ToastContainer() {
   const { toasts, removeToast } = useToast();
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
+    <div
+      role="region"
+      aria-label="Notifications"
+      // `polite` sur le conteneur : le niveau par défaut. Chaque bandeau le
+      // surcharge selon son type, juste en dessous.
+      aria-live="polite"
+      // `false` : on annonce le bandeau qui arrive, pas la pile entière à
+      // chaque fois. Trois notifications de suite se liraient sinon trois fois.
+      aria-atomic="false"
+      className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"
+    >
       {toasts.map((toast) => (
         <ToastItem
           key={toast.id}
@@ -71,8 +95,27 @@ function ToastItem({ id, message, type, progress, sticky, onClose }: ToastItemPr
       ? Math.min(100, Math.round((progress.current / progress.total) * 100))
       : null;
 
+  /**
+   * ⚠️ TROIS NIVEAUX, ET LE TROISIÈME EST LE PLUS IMPORTANT.
+   *
+   *   · `alert` (assertif) pour ce qui interrompt : une erreur, un
+   *     avertissement. Le lecteur coupe sa lecture en cours pour le dire.
+   *   · `status` (poli) pour une réussite ou une information : annoncé à la
+   *     prochaine respiration, sans couper la parole.
+   *   · RIEN du tout pour une barre de progression. Elle se met à jour à chaque
+   *     pièce traitée — parfois des centaines de fois — et chaque changement
+   *     serait annoncé. Une région live sur un compteur qui défile rend le
+   *     logiciel inutilisable au lecteur d'écran, ce qui est pire que le
+   *     silence d'origine. `aria-live="off"` surcharge le `polite` du
+   *     conteneur ; le bandeau de fin, lui, sera un `status` ordinaire.
+   */
+  const enProgression = type === 'progress';
+  const alerte = type === 'error' || type === 'warning';
+
   return (
     <div
+      role={enProgression ? undefined : alerte ? 'alert' : 'status'}
+      aria-live={enProgression ? 'off' : undefined}
       className={`
         ${toastColors[type]}
         border-l-4 p-4 rounded-xl shadow-elevated dark:shadow-dark-card

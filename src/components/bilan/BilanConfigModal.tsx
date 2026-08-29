@@ -120,7 +120,7 @@ export function BilanConfigModal({
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`Configuration ${regime}`} size="xl">
         <Tabs defaultValue="columns" className="space-y-4">
-          <TabsList>
+          <TabsList aria-label="Reglages du bilan">
             <TabsTrigger value="columns">Colonnes ({cols.length})</TabsTrigger>
             <TabsTrigger value="checklist">Checklist ({tpls.length})</TabsTrigger>
             <TabsTrigger value="options">Options</TabsTrigger>

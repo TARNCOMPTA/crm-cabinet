@@ -7,7 +7,16 @@ interface MonthPickerProps {
   required?: boolean;
 }
 
-const MONTHS = [
+/**
+ * Les douze mois, DECEMBRE EN TETE : c'est la cloture de la grande majorite des
+ * dossiers, et la mettre en premier evite de derouler toute la liste pour le cas
+ * courant. L'ordre n'est donc pas un oubli.
+ *
+ * Exportee pour la saisie de cloture dans la liste des clients
+ * (ClientsTable.tsx) : deux listes de mois finiraient par diverger sur cet ordre
+ * precis, qui est le seul detail qui compte ici.
+ */
+export const MOIS_CLOTURE = [
   { value: '12', label: 'Décembre' },
   { value: '01', label: 'Janvier' },
   { value: '02', label: 'Février' },
@@ -45,7 +54,7 @@ export function MonthPicker({ value, onChange, label = 'Mois de clôture', requi
         required={required}
       >
         <option value="">Sélectionner un mois</option>
-        {MONTHS.map((m) => (
+        {MOIS_CLOTURE.map((m) => (
           <option key={m.value} value={m.value}>
             {m.label}
           </option>
@@ -53,7 +62,7 @@ export function MonthPicker({ value, onChange, label = 'Mois de clôture', requi
       </Select>
       {value && (
         <p className="mt-1 text-xs text-gray-500">
-          Clôture le dernier jour de {MONTHS.find(m => m.value === month)?.label.toLowerCase()}
+          Clôture le dernier jour de {MOIS_CLOTURE.find(m => m.value === month)?.label.toLowerCase()}
         </p>
       )}
     </div>

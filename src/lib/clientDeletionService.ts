@@ -14,6 +14,7 @@ export interface DeletionStats {
   officer_companies: number;
   legal_documents: number;
   client_software: number;
+  client_associes: number;
 }
 
 export async function getClientDeletionStats(clientId: string): Promise<DeletionStats> {
@@ -30,6 +31,7 @@ export async function getClientDeletionStats(clientId: string): Promise<Deletion
     officer_companies: 0,
     legal_documents: 0,
     client_software: 0,
+    client_associes: 0,
   };
 
   const counts = await Promise.all([
@@ -45,6 +47,7 @@ export async function getClientDeletionStats(clientId: string): Promise<Deletion
     supabase.from('officer_companies').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
     supabase.from('legal_documents').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
     supabase.from('client_software').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
+    supabase.from('client_associes').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
   ]);
 
   stats.habilitations = counts[0].count || 0;
@@ -59,6 +62,11 @@ export async function getClientDeletionStats(clientId: string): Promise<Deletion
   stats.officer_companies = counts[9].count || 0;
   stats.legal_documents = counts[10].count || 0;
   stats.client_software = counts[11].count || 0;
+  // La cle etrangere est en ON DELETE CASCADE : la suppression ci-dessous est
+  // une ceinture. LE COMPTAGE, LUI, EST NECESSAIRE — la fenetre de confirmation
+  // enumere ce qui va disparaitre, et taire la repartition des parts la rendrait
+  // malhonnete au moment precis ou l'on demande a l'utilisateur de trancher.
+  stats.client_associes = counts[12].count || 0;
 
   return stats;
 }
@@ -136,6 +144,7 @@ export async function deleteClientPermanently(clientId: string, userId: string, 
   // ticket_messages ni ticket_attachments, donc plus rien a supprimer en
   // cascade ici.
 
+  await supabase.from('client_associes').delete().eq('client_id', clientId);
   await supabase.from('legal_documents').delete().eq('client_id', clientId);
   await supabase.from('officer_companies').delete().eq('client_id', clientId);
   await supabase.from('legal_acts').delete().eq('client_id', clientId);

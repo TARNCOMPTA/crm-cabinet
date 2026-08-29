@@ -25,6 +25,28 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      /**
+       * Le prefixe `_` dit « inutilise DELIBEREMENT », et le code s'en sert
+       * deja : `_options` (lib/api/storage.ts), `_nom`, `_args`, `_canal`
+       * (lib/supabase.ts, ou le faux client doit respecter une signature qu'il
+       * n'implemente pas). Sans ce reglage, la convention ne voulait rien dire
+       * et ces six declarations comptaient comme des oublis.
+       *
+       * ⚠️ CE N'EST PAS UN MOYEN DE FAIRE TAIRE LA REGLE. Un `_` devant une
+       * variable qu'on a juste oublie de retirer la cache au lieu de la
+       * signaler. Il se met quand la signature IMPOSE le parametre — interface
+       * a respecter, position dans une liste d'arguments, cle ecartee d'une
+       * destructuration.
+       */
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

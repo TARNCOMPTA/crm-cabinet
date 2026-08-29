@@ -40,6 +40,34 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         /**
+         * CE QUI N'EST PAS PRÉCHARGÉ, ET POURQUOI.
+         *
+         * Le precache comptait 162 fichiers pour 3,19 Mo, soit TOUT le bundle —
+         * y compris les morceaux que le code ne charge qu'à la demande. Trois
+         * d'entre eux pèsent à eux seuls 1 Mo : le tableur (`vendor-xlsx`,
+         * 420 Ko), l'export PDF d'une fiche client (424 Ko) et son moteur de
+         * capture (`html2canvas`, 200 Ko). La plupart des collaborateurs
+         * n'importent jamais de classeur et n'exportent jamais de fiche en PDF ;
+         * ils téléchargeaient pourtant ce mégaoctet À CHAQUE MISE À JOUR de
+         * l'instance — et il y en a plusieurs par semaine.
+         *
+         * Les exclure du precache ne les rend pas indisponibles : ils sont
+         * récupérés au premier usage, comme n'importe quel import différé, et
+         * le cache HTTP les garde ensuite. Ce qu'on perd est étroit et assumé :
+         * un premier export PDF ou un premier import Excel HORS LIGNE, sur un
+         * appareil qui ne les a jamais ouverts.
+         *
+         * ⚠️ CES MOTIFS SUIVENT LES NOMS DE FICHIERS PRODUITS PAR ROLLUP. Ils
+         * portent une empreinte (`vendor-xlsx-D_0l8YDs.js`), d'où les jokers.
+         * `tests/precache.test.ts` échoue si le precache regrossit, ce qui
+         * attrape aussi bien un motif devenu obsolète qu'un nouveau poids lourd.
+         */
+        globIgnores: [
+          '**/vendor-xlsx-*.js',
+          '**/clientPdfExportService-*.js',
+          '**/html2canvas*.js',
+        ],
+        /**
          * Ces préfixes sont servis par le serveur Node : le service worker ne
          * doit jamais les intercepter ni leur substituer index.html.
          *
@@ -138,11 +166,49 @@ export default defineConfig({
          * Verifie le 2026-08-02 sur l'instance locale : le premier chargement
          * pese 113 ko gzip (entree 25, react 56, postgrest 5, styles 26).
          */
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-postgrest': ['@supabase/postgrest-js'],
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          'vendor-xlsx': ['xlsx'],
+        /**
+         * ⚠️ `codeSplitting`, ET NON PLUS `manualChunks` NI `advancedChunks`.
+         * Vite 8 empaquette avec Rolldown, et la bascule s'est faite en trois
+         * temps qu'il vaut mieux connaître :
+         *
+         *   — la table de correspondance d'origine échouait franchement, sur
+         *     « manualChunks is not a function » ;
+         *   — réécrite en fonction, elle CONSTRUISAIT SANS ERREUR MAIS GROUPAIT
+         *     FAUX. Vérifié dans le bundle produit : `react-dom` se retrouvait
+         *     dans le morceau nommé `vendor-dnd`, et dnd-kit n'était dans aucun
+         *     morceau commun — recopié dans les trois pages qui l'emploient.
+         *     Un découpage muet et faux est pire que celui qui plante ;
+         *   — `advancedChunks`, qui a corrigé cela, est à son tour DÉPRÉCIÉ
+         *     depuis Rolldown 1.2 : la construction affichait « advancedChunks
+         *     option is deprecated, please use codeSplitting instead ».
+         *
+         * Le passage à `codeSplitting` est un RENOMMAGE, pas un changement de
+         * comportement, et ce n'est pas une supposition : Rolldown déclare
+         * `type AdvancedChunksOptions = CodeSplittingOptions`, le même type sous
+         * deux noms. Vérifié en plus par la mesure — les quatre morceaux
+         * `vendor-*` gardent leur taille à l'octet près de part et d'autre.
+         *
+         * ⚠️ NE PAS LAISSER LES DEUX. Rolldown précise que si `advancedChunks`
+         * et `codeSplitting` sont tous deux fournis, c'est `advancedChunks` qui
+         * est IGNORÉ — garder l'ancien « au cas où » désactiverait donc le neuf.
+         *
+         * `scripts/verifier-decoupage.mjs` — lancé par le job `build` — vérifie
+         * que chaque morceau contient bien ce que son nom annonce.
+         *
+         * L'INTENTION N'A PAS CHANGÉ, elle est rappelée ci-dessus : ces
+         * regroupements servent la STABILITÉ DANS LE CACHE, pas le moment du
+         * chargement. jsPDF en reste exclu, pour la raison mesurée plus haut.
+         */
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor-react',
+              test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
+            },
+            { name: 'vendor-postgrest', test: /[\\/]node_modules[\\/]@supabase[\\/]postgrest-js[\\/]/ },
+            { name: 'vendor-dnd', test: /[\\/]node_modules[\\/]@dnd-kit[\\/]/ },
+            { name: 'vendor-xlsx', test: /[\\/]node_modules[\\/]xlsx[\\/]/ },
+          ],
         },
       },
     },

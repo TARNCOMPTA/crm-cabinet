@@ -14,10 +14,30 @@
 #
 # Configuration : un fichier .env à côté de celui-ci (voir .env.exemple).
 # ============================================================================
+# ⚠️ LES JOURNAUX DES CONTENEURS N'AVAIENT AUCUNE LIMITE.
+#
+# Le pilote `json-file` de Docker conserve TOUT, sans plafond de taille ni de
+# duree, jusqu'a ce que le disque du serveur soit plein — et le disque plein
+# arrete la base avant d'arreter les journaux. C'est une panne d'exploitation
+# qui arrive apres des mois, donc au pire moment : longtemps apres la mise en
+# service, sans rapport apparent avec quoi que ce soit.
+#
+# C'est aussi une question de donnees personnelles. Meme assainis
+# (`server/src/journal.ts`), ces journaux gardent la trace horodatee de chaque
+# geste fait dans le logiciel. Les conserver indefiniment n'a aucune raison
+# d'etre : cinq fichiers de 10 Mo couvrent tres largement le besoin de
+# diagnostic, et ce qui est plus vieux ne sert plus a rien.
+x-journal: &journal
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *journal
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-crmcabinet}
       POSTGRES_USER: ${POSTGRES_USER:-crm}
@@ -35,8 +55,18 @@ services:
     # Aucun port publié : la base n'est joignable que depuis le réseau interne.
 
   postgrest:
+    # ⚠️ CE NUMÉRO EST ÉPINGLÉ À TROIS ENDROITS : ici, dans
+    # `docker-compose.partage.yml`, et dans le job `navigateur` de
+    # `.github/workflows/ci.yml`, qui tire le binaire depuis GitHub pour
+    # exercer le produit tel qu'un cabinet l'exécute. Les changer ensemble ;
+    # `tests/postgrest.test.ts` casse la CI si l'un d'eux dérive.
+    #
+    # La dérive a déjà eu lieu — la CI en v14.16, les instances en v12.2.3 —
+    # et elle était silencieuse : le job restait vert en prouvant les
+    # 70 requêtes du front contre un PostgREST que personne n'installe.
     image: postgrest/postgrest:v12.2.3
     restart: unless-stopped
+    logging: *journal
     environment:
       PGRST_DB_URI: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crmcabinet}
       PGRST_DB_SCHEMAS: public
@@ -61,9 +91,14 @@ services:
     build: .
     image: ghcr.io/tarncompta/crmcabinet:${VERSION:-latest}
     restart: unless-stopped
+    logging: *journal
     environment:
       PORT: 3000
       NODE_ENV: production
+      # Commande l'heure à laquelle les tâches planifiées se déclenchent, et la
+      # date portée sur les PDF. Voir le Dockerfile : sans `tzdata`, qui y est
+      # installé, cette variable serait ignorée sans le dire.
+      TZ: ${TZ:-Europe/Paris}
       PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL est obligatoire}
       DATABASE_URL: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crmcabinet}
       POSTGREST_URL: http://postgrest:3001
@@ -125,6 +160,7 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
+    logging: *journal
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN est obligatoire}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL est obligatoire}

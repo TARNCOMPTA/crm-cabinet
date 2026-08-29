@@ -16,14 +16,45 @@
 # chaine de tests — appelle `webidl.util.markAsUncloneable`, absent de Node 20 :
 # la suite de tests ne peut pas s'y executer.
 
+
+# ⚠️ L'IMAGE DE BASE EST FIGEE PAR SON DIGEST, pas seulement par son etiquette.
+#
+# `node:22-alpine` est une etiquette MOBILE : elle designe une image differente
+# chaque semaine. Deux consequences, et la seconde est la plus genante au
+# quotidien :
+#   · qui republie sous cette etiquette decide de ce qui tourne chez le cabinet.
+#     Une compromission du depot amont entre directement en production a la
+#     reconstruction suivante, sans que rien ne change dans ce depot ;
+#   · deux constructions du meme commit ne donnent pas la meme image. Un
+#     deploiement qui casse ne peut alors pas etre distingue d'une mise a jour
+#     du socle, et le retour en arriere par `git checkout` ne ramene pas ce qui
+#     tournait.
+#
+# Le digest ci-dessous est celui que la production execute deja — releve dans le
+# journal du deploiement du 2026-08-28. L'epingler ne change donc rien a ce qui
+# tourne : il le NOMME.
+#
+# La contrepartie est qu'un digest fige aussi les correctifs de securite d'Alpine
+# et de Node. C'est pour cela, et seulement pour cela, que `.github/dependabot.yml`
+# existe : il propose le digest suivant chaque lundi. Retirer l'un rend l'autre
+# nuisible.
+#
+# Pour le relever a la main :  docker buildx imagetools inspect node:22-alpine
+
 # ---- 1. Construction du front ---------------------------------------------
-FROM node:22-alpine AS front
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS front
 WORKDIR /build
 
 # Les dépendances d'abord : cette couche reste en cache tant que package*.json
 # ne change pas, ce qui évite de réinstaller 700 paquets à chaque modification
 # de code.
+# ⚠️ `vendor/` DOIT PRECEDER `npm ci`. `package.json` y pointe pour SheetJS —
+# `file:vendor/xlsx-0.20.3.tgz` — parce que l'editeur ne publie plus sur npm et
+# que la derniere version du registre porte deux failles hautes sans correctif.
+# Sans cette copie, `npm ci` s'arrete sur une archive introuvable, et l'image ne
+# se construit pas. Voir `vendor/LISEZMOI.md`.
 COPY package.json package-lock.json ./
+COPY vendor ./vendor
 RUN npm ci --no-audit --no-fund
 
 # `version.json` est indispensable A LA CONSTRUCTION : vite.config.ts le lit pour
@@ -43,7 +74,7 @@ COPY src ./src
 RUN npm run build
 
 # ---- 2. Construction du serveur -------------------------------------------
-FROM node:22-alpine AS serveur
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS serveur
 WORKDIR /build
 
 COPY server/package.json server/package-lock.json ./
@@ -59,17 +90,30 @@ COPY server/src ./src
 RUN npx tsc -p tsconfig.json
 
 # ---- 3. Image d'exécution --------------------------------------------------
-FROM node:22-alpine
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
 WORKDIR /app
 
 # `postgresql-client` fournit pg_dump : c'est ce qui permet à maj.sh de
 # sauvegarder la base avant d'appliquer une mise à jour, et à l'administrateur
 # d'exporter ses données sans installer quoi que ce soit sur l'hôte.
-RUN apk add --no-cache postgresql-client tini
+#
+# ⚠️ `tzdata` N'EST PAS DÉCORATIF. Alpine n'embarque AUCUNE base de fuseaux :
+# sans ce paquet, `TZ` est ignoré en silence et le conteneur reste en UTC. Le
+# réglage ci-dessous n'aurait alors aucun effet, ce qui est pire que de ne pas
+# l'écrire — il donnerait l'illusion que l'heure est réglée.
+RUN apk add --no-cache postgresql-client tini tzdata
 
 # Dépendances de production seulement.
+#
+# ⚠️ `--omit=optional` N'EST PAS UNE OPTIMISATION DE TAILLE. `pdfjs-dist`
+# déclare `@napi-rs/canvas` en dépendance optionnelle : sans ce drapeau, npm
+# l'installe, et l'image emporte une cinquantaine de mégaoctets de binaires
+# NATIFS — un par architecture et par libc — que ce serveur n'utilise jamais,
+# puisqu'il ne dessine aucune page. `server/src/inpi/pdfjs.ts` fournit à la
+# place les deux classes vides dont pdf.js a besoin pour se charger, et le
+# vérifie sur un arbre installé exactement comme ici.
 COPY server/package.json server/package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --omit=optional --no-audit --no-fund && npm cache clean --force
 
 COPY --from=serveur /build/dist ./dist
 COPY --from=front /build/dist ./public
@@ -93,12 +137,55 @@ COPY version.json ./version.json
 COPY docker/entree.sh ./entree.sh
 RUN chmod +x ./entree.sh
 
+# L'HEURE LOCALE DU CONTENEUR COMMANDE L'ORDONNANCEUR.
+#
+# `planificateur.ts` compare `new Date().getHours()` à l'heure annoncée par
+# chaque tâche (« tous les jours a 2h »). En UTC — le défaut d'une image Alpine
+# — ces libellés mentaient de une à deux heures selon la saison : « 6h » se
+# déclenchait à 8h en été. Trois autres affichages en dépendaient aussi, et se
+# trompaient pareil : l'expiration d'un code d'enrôlement, celle affichée à
+# l'utilisateur, et la date portée sur les PDF générés — cette dernière datant
+# de la veille entre minuit et 2h du matin.
+#
+# Surchargeable : le produit est distribué, et tous les cabinets ne sont pas
+# en France métropolitaine.
+ENV TZ=Europe/Paris
+
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV STORAGE_DIR=/app/data/storage
 # Le front construit est copie dans ./public : le serveur le cherche ici.
 ENV FRONT_DIR=/app/public
 EXPOSE 3000
+
+# ⚠️ LE CONTENEUR NE TOURNE PLUS EN ROOT.
+#
+# Il y tournait, comme tout conteneur qui ne dit rien. La conséquence n'est pas
+# théorique : root DANS un conteneur est le même uid 0 que root sur l'hôte, et
+# tout ce qui élargit l'isolation — un montage, une capacité ajoutée, une faille
+# du noyau — transforme une exécution de code arbitraire dans le serveur Node en
+# accès root sur la machine du cabinet. Un serveur qui accepte des fichiers
+# déposés par ses utilisateurs et qui va chercher des PDF sur Internet est
+# exactement le genre de programme dont on ne veut pas qu'il soit root.
+#
+# Rien ici n'a besoin de privilèges : le port est 3000 (au-dessus de 1024), le
+# schéma est appliqué par psql avec les droits de la BASE et non ceux du
+# système, et la seule écriture est celle des pièces déposées, sous /app/data.
+#
+# ⚠️ L'UID EST FIXE À 10001, ET CE NOMBRE EST UN CONTRAT. /app/data est un
+# montage lié : son propriétaire est celui du dossier `data/` SUR L'HÔTE, que
+# l'image ne peut pas changer. `installation/preparer-data.sh` le donne à cet
+# uid, et les deux valeurs doivent rester d'accord. Un uid choisi par Alpine
+# (« le prochain libre ») changerait au gré des versions de l'image de base et
+# rendrait le montage illisible sans que rien ne l'annonce.
+#
+# `/app/data` est créé et donné à cet utilisateur POUR LE CAS SANS VOLUME — une
+# image lancée à la main, un essai en CI. Avec le montage lié, l'hôte recouvre
+# ce dossier et c'est lui qui décide ; sans montage, l'application a tout de
+# même où écrire.
+RUN addgroup -g 10001 -S crm && adduser -u 10001 -S crm -G crm \
+    && mkdir -p /app/data/storage && chown -R crm:crm /app/data
+USER crm
 
 # tini comme PID 1 : Node reçoit alors SIGTERM proprement, et l'arrêt ferme le
 # pool Postgres et la connexion SMTP au lieu d'être tué net.

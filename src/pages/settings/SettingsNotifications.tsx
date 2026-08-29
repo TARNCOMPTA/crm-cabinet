@@ -77,7 +77,7 @@ export function SettingsNotifications() {
       ]);
       setPreferences(prefs);
       setDigest(digestData);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des preferences', 'error');
     } finally {
       setLoading(false);

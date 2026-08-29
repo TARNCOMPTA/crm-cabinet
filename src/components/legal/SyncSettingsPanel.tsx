@@ -50,8 +50,6 @@ function BatchProgressBar({ progress, lastCompleted }: {
   );
 }
 
-interface SyncSettingsPanelProps {
-}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   success: { label: 'Reussi', color: 'text-green-700', bg: 'bg-green-50' },
@@ -212,7 +210,7 @@ function SyncLogHistory({ logs }: { logs: LegalSyncLogEntry[] }) {
   );
 }
 
-export function SyncSettingsPanel({}: SyncSettingsPanelProps) {
+export function SyncSettingsPanel() {
   const [inpiSettings, setInpiSettings] = useState<SyncSettings | null>(null);
   const [fullSettings, setFullSettings] = useState<SyncSettings | null>(null);
   const [actsSettings, setActsSettings] = useState<SyncSettings | null>(null);

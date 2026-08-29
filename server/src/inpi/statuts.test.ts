@@ -95,3 +95,49 @@ describe('choisirStatuts', () => {
     expect(choisi).toBeUndefined();
   });
 });
+
+/**
+ * Ce sur quoi s'appuie le repli du connecteur.
+ * ---------------------------------------------------------------------------
+ * ⚠️ `get_client_statuts` REPONDAIT « aucun statut au registre » SANS AVOIR
+ * INTERROGE LE REGISTRE. Il ne l'appelait que si `legal_acts` etait VIDE ; une
+ * base qui connaissait des actes, mais pas les bons, suffisait donc a produire
+ * une affirmation sur le registre tiree du cache. Constate sur une SAS de 2023,
+ * qui a forcement depose des statuts a sa constitution.
+ *
+ * Le connecteur redemande desormais au registre avant de conclure, et distingue
+ * trois absences. Les deux cas ci-dessous fixent ce sur quoi cette distinction
+ * repose.
+ */
+describe('les trois formes d une absence', () => {
+  /**
+   * Une piece RECONNUE mais sans identifiant est un cas a part : le document
+   * existe, il n'est simplement pas telechargeable. Le connecteur doit pouvoir
+   * le NOMMER a l'utilisateur au lieu de nier son existence — ce qui suppose que
+   * `choisirStatuts` la rende plutot que de l'ecarter.
+   */
+  it('rend une piece de statuts meme privee d identifiant', () => {
+    const choisi = choisirStatuts([
+      piece({ id: null, type: 'Statuts constitutifs', depositDate: '2023-04-12' }),
+    ]);
+    expect(choisi?.type).toBe('Statuts constitutifs');
+    expect(choisi?.id).toBeNull();
+  });
+
+  /**
+   * Et le cas oppose : des pieces existent, aucune n'est des statuts. Le
+   * connecteur en tire un message different — c'est la regle de reconnaissance
+   * qui est suspecte, pas le registre — et joint les types vus pour qu'on
+   * puisse trancher.
+   */
+  it('ne rend rien quand le registre ne porte que des depots de comptes', () => {
+    const pieces = [
+      piece({ id: 'c1', type: 'Depot des comptes annuels', category: 'comptes' }),
+      piece({ id: 'c2', type: 'Depot des comptes annuels', category: 'comptes' }),
+    ];
+    expect(choisirStatuts(pieces)).toBeUndefined();
+    // Ce que le message joindra : de quoi voir si les statuts s'y cachent sous
+    // un libelle inattendu.
+    expect([...new Set(pieces.map((p) => p.type))]).toEqual(['Depot des comptes annuels']);
+  });
+});

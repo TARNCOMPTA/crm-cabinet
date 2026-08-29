@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
+import { codeErreur } from '../lib/erreurs';
 
 interface CollaboratorAssignment {
   client_id: string;
@@ -35,7 +36,7 @@ export function useCollaboratorAssignments(userId?: string) {
       if (error) throw error;
 
       setAssignments(data || []);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des affectations', 'error');
     } finally {
       setLoading(false);
@@ -57,8 +58,8 @@ export function useCollaboratorAssignments(userId?: string) {
       await loadAssignments();
       showToast('Client assigné avec succès', 'success');
       return { success: true };
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error) {
+      if (codeErreur(error) === '23505') {
         showToast('Ce collaborateur est déjà assigné à ce client', 'error');
       } else {
         showToast('Erreur lors de l\'assignation', 'error');

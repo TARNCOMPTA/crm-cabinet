@@ -208,7 +208,7 @@ export function Tasks() {
       ]);
       setAttachmentCounts(attCounts);
       setChecklistCounts(clCounts);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des données', 'error');
       setTasks([]);
       setClients([]);
@@ -297,7 +297,7 @@ export function Tasks() {
       showToast('Tache créée', 'success');
       setShowModal(false);
       loadData();
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la création', 'error');
     }
   }, [profile, formData, selectedTemplateId, showToast]);
@@ -336,7 +336,7 @@ export function Tasks() {
           '/tasks'
         );
       }
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du changement de statut', 'error');
       loadData();
     }
@@ -429,7 +429,9 @@ export function Tasks() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Même en-tête que la liste clients, même débordement : 37 px sur un
+          téléphone. Voir le commentaire de `Clients.tsx`. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           {showArchived ? (
             <>
@@ -455,7 +457,7 @@ export function Tasks() {
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!showArchived && (
             <>
               <div className="flex bg-gray-100 dark:bg-white/[0.04] dark:ring-1 dark:ring-white/10 rounded-lg p-1">

@@ -28,6 +28,16 @@ import { synchroniserTous as synchroniserBodacc } from './bodacc.js';
 import { analyserPeriode } from './jedeclare/suivi.js';
 import { config } from './config.js';
 
+/** Une ligne de `taches_planifiees`, telle que la requête la demande. */
+interface LigneSuivi {
+  nom: string;
+  derniere_execution: string;
+  dernier_succes: string | null;
+  duree_ms: number;
+  statut: 'succes' | 'echec';
+  detail: string | null;
+}
+
 /** Vrai quand la tâche est due à cette minute-là. */
 type EstDue = (d: Date) => boolean;
 
@@ -151,14 +161,29 @@ const TACHES: Tache[] = [
      * retard d'un jour ou deux sur les toutes dernières déclarations. C'est le
      * prix de la sûreté, et c'est le bon prix.
      *
-     * LA FENÊTRE REMONTE À SEPT JOURS, pas seulement à la veille. Un accusé
-     * marqué tardivement serait autrement manqué pour toujours : le cache est
-     * incrémental, repasser sur une semaine ne coûte qu'une liste — les pièces
-     * déjà connues ne sont jamais relues.
+     * LA FENÊTRE REMONTE À SEPT JOURS, pas seulement à la veille — et elle y
+     * reste alors même que le cabinet a demandé « les accusés de la veille ».
+     * La veille est évidemment couverte ; ce sont les six jours d'avant qui
+     * comptent. Un accusé n'entre au cache que lorsque le logiciel de production
+     * l'a consommé, et rien ne garantit qu'il le fasse le jour même : celui
+     * consommé le mardi pour une déclaration de vendredi ne serait jamais vu par
+     * une fenêtre d'un jour. Manqué une fois, manqué pour toujours.
+     *
+     * Le surcoût est nul : le cache est incrémental, repasser sur une semaine ne
+     * coûte qu'une liste — les pièces déjà connues ne sont jamais relues, donc
+     * jamais remarquées.
+     *
+     * ---------------------------------------------------------------------------
+     * 2H DU MATIN, ET C'EST BIEN 2H EN FRANCE
+     *
+     * `estDue` compare l'heure LOCALE du conteneur. L'image Alpine tourne en UTC
+     * par défaut, ce qui décalait tous les libellés de une à deux heures selon la
+     * saison. Le Dockerfile pose donc `TZ=Europe/Paris` et installe `tzdata`,
+     * sans lequel la variable serait ignorée en silence.
      */
     nom: 'suivi-echeances-jedeclare',
-    quand: 'tous les jours a 6h30',
-    estDue: chaqueJourA(6, 30),
+    quand: 'tous les jours a 2h',
+    estDue: chaqueJourA(2),
     executer: async (journal) => {
       if (!config.jedeclare.configure) return;
 
@@ -303,6 +328,47 @@ let battement: NodeJS.Timeout | null = null;
 /** Minute déjà traitée, pour ne pas rejouer une tâche si un battement dérive. */
 let derniereMinute = '';
 
+/**
+ * Consigne ce qu'a donné un tour, dans `taches_planifiees`.
+ *
+ * POURQUOI EN BASE PLUTÔT QU'EN MÉMOIRE : chaque mise à jour recrée le
+ * conteneur, et un suivi gardé dans le processus repartirait de zéro à chaque
+ * déploiement — précisément au moment où l'on veut vérifier que la nuit s'est
+ * bien passée.
+ *
+ * ⚠️ CETTE ÉCRITURE NE DOIT JAMAIS FAIRE ÉCHOUER LA TÂCHE QU'ELLE OBSERVE. Une
+ * base momentanément indisponible ferait alors passer pour rate un travail qui a
+ * abouti — et, pour `emails-en-attente`, ferait croire que les courriels ne
+ * partent pas. L'échec est donc journalisé, pas propagé.
+ *
+ * `dernier_succes` n'est écrasé que par un succès : `COALESCE` garde le
+ * précédent quand ce tour-ci a échoué. C'est ce qui permet de lire « échec ce
+ * matin, mais ça marchait hier » au lieu de perdre la seule information utile.
+ */
+async function consignerExecution(
+  nom: string,
+  reussi: boolean,
+  dureeMs: number,
+  detail: string | null,
+  log: FastifyBaseLogger
+): Promise<void> {
+  try {
+    await requete(
+      `INSERT INTO taches_planifiees (nom, derniere_execution, dernier_succes, duree_ms, statut, detail)
+       VALUES ($1, now(), CASE WHEN $2 THEN now() ELSE NULL END, $3, $4, $5)
+       ON CONFLICT (nom) DO UPDATE SET
+         derniere_execution = now(),
+         dernier_succes = CASE WHEN $2 THEN now() ELSE taches_planifiees.dernier_succes END,
+         duree_ms = EXCLUDED.duree_ms,
+         statut = EXCLUDED.statut,
+         detail = EXCLUDED.detail`,
+      [nom, reussi, dureeMs, reussi ? 'succes' : 'echec', detail]
+    );
+  } catch (e) {
+    log.error(`[cron] ${nom} : suivi non enregistre — ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 async function executerTache(t: Tache, log: FastifyBaseLogger): Promise<void> {
   if (enCours.has(t.nom)) {
     log.warn(`[cron] ${t.nom} : execution precedente encore en cours, tour passe`);
@@ -310,17 +376,23 @@ async function executerTache(t: Tache, log: FastifyBaseLogger): Promise<void> {
   }
   enCours.add(t.nom);
   const debut = Date.now();
+  let reussi = true;
+  let compteRendu: string | null = null;
   try {
     const detail = await t.executer(log);
+    compteRendu = detail || null;
     if (detail) {
       log.info(`[cron] ${t.nom} : ${detail} (${Date.now() - debut} ms)`);
     }
   } catch (e) {
     // Une tâche qui échoue ne doit jamais arrêter l'ordonnanceur : le processus
     // sert aussi l'application.
-    log.error(`[cron] ${t.nom} : ${e instanceof Error ? e.message : String(e)}`);
+    reussi = false;
+    compteRendu = e instanceof Error ? e.message : String(e);
+    log.error(`[cron] ${t.nom} : ${compteRendu}`);
   } finally {
     enCours.delete(t.nom);
+    await consignerExecution(t.nom, reussi, Date.now() - debut, compteRendu, log);
   }
 }
 
@@ -355,9 +427,57 @@ export function arreterPlanificateur(): void {
   }
 }
 
-/** Liste des tâches, pour l'écran d'administration. */
-export function listerTaches(): Array<{ nom: string; quand: string; enCours: boolean }> {
-  return TACHES.map((t) => ({ nom: t.nom, quand: t.quand, enCours: enCours.has(t.nom) }));
+export interface EtatTache {
+  nom: string;
+  quand: string;
+  enCours: boolean;
+  derniereExecution: string | null;
+  dernierSucces: string | null;
+  dureeMs: number | null;
+  statut: 'succes' | 'echec' | null;
+  detail: string | null;
+}
+
+/**
+ * L'état des tâches pour l'écran d'administration : ce qu'elles sont, et ce
+ * qu'a donné leur dernier tour.
+ *
+ * `enCours` VIENT DE LA MÉMOIRE, le reste de la base, et ce mélange est voulu.
+ * « En cours » ne vaut que pour CE processus — après un redémarrage, une tâche
+ * qui tournait n'est plus en cours nulle part, et la lire en base ferait croire
+ * l'inverse indéfiniment.
+ *
+ * Une tâche sans ligne (jamais lancée depuis la mise en place du suivi, ou
+ * jamais due) rend des `null` : l'écran distingue ainsi « pas encore tournée »
+ * de « tournée sans rien à dire ».
+ */
+export async function listerTaches(): Promise<EtatTache[]> {
+  let suivi = new Map<string, LigneSuivi>();
+  try {
+    const lignes = await requete<LigneSuivi>(
+      `SELECT nom, derniere_execution, dernier_succes, duree_ms, statut, detail
+         FROM taches_planifiees`
+    );
+    suivi = new Map(lignes.map((l) => [l.nom, l]));
+  } catch {
+    // L'écran doit rester consultable meme si le suivi est illisible : sans
+    // cela, une table absente rendrait la page entiere inutilisable alors
+    // qu'elle sait deja dire ce que sont les taches et lesquelles tournent.
+  }
+
+  return TACHES.map((t) => {
+    const l = suivi.get(t.nom);
+    return {
+      nom: t.nom,
+      quand: t.quand,
+      enCours: enCours.has(t.nom),
+      derniereExecution: l?.derniere_execution ?? null,
+      dernierSucces: l?.dernier_succes ?? null,
+      dureeMs: l?.duree_ms ?? null,
+      statut: l?.statut ?? null,
+      detail: l?.detail ?? null,
+    };
+  });
 }
 
 /** Déclenche une tâche à la demande, depuis l'interface d'administration. */

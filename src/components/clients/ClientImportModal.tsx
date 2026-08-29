@@ -6,6 +6,7 @@ import { parseExcelFile, generateExcelTemplate, exportErrorsToExcel, ParsedClien
 import { bulkCreateClients, ImportResult } from '../../lib/clientImportService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { messageErreur } from '../../lib/erreurs';
 
 interface ClientImportModalProps {
   isOpen: boolean;
@@ -72,8 +73,8 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
       setPreviewPage(0);
       setStage('preview');
       showToast(`${result.validLines} ligne(s) valide(s) détectée(s)`, 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la lecture du fichier', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la lecture du fichier'), 'error');
       setStage('upload');
     }
   };
@@ -127,8 +128,8 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
       }
 
       showToast(message, result.errors.length > 0 ? 'warning' : 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de l\'import', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de l\'import'), 'error');
       setStage('preview');
     }
   };

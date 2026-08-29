@@ -124,6 +124,88 @@ const ACCEPTE = /accept/i;
 /** Le destinataire n'a pas répondu. Ce n'est ni un refus ni une acceptation. */
 const SANS_RETOUR = /sansretour/i;
 
+export type Periodicite = 'mensuelle' | 'trimestrielle' | 'annuelle';
+
+export const LIBELLE_PERIODICITE: Record<Periodicite, string> = {
+  mensuelle: 'mensuelle',
+  trimestrielle: 'trimestrielle',
+  annuelle: 'annuelle',
+};
+
+/**
+ * La périodicité d'une déclaration, DÉDUITE DE LA PÉRIODE QU'ELLE COUVRE.
+ *
+ * Ni jedeclare ni le CRM ne portent le régime de TVA d'un client : ce qui est
+ * connu, c'est la période effectivement déclarée. Un mois, c'est du mensuel ;
+ * un trimestre, du trimestriel ; douze mois, de l'annuel. La donnée est déjà là,
+ * et elle décrit ce qui a RÉELLEMENT été déposé — pas ce qu'un champ de fiche
+ * client prétendrait, et qui aurait pu ne jamais être mis à jour.
+ *
+ * La fourchette est large à dessein. Un trimestre déclaré ne fait pas toujours
+ * exactement trois mois pleins : une création ou une cessation en cours de
+ * trimestre en donne deux, ou quatre à cheval. Coller à « exactement 3 » ferait
+ * basculer ces cas dans « annuelle », là où deux à quatre mois restent
+ * évidemment du trimestriel.
+ *
+ * Rend `null` quand les bornes manquent ou se contredisent : une périodicité
+ * inventée vaudrait moins que pas de périodicité du tout.
+ */
+export function periodiciteDe(
+  debut: string | null | undefined,
+  fin: string | null | undefined
+): Periodicite | null {
+  const d = String(debut ?? '').match(/^(\d{4})-(\d{2})/);
+  const f = String(fin ?? '').match(/^(\d{4})-(\d{2})/);
+  if (!d || !f) return null;
+  const mois =
+    (Number(f[1]) - Number(d[1])) * 12 + (Number(f[2]) - Number(d[2])) + 1;
+  if (mois < 1) return null;
+  if (mois === 1) return 'mensuelle';
+  if (mois <= 4) return 'trimestrielle';
+  return 'annuelle';
+}
+
+export type Famille = 'tva' | 'bilan' | 'autres';
+
+export const LIBELLE_FAMILLE: Record<Famille, string> = {
+  tva: 'TVA',
+  bilan: 'Bilan',
+  autres: 'Autres',
+};
+
+/**
+ * La famille de travail d'un type de déclaration, DÉDUITE DE LA TÉLÉPROCÉDURE.
+ * ---------------------------------------------------------------------------
+ * Trois familles, parce que ce sont trois moments de production distincts dans
+ * un cabinet : la TVA au fil des mois, le bilan à la clôture, le reste. C'est
+ * ce découpage-là qui donne les onglets de l'écran de suivi.
+ *
+ * ⚠️ AUCUNE LISTE DE CODES FISCAUX N'EST ÉCRITE ICI. `IDT`, `IS`, `ILF` ne sont
+ * nommés nulle part : seule la téléprocédure qui a porté la pièce est lue. Un
+ * type de déclaration nouveau se range donc de lui-même, ce qui est la seule
+ * façon de ne pas se périmer à la première évolution fiscale — c'est déjà le
+ * parti pris de l'écran, qui déduit ses onglets des données plutôt que d'un
+ * référentiel tenu à jour à la main.
+ *
+ * Les copies de liasse envoyées aux BANQUES du client (type `ILF`) partent avec
+ * le bilan, et c'est voulu : même liasse, même moment de production. Le bandeau
+ * « Destinataires » de l'écran continue de nommer la banque, pour qu'un refus
+ * bancaire ne se lise pas comme un refus de l'administration.
+ *
+ * La TVA l'emporte quand un groupe porte les deux procédures. Le cas ne
+ * s'observe pas aujourd'hui, mais laisser la priorité indéterminée ferait
+ * dépendre l'onglet de l'ordre d'insertion dans un `Set` — donc de l'ordre
+ * d'arrivée des accusés, qui n'a aucun sens ici.
+ */
+export function familleDe(procedures: Iterable<string>): Famille {
+  let bilan = false;
+  for (const procedure of procedures) {
+    if (procedure === 'EDI-TVA') return 'tva';
+    if (procedure === 'EDI-TDFC') bilan = true;
+  }
+  return bilan ? 'bilan' : 'autres';
+}
+
 /** Ce qu'une ligne dit, une fois les codes de jedeclare traduits. */
 type Verdict = 'accepte' | 'refuse' | 'attente';
 
@@ -251,3 +333,43 @@ export function etatCellule(lignes: LigneTeletransmission[]): EtatCellule | null
   };
 }
 
+
+export type Decoupage = 'mois' | 'trimestre' | 'annee';
+
+/**
+ * LE PAS DES COLONNES d'un tableau de suivi : au mois, au trimestre, à l'année.
+ * ---------------------------------------------------------------------------
+ * LE DÉFAUT QUE CECI CORRIGE. La grille avait une colonne par mois pour tout le
+ * monde. Sur une TVA trimestrielle, une société ne déclare qu'un mois sur trois
+ * — les deux autres colonnes étaient vides par construction, et ces vides se
+ * lisaient comme du retard. Sur le bilan, c'est pire : une liasse par an, donc
+ * onze colonnes vides pour une pleine, et il fallait faire défiler la grille
+ * entière pour trouver la seule qui portait quelque chose.
+ *
+ * C'est le MÊME défaut que celui qui a déjà fait éclater la TVA en trois
+ * tableaux (voir `cleDe` dans `suivi.ts`) : là on avait séparé les rythmes en
+ * lignes, ici on aligne les colonnes sur le rythme.
+ *
+ * ⚠️ LA PÉRIODICITÉ N'EST CONNUE QUE POUR LA TVA, et c'est délibéré : elle s'y
+ * déduit des bornes réellement déclarées, là où ailleurs elle serait devinée.
+ * Le bilan n'a donc pas besoin d'elle — sa famille suffit à le dire annuel, et
+ * c'est une propriété du moment de production, pas d'un client en particulier.
+ *
+ * « Autres » reste au mois, faute de mieux : DSN, DUCS et le reste y cohabitent
+ * avec des rythmes différents, et un découpage deviné y afficherait des
+ * trimestres faux. Un mois vide de trop vaut mieux qu'une colonne qui ment.
+ *
+ * Une TVA sans bornes exploitables retombe au mois pour la même raison : sans
+ * périodicité constatée, il n'y a rien à regrouper.
+ */
+export function decoupageDe(
+  famille: Famille,
+  periodicite?: Periodicite | null
+): Decoupage {
+  if (famille === 'bilan') return 'annee';
+  if (famille === 'tva') {
+    if (periodicite === 'trimestrielle') return 'trimestre';
+    if (periodicite === 'annuelle') return 'annee';
+  }
+  return 'mois';
+}

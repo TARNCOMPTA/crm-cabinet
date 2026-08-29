@@ -12,12 +12,24 @@
  *     comme nouveaux. Ce n'est pas une opération coûteuse, c'est une opération
  *     destructrice pour un tiers — d'où les six garanties posées plus bas.
  *
- * AUCUNE TÂCHE PLANIFIÉE, ET C'EST DÉLIBÉRÉ.
- * `planificateur.ts` n'a pas été touché. Une analyse nocturne marquerait des
- * accusés chaque nuit sans que personne ne l'ait décidé : c'est exactement le
- * risque, en automatique et sans témoin. Ce renoncement est écrit ici parce que
- * sans trace, quelqu'un rajoutera la tâche « par cohérence » avec synchro-inpi
- * et synchro-bodacc, qui n'ont pas cette conséquence.
+ * UNE TÂCHE PLANIFIÉE EXISTE — `suivi-echeances-jedeclare`, chaque nuit à 2h.
+ *
+ * Ce commentaire a longtemps dit l'inverse, et affirmait que `planificateur.ts`
+ * n'avait pas été touché. C'était vrai, et ce ne l'est plus : le raisonnement
+ * est écrit en entier au-dessus de la tâche elle-même, et c'est là qu'il faut le
+ * lire avant d'y toucher.
+ *
+ * Ce qui a rendu la tâche acceptable, en un mot : elle force le mode PRUDENT,
+ * qui ne lit que les accusés DÉJÀ marqués récupérés. Leur lecture ne retire donc
+ * rien au logiciel de production du cabinet — il consomme, puis nous recopions.
+ * Le prix à payer est un retard d'un jour ou deux sur les toutes dernières
+ * déclarations, et c'est le bon prix.
+ *
+ * ⚠️ L'EXCEPTION VAUT POUR LA NUIT AUSSI. Un compte dont le `.env` lève la
+ * prudence (`JEDECLARE_MARQUAGE_AUTORISE{suffixe}`) verra ses accusés marqués
+ * par cette tâche, sans que personne ne clique. Le réglage n'existe que pour un
+ * compte qu'aucun logiciel ne relève, où le marquage ne prive personne — mais
+ * qui l'active l'active aussi pour 2h du matin.
  *
  * La seule vraie parade reste contractuelle : faire inscrire le couple
  * éditeur/logiciel sur la liste d'exclusion de marquage de jedeclare.
@@ -31,11 +43,13 @@ import { consommer } from '../limiteur.js';
 import { TELEPROCEDURES, TYPES_PIECE, testerConnexion } from '../jedeclare/client.js';
 import { analyserPeriode, compterTeletransmissions, construireSuivi } from '../jedeclare/suivi.js';
 import {
+  estHorsPortefeuille,
   indexerClients,
   rapprocher,
   type ClientRapprochable,
   type NiveauRapprochement,
 } from '../jedeclare/rapprochement.js';
+import { echeanceTva, type ClientEcheance } from '../jedeclare/echeance.js';
 
 /** Une analyse à la fois : deux administrateurs ne doivent pas marquer deux fois. */
 let analyseEnCours = false;
@@ -80,24 +94,88 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
    * en lecture seule et ce qui ne l'est pas.
    */
   app.get<{
-    Querystring: { debut?: string; fin?: string; procedure?: string; axe?: string };
+    // Plus de `procedure` ici : le suivi ne se filtre plus par téléprocédure.
+    // L'ANALYSE garde la sienne (voir plus bas) et c'est une autre affaire —
+    // elle borne ce qu'on va CHERCHER chez jedeclare, donc ce qu'on va marquer,
+    // là où celle-ci ne bornait qu'un affichage.
+    Querystring: { debut?: string; fin?: string; axe?: string };
   }>('/api/jedeclare/suivi', async (request, reply) => {
     const session = await exigerSession(request, reply);
     if (!session) return;
 
-    const { debut, fin, procedure, axe } = request.query;
+    const { debut, fin, axe } = request.query;
+    const axeChoisi = axe === 'depot' ? 'depot' : 'periode';
+
+    // ⚠️ LE PORTEFEUILLE SE LIT AVANT LE PIVOT, et non plus apres. C'est lui qui
+    // dit quels dossiers ont quitte le cabinet, et cette exclusion doit
+    // s'appliquer a la source pour que les totaux ne comptent pas ce que la
+    // grille n'affiche pas.
+    //
+    // La meme lecture sert trois besoins : rapprocher les societes, calculer leur
+    // jour d'echeance TVA, et reperer les dossiers partis. Le portefeuille tient
+    // en une passe plutot qu'en trois requetes.
+    const clients = await requete<
+      ClientRapprochable & ClientEcheance & { id: string; date_sortie_cabinet: string | null }
+    >(
+      `SELECT id, siren, siret, numero_dossier, statut, nom_entreprise,
+              type_personne, forme_juridique, nom, tva_jour_echeance,
+              date_sortie_cabinet
+         FROM clients`
+    );
+    const index = indexerClients(clients);
+    const parId = new Map(clients.map((c) => [c.id, c]));
+
+    /**
+     * Les fiches qui ne sont plus du travail a faire : sorties, archivees ou
+     * inactives. La regle et ses raisons sont dans `estHorsPortefeuille`
+     * (jedeclare/rapprochement.ts), partagee avec l'outil MCP pour que l'ecran
+     * et l'assistant ne lisent jamais deux portefeuilles differents.
+     */
+    const horsPortefeuille = new Set(clients.filter(estHorsPortefeuille).map((c) => c.id));
+
+    /** Rattachements decides a la main, indexes par societe × type. */
+    const manuels = new Map<string, string>();
+    const internes = new Map<string, LigneInterne>();
+    for (const l of await requete<LigneInterne>(
+      `SELECT siren, type_declaration, mois, statut, commentaire, assignee_id,
+              updated_at, client_id, rapprochement_manuel
+         FROM jedeclare_suivi_interne WHERE axe = $1`,
+      [axeChoisi]
+    )) {
+      internes.set(`${l.siren}|${l.type_declaration}|${l.mois}`, l);
+      if (l.rapprochement_manuel && l.client_id) {
+        manuels.set(`${l.siren}|${l.type_declaration}`, l.client_id);
+      }
+    }
+
+    /**
+     * La fiche a laquelle une societe se rattache, rattachement manuel compris.
+     *
+     * Ecrite une fois et memorisee : elle sert au filtrage ligne a ligne, donc
+     * potentiellement des milliers de fois, la ou le nombre de societes
+     * distinctes se compte en centaines.
+     */
+    const cacheClient = new Map<string, string | null>();
+    const clientDe = (s: { siren: string; siret: string; dossier: string }, type: string) => {
+      const cle = `${s.siren}|${s.siret}|${s.dossier}|${type}`;
+      if (!cacheClient.has(cle)) {
+        cacheClient.set(cle, manuels.get(`${s.siren}|${type}`) ?? rapprocher(s, index).clientId);
+      }
+      return cacheClient.get(cle)!;
+    };
+
     const pivot = await construireSuivi({
       debut: debut && JOUR.test(debut) ? debut : undefined,
       fin: fin && JOUR.test(fin) ? fin : undefined,
-      procedure: procedure && procedure !== 'TOUTES' ? procedure : undefined,
-      axe: axe === 'depot' ? 'depot' : 'periode',
+      axe: axeChoisi,
+      // Une societe non rapprochee n'est JAMAIS ecartee : on ne sait pas si elle
+      // est sortie, et c'est precisement le signal que cet ecran doit montrer —
+      // elle teledeclare sans exister au portefeuille.
+      exclure: (l) => {
+        const id = clientDe(l, l.type_declaration || '(type non précisé)');
+        return id !== null && horsPortefeuille.has(id);
+      },
     });
-
-    const index = indexerClients(
-      await requete<ClientRapprochable>(
-        'SELECT id, siren, siret, numero_dossier, statut, nom_entreprise FROM clients'
-      )
-    );
 
     // Les dossiers du collaborateur, pour le filtre « mes dossiers ».
     const miens = new Set(
@@ -109,24 +187,34 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
       ).map((l) => l.client_id)
     );
 
-    const internes = new Map<string, LigneInterne>();
-    /** Rattachements décidés à la main, indexés par société × type. */
-    const manuels = new Map<string, string>();
-    for (const l of await requete<LigneInterne>(
-      `SELECT siren, type_declaration, mois, statut, commentaire, assignee_id,
-              updated_at, client_id, rapprochement_manuel
-         FROM jedeclare_suivi_interne WHERE axe = $1`,
-      [pivot.axe]
-    )) {
-      internes.set(`${l.siren}|${l.type_declaration}|${l.mois}`, l);
-      if (l.rapprochement_manuel && l.client_id) {
-        manuels.set(`${l.siren}|${l.type_declaration}`, l.client_id);
-      }
-    }
+    // `internes` et `manuels` sont lus plus haut : l'exclusion des dossiers
+    // sortis en a besoin AVANT le pivot, un rattachement fait a la main pouvant
+    // designer une fiche sortie que le rapprochement automatique ignorerait.
 
     let sansClient = 0;
     const tables = pivot.tables.map((table) => ({
+      // ⚠️ `famille` ET `cle` FONT PARTIE DES CHAMPS À RECOPIER, au même titre
+      // que les deux signalés plus bas. `famille` désigne l'ONGLET — TVA, Bilan,
+      // Autres —, `cle` la PASTILLE à l'intérieur, depuis que la TVA se divise
+      // en trois tableaux partageant un même `typeDeclaration`. Sans l'une ou
+      // sans l'autre, le front n'a plus rien de sélectionnable et la page reste
+      // vide.
+      //
+      // C'est la TROISIÈME fois que cette projection oublie un champ. La cause
+      // n'a pas changé et est expliquée plus bas : elle ne garde que ce qu'elle
+      // nomme, et rien — surtout pas `tsc` — ne l'y oblige.
+      famille: table.famille,
+      cle: table.cle,
       typeDeclaration: table.typeDeclaration,
+      estTva: table.estTva,
+      periodicite: table.periodicite,
+      // ⚠️ `decoupage` EST DU MÊME LOT, et son oubli est le plus sournois de
+      // tous : le front retomberait sur « mois » sans rien casser, et l'écran
+      // afficherait de nouveau douze colonnes vides pour une liasse annuelle.
+      // Aucune erreur, aucune page blanche — juste la grille d'avant, revenue
+      // en silence. C'est pourquoi le type du front le déclare OBLIGATOIRE :
+      // c'est le seul endroit où l'oubli redevient visible.
+      decoupage: table.decoupage,
       libelle: table.libelle,
       // ⚠️ RECOPIER `nbLignes` ET `destinataires`, sous peine d'ecran blanc.
       //
@@ -160,6 +248,13 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
           clientNom: manuel ? null : auto.clientNom,
           rapprochement,
           monDossier: clientId ? miens.has(clientId) : false,
+          // Le jour du calendrier CA3, ou l'aveu qu'on ne le sait pas. Calculé
+          // par société et non par cellule : il ne dépend pas du mois. `null`
+          // hors TVA — une liasse fiscale n'a pas d'échéance mensuelle, et un
+          // tiret sur chacune de ses lignes ne serait que du bruit.
+          echeance: table.estTva
+            ? echeanceTva(clientId ? (parId.get(clientId) ?? null) : null, table.periodicite ?? null)
+            : null,
           cellules: Object.fromEntries(
             Object.entries(s.cellules).map(([mois, jedeclare]) => {
               const interne = internes.get(`${s.siren}|${table.typeDeclaration}|${mois}`);
@@ -274,6 +369,47 @@ export function enregistrerRoutesJedeclare(app: FastifyInstance): void {
     );
     return reply.code(204).send();
   });
+
+  /**
+   * La surcharge du jour d'échéance TVA, posée ou retirée sur une fiche client.
+   *
+   * Écrit dans `clients` et non dans `jedeclare_suivi_interne` : le jour est un
+   * attribut du redevable, pas d'une cellule du suivi. Le ranger par mois
+   * obligerait à le ressaisir à chaque période, et le suivi interne se purge
+   * avec la fenêtre affichée alors que cet arbitrage doit survivre.
+   *
+   * `jour: null` REMET LA RÈGLE EN VIGUEUR — il fallait pouvoir défaire un
+   * arbitrage sans passer par la base, sinon une valeur posée par erreur reste
+   * pour toujours.
+   */
+  app.put<{ Body: { clientId?: string; jour?: number | null } }>(
+    '/api/jedeclare/jour-echeance',
+    async (request, reply) => {
+      const session = await exigerSession(request, reply);
+      if (!session) return;
+
+      const b = request.body ?? {};
+      const clientId = String(b.clientId ?? '').trim();
+      if (!/^[0-9a-f-]{36}$/i.test(clientId)) {
+        return reply.code(400).send({ message: 'clientId attendu.' });
+      }
+
+      const brut = b.jour;
+      // `null` et `undefined` disent la même chose — retirer la surcharge — et
+      // le front n'a pas à choisir lequel envoyer pour un champ vidé.
+      const jour = brut == null ? null : Number(brut);
+      if (jour !== null && (!Number.isInteger(jour) || jour < 1 || jour > 31)) {
+        return reply.code(400).send({ message: 'jour attendu entre 1 et 31, ou null.' });
+      }
+
+      const lignes = await requete<{ id: string }>(
+        'UPDATE clients SET tva_jour_echeance = $1 WHERE id = $2 RETURNING id',
+        [jour, clientId]
+      );
+      if (!lignes.length) return reply.code(404).send({ message: 'Fiche client introuvable.' });
+      return reply.code(204).send();
+    }
+  );
 
   /** Vérifie les identifiants sans rien marquer : lister ne marque pas. */
   app.post('/api/jedeclare/tester', async (request, reply) => {

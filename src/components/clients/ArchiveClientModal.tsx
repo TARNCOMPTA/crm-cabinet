@@ -23,7 +23,7 @@ export default function ArchiveClientModal({
     try {
       await onConfirm();
       onClose();
-    } catch (error) {
+    } catch {
       // error handled by parent
     } finally {
       setIsLoading(false);

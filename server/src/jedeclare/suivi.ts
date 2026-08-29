@@ -21,8 +21,15 @@ import { requete } from '../db.js';
 import {
   etatCellule,
   sirenDe,
+  familleDe,
+  decoupageDe,
+  periodiciteDe,
+  LIBELLE_PERIODICITE,
   type EtatCellule,
+  type Famille,
   type LigneTeletransmission,
+  type Decoupage,
+  type Periodicite,
 } from './etat.js';
 
 // Réexporté : le jugement a demenage dans `etat.ts`, mais les appelants
@@ -317,7 +324,46 @@ export interface SocieteSuivie {
 }
 
 export interface TableSuivi {
+  /**
+   * La famille de travail : c'est elle qui désigne l'ONGLET de l'écran.
+   *
+   * Trois onglets — TVA, Bilan, Autres — là où il y avait une douzaine de types
+   * dans une barre qui défilait. `cle` désigne la pastille À L'INTÉRIEUR de
+   * l'onglet, `famille` désigne l'onglet lui-même. Déduite de la téléprocédure
+   * par `familleDe`, sans référentiel écrit en dur : voir son en-tête.
+   */
+  famille: Famille;
+  /**
+   * L'identifiant de CE tableau, distinct du code de déclaration.
+   *
+   * ⚠️ LA TVA EN PRODUIT TROIS — mensuelle, trimestrielle, annuelle — qui
+   * portent toutes le même `typeDeclaration`. L'écran indexait ses onglets sur
+   * ce code : trois tableaux s'y seraient masqués l'un l'autre, seul le premier
+   * restant atteignable. `typeDeclaration` demeure ce qu'on écrit en base pour
+   * le suivi interne, `cle` est ce qui désigne un onglet.
+   */
+  cle: string;
   typeDeclaration: string;
+  /**
+   * Vrai pour les tableaux de TVA, et eux seuls.
+   *
+   * Sert à savoir qui a un jour d'échéance : le calendrier CA3 ne concerne que
+   * la TVA. Sans ce drapeau, une liasse fiscale afficherait une colonne
+   * d'échéance vide sur chacune de ses lignes — du bruit là où il n'y a rien à
+   * dire. Distinct de `periodicite`, qui manque aussi aux TVA dont les bornes
+   * de période sont inexploitables.
+   */
+  estTva: boolean;
+  /** Renseignée pour la TVA, absente ailleurs. */
+  periodicite?: Periodicite;
+  /**
+   * Le pas des colonnes de la grille — voir `decoupageDe` dans `etat.ts`.
+   *
+   * Une TVA trimestrielle se lit par trimestres, un bilan par années. Laisser
+   * ces tableaux au mois affichait des colonnes vides PAR CONSTRUCTION, que
+   * l'écran ne pouvait pas distinguer d'un retard.
+   */
+  decoupage: Decoupage;
   libelle: string;
   societes: SocieteSuivie[];
   /**
@@ -333,6 +379,19 @@ export interface TableSuivi {
   nbLignes: number;
 }
 
+/**
+ * L'ordre des onglets : TVA, Bilan, Autres.
+ *
+ * C'est l'ordre du travail d'un cabinet — le rythme mensuel d'abord, la clôture
+ * ensuite, le reste après — et il ne bouge pas avec le portefeuille. Trier les
+ * onglets au volume les ferait changer de place d'une période à l'autre.
+ */
+const rangFamille = (f: Famille): number => (f === 'tva' ? 0 : f === 'bilan' ? 1 : 2);
+
+/** L'ordre de lecture des trois tableaux de TVA. Le reste vient après. */
+const rangPeriodicite = (p: Periodicite | undefined): number =>
+  p === 'mensuelle' ? 0 : p === 'trimestrielle' ? 1 : p === 'annuelle' ? 2 : 3;
+
 export interface Suivi {
   axe: 'periode' | 'depot';
   mois: string[];
@@ -340,11 +399,10 @@ export interface Suivi {
   tables: TableSuivi[];
 }
 
-/** Lit le cache, filtré sur la période et éventuellement la téléprocédure. */
+/** Lit le cache, filtré sur la période. */
 async function lireTeletransmissions(opts: {
   debut?: string;
   fin?: string;
-  procedure?: string;
 }): Promise<LigneTeletransmission[]> {
   const conditions: string[] = [];
   const valeurs: unknown[] = [];
@@ -357,10 +415,6 @@ async function lireTeletransmissions(opts: {
   if (opts.fin) {
     valeurs.push(`${opts.fin}￿`);
     conditions.push(`(periode_fin <= $${valeurs.length} OR date_avis <= $${valeurs.length})`);
-  }
-  if (opts.procedure) {
-    valeurs.push(opts.procedure);
-    conditions.push(`procedure = $${valeurs.length}`);
   }
   const filtre = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
   return requete<LigneTeletransmission>(
@@ -377,11 +431,26 @@ async function lireTeletransmissions(opts: {
 export async function construireSuivi(opts: {
   debut?: string;
   fin?: string;
-  procedure?: string;
   axe?: 'periode' | 'depot';
+  /**
+   * Ecarte une ligne AVANT le pivot, et donc avant tous les comptages.
+   *
+   * ⚠️ C'EST LE SEUL ENDROIT OU L'EXCLUSION EST SANS CONTRADICTION. Filtrer les
+   * societes apres coup laisserait `nbLignes`, `nbDeclarations` et les
+   * destinataires compter des lignes que le tableau n'affiche plus : l'en-tete
+   * annoncerait « 41 declarations » au-dessus d'une grille qui n'en montre que
+   * 30, sans que rien n'explique l'ecart.
+   *
+   * Le pivot reste ignorant du portefeuille : il recoit un predicat, pas des
+   * clients. C'est l'appelant qui sait ce qu'est un dossier sorti.
+   */
+  exclure?: (ligne: LigneTeletransmission) => boolean;
 }): Promise<Suivi> {
   const axe = opts.axe === 'depot' ? 'depot' : 'periode';
-  const lignes = await lireTeletransmissions(opts);
+  const toutes = await lireTeletransmissions(opts);
+  // L'exclusion s'applique ICI, avant le moindre comptage : ce qui suit ne voit
+  // jamais les lignes ecartees, et aucun total ne peut donc les inclure.
+  const lignes = opts.exclure ? toutes.filter((l) => !opts.exclure!(l)) : toutes;
 
   /**
    * LA COUPE QUE LA REQUÊTE SQL NE FAIT PAS.
@@ -409,6 +478,8 @@ export async function construireSuivi(opts: {
   const parType = new Map<
     string,
     {
+      typeDeclaration: string;
+      periodicite?: Periodicite;
       libelle: string;
       nbLignes: number;
       /** Téléprocédures rencontrées : sert à reconnaître la TVA au tri. */
@@ -417,6 +488,30 @@ export async function construireSuivi(opts: {
       societes: Map<string, SocieteSuivie & { brut: Map<string, LigneTeletransmission[]> }>;
     }
   >();
+
+  /**
+   * LA TVA SE LIT PAR PÉRIODICITÉ, et non en un seul tableau.
+   *
+   * Un cabinet ne traite pas ensemble une TVA mensuelle et une TVA annuelle :
+   * ce sont deux rythmes, deux échéances, deux moments de production. Mélangées,
+   * les colonnes de mois donnaient une grille pleine de trous — une société au
+   * régime trimestriel n'a rien à déclarer deux mois sur trois, et ces vides se
+   * lisaient comme du retard.
+   *
+   * Le découpage ne vaut QUE pour la TVA : c'est là que la périodicité change
+   * d'un client à l'autre. Un IS ou une liasse n'ont pas cette question.
+   */
+  const cleDe = (ligne: LigneTeletransmission, type: string): {
+    cle: string;
+    periodicite?: Periodicite;
+  } => {
+    if (ligne.procedure !== 'EDI-TVA') return { cle: type };
+    const periodicite = periodiciteDe(ligne.periode_debut, ligne.periode_fin);
+    // Sans bornes exploitables, la ligne reste dans le tableau du type, sans
+    // périodicité affichée. La ranger d'office en « mensuelle » ferait passer
+    // une inconnue pour une certitude.
+    return periodicite ? { cle: `${type}|${periodicite}`, periodicite } : { cle: type };
+  };
 
   for (const ligne of lignes) {
     const cleMois = String(axe === 'depot' ? ligne.date_avis : ligne.periode_fin).slice(0, 7);
@@ -431,15 +526,18 @@ export async function construireSuivi(opts: {
     // Regroupement sur le CODE technique, stable entre ACS et ARS ; le libellé,
     // présent seulement dans les ARS, ne sert qu'à l'affichage.
     const type = ligne.type_declaration || '(type non précisé)';
-    if (!parType.has(type))
-      parType.set(type, {
+    const { cle: cleTable, periodicite } = cleDe(ligne, type);
+    if (!parType.has(cleTable))
+      parType.set(cleTable, {
+        typeDeclaration: type,
+        periodicite,
         libelle: '',
         nbLignes: 0,
         procedures: new Set(),
         destinataires: new Map(),
         societes: new Map(),
       });
-    const groupe = parType.get(type)!;
+    const groupe = parType.get(cleTable)!;
     if (!groupe.libelle && ligne.type_libelle) groupe.libelle = ligne.type_libelle;
     groupe.nbLignes += 1;
     if (ligne.procedure) groupe.procedures.add(ligne.procedure);
@@ -465,27 +563,57 @@ export async function construireSuivi(opts: {
   }
 
   const moisTries = [...mois].sort();
-  const tables: TableSuivi[] = [...parType.entries()]
-    // LA TVA D'ABORD, puis le volume, puis l'alphabet.
+
+  // La famille est calculée UNE fois par tableau, avant le tri. La recalculer
+  // dans le comparateur reparcourrait le Set des procédures à chaque
+  // comparaison, pour une valeur qui ne change pas.
+  const groupes = [...parType.entries()].map(
+    ([cle, groupe]) => [cle, groupe, familleDe(groupe.procedures)] as const
+  );
+
+  const tables: TableSuivi[] = groupes
+    // LA FAMILLE D'ABORD — c'est l'ordre des onglets — puis le rythme, le
+    // volume, l'alphabet.
+    //
+    // ⚠️ CE TRI CLASSE LES ONGLETS ET LES PASTILLES À LA FOIS, et c'est
+    // délibéré : `tables` reste UN SEUL tableau trié, que l'écran n'a plus qu'à
+    // partitionner par famille en préservant l'ordre. Dédoubler la logique de
+    // tri côté front l'aurait fait diverger de celle-ci à la première retouche.
     //
     // Le volume seul ne suffisait pas. Il place bien `IDT` en tête — 3 650
-    // lignes pour 175 sociétés — mais laisse `RBT`, les remboursements de TVA,
-    // au cinquième rang derrière `IS`, `IDF` et `ILF`. Or les deux se lisent
-    // ensemble : c'est la même échéance, le même interlocuteur, le même geste.
+    // lignes pour 175 sociétés — mais laissait `RBT`, les remboursements de
+    // TVA, au cinquième rang derrière `IS`, `IDF` et `ILF`. Or les deux se
+    // lisent ensemble : c'est la même échéance, le même interlocuteur, le même
+    // geste — et ils tiennent désormais dans le même onglet.
     //
     // Le volume garde tout son sens ensuite : `IAA` et `BCG` pèsent UNE ligne
     // chacun, et l'alphabet les mettait au même rang que le travail quotidien
     // du cabinet. À volume égal, l'ordre alphabétique départage, pour que la
     // liste ne bouge pas d'un chargement à l'autre.
+    //
+    // Entre les trois tableaux de TVA, l'ordre est celui du RYTHME et non du
+    // volume : mensuelle, trimestrielle, annuelle. Le volume les classerait
+    // par hasard, alors que ces trois-là se lisent dans un ordre évident — et
+    // qui ne bouge pas quand le portefeuille change.
     .sort(
       (a, b) =>
-        Number(b[1].procedures.has('EDI-TVA')) - Number(a[1].procedures.has('EDI-TVA')) ||
+        rangFamille(a[2]) - rangFamille(b[2]) ||
+        rangPeriodicite(a[1].periodicite) - rangPeriodicite(b[1].periodicite) ||
         b[1].nbLignes - a[1].nbLignes ||
         (a[1].libelle || a[0]).localeCompare(b[1].libelle || b[0], 'fr')
     )
-    .map(([typeDeclaration, groupe]) => ({
-      typeDeclaration,
-      libelle: groupe.libelle || typeDeclaration,
+    .map(([cle, groupe, famille]) => ({
+      famille,
+      cle,
+      typeDeclaration: groupe.typeDeclaration,
+      estTva: groupe.procedures.has('EDI-TVA'),
+      ...(groupe.periodicite ? { periodicite: groupe.periodicite } : {}),
+      decoupage: decoupageDe(famille, groupe.periodicite),
+      // Le libellé porte la périodicité : trois onglets nommés « TVA » à
+      // l'identique n'aideraient personne.
+      libelle: groupe.periodicite
+        ? `${groupe.libelle || groupe.typeDeclaration} — ${LIBELLE_PERIODICITE[groupe.periodicite]}`
+        : groupe.libelle || groupe.typeDeclaration,
       nbLignes: groupe.nbLignes,
       destinataires: [...groupe.destinataires.entries()]
         .map(([nom, lignes]) => ({ nom, lignes }))

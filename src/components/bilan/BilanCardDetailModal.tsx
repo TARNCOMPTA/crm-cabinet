@@ -35,14 +35,22 @@ import type { BilanCardWithDetails, BilanColumn } from '../../types/database';
 
 const MOIS_LABELS = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/**
+ * Une piece jointe de checklist, telle que la base la rend.
+ *
+ * Trois champs etaient declares NON NULS alors qu'ils le sont — `file_size`,
+ * `mime_type`, `created_at`. Le `as any` du chargement empechait de le voir : un
+ * fichier sans type MIME enregistre passait pour une chaine, et l'affichage
+ * d'une taille absente montrait « NaN o ».
+ */
 interface Attachment {
   id: string;
   file_name: string;
-  file_size: number;
-  mime_type: string;
+  file_size: number | null;
+  mime_type: string | null;
   storage_path: string;
   uploaded_by: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 interface Props {
@@ -80,7 +88,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
       const attachState: Record<string, Attachment[]> = {};
       card.checklist_items?.forEach((item) => {
         state[item.id] = item.is_checked;
-        attachState[item.id] = (item as any).attachments || [];
+        attachState[item.id] = item.attachments || [];
       });
       setChecklistState(state);
       setAttachmentsState(attachState);
@@ -410,7 +418,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
                               key={att.id}
                               className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-xs group/att"
                             >
-                              {att.mime_type.startsWith('image/') ? (
+                              {att.mime_type?.startsWith('image/') ? (
                                 <Image className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                               ) : (
                                 <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -419,7 +427,9 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
                                 {att.file_name}
                               </span>
                               <span className="text-gray-400 dark:text-gray-500 shrink-0">
-                                {att.file_size < 1024 * 1024
+                                {att.file_size == null
+                                  ? ''
+                                  : att.file_size < 1024 * 1024
                                   ? `${Math.round(att.file_size / 1024)} Ko`
                                   : `${(att.file_size / (1024 * 1024)).toFixed(1)} Mo`}
                               </span>

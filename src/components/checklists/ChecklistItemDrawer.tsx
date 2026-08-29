@@ -122,7 +122,11 @@ export function ChecklistItemDrawer({
     try {
       const url = await getAttachmentSignedUrl(att.storage_path);
       window.open(url, '_blank');
-    } catch {}
+    } catch {
+      // L'ouverture de la piece jointe a echoue : le lien signe a pu expirer ou
+      // le navigateur bloquer l'onglet. Rien a rattraper ici, l'utilisateur
+      // reclique.
+    }
   };
 
   const handleSaveLabel = () => {

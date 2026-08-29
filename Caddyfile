@@ -64,12 +64,30 @@
 		}
 		# Les adresses IP sont des données personnelles : on ne les conserve pas
 		# dans les journaux d'accès d'un outil interne, où elles n'apportent rien.
+		#
+		# ⚠️ L'URI PART AVEC, ET C'ÉTAIT LA PLUS GROSSE FUITE DES DEUX. Le front
+		# interroge PostgREST par l'URL : filtres, tris et sélections y sont
+		# écrits en clair. Ce journal contenait donc, ligne après ligne,
+		# `?email=eq.jean.dupont@exemple.fr`, `?last_name=eq.DUPONT`, le nom des
+		# pièces déposées — et la signature des URL de téléchargement, qui est
+		# un secret d'accès. Supprimer les IP en laissant cela n'aurait protégé
+		# personne.
+		#
+		# On SUPPRIME plutôt que d'assainir, contrairement au journal de
+		# l'application, qui garde les noms de paramètres sans leurs valeurs
+		# (`server/src/journal.ts`). Deux raisons : un filtre `regexp` qui ne
+		# marche qu'à moitié laisse fuir sans le dire, et ce journal-ci fait
+		# doublon — l'URL assainie, celle qui sert à diagnostiquer, est dans
+		# celui de l'application. Il reste ici la méthode, le code de réponse,
+		# la taille et la durée : de quoi voir une panne ou un flot anormal,
+		# sans savoir de qui on parle.
 		format filter {
 			wrap console
 			fields {
 				request>remote_ip delete
 				request>client_ip delete
 				request>headers delete
+				request>uri delete
 			}
 		}
 	}

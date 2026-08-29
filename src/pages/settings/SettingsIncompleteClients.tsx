@@ -26,6 +26,7 @@ import { FieldCell } from '../../components/incomplete/FieldCell';
 import { IncompleteBulkActionsBar } from '../../components/incomplete/IncompleteBulkActionsBar';
 import { SoftwareManagementModal } from '../../components/settings/SoftwareManagementModal';
 import { useRegimesFiscaux } from '../../hooks/useRegimesFiscaux';
+import { messageErreur } from '../../lib/erreurs';
 
 /**
  * La ligne complete, et la requete qui va avec (`select('*')`).
@@ -162,8 +163,8 @@ export function SettingsIncompleteClients() {
           }
           if (res.data) setLegalForms(res.data);
         });
-    } catch (error: any) {
-      const message = error?.message || 'Erreur inconnue lors du chargement';
+    } catch (error) {
+      const message = messageErreur(error, 'Erreur inconnue lors du chargement');
       console.error('[SettingsIncompleteClients] loadData failed', error);
       setLoadError(message);
       showToast(message, 'error');
@@ -507,8 +508,8 @@ export function SettingsIncompleteClients() {
       );
       await loadData();
       clearSelection();
-    } catch (e: any) {
-      showToast(e?.message || 'Erreur lors de l\'enrichissement INPI', 'error');
+    } catch (e) {
+      showToast(messageErreur(e, 'Erreur lors de l\'enrichissement INPI'), 'error');
     } finally {
       setIsEnriching(false);
       setEnrichProgress(null);
@@ -626,8 +627,8 @@ export function SettingsIncompleteClients() {
       clearSelection();
       await loadData();
       showToast('Modifications enregistrees avec succes', 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la sauvegarde', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la sauvegarde'), 'error');
     } finally {
       setSaving(false);
     }

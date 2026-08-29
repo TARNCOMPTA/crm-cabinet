@@ -18,10 +18,30 @@
 # Pour un VPS dédié — le cas d'un confrère qui installe le produit —, c'est
 # `docker-compose.yml` qu'il faut utiliser : il embarque son propre Caddy.
 # ============================================================================
+# ⚠️ LES JOURNAUX DES CONTENEURS N'AVAIENT AUCUNE LIMITE.
+#
+# Le pilote `json-file` de Docker conserve TOUT, sans plafond de taille ni de
+# duree, jusqu'a ce que le disque du serveur soit plein — et le disque plein
+# arrete la base avant d'arreter les journaux. C'est une panne d'exploitation
+# qui arrive apres des mois, donc au pire moment : longtemps apres la mise en
+# service, sans rapport apparent avec quoi que ce soit.
+#
+# C'est aussi une question de donnees personnelles. Meme assainis
+# (`server/src/journal.ts`), ces journaux gardent la trace horodatee de chaque
+# geste fait dans le logiciel. Les conserver indefiniment n'a aucune raison
+# d'etre : cinq fichiers de 10 Mo couvrent tres largement le besoin de
+# diagnostic, et ce qui est plus vieux ne sert plus a rien.
+x-journal: &journal
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *journal
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-crmcabinet}
       POSTGRES_USER: ${POSTGRES_USER:-crm}
@@ -42,6 +62,7 @@ services:
   postgrest:
     image: postgrest/postgrest:v12.2.3
     restart: unless-stopped
+    logging: *journal
     environment:
       PGRST_DB_URI: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crmcabinet}
       PGRST_DB_SCHEMAS: public
@@ -54,12 +75,19 @@ services:
         condition: service_healthy
     expose:
       - '3001'
+    # ⚠️ FORME EN DICTIONNAIRE ET NON EN LISTE : on ne peut pas melanger
+    # `- default` et un reseau porteur d'alias dans le meme bloc.
     networks:
-      - default
+      default: {}
+      lecture:
+        aliases:
+          # Le nom que les lecteurs visent : `http://crmcabinet-postgrest:3001`.
+          - crmcabinet-postgrest
 
   app:
     build: .
     restart: unless-stopped
+    logging: *journal
     # Pas de « init: true » ici : l'image a deja tini en ENTRYPOINT. Les deux
     # ensemble placent l'init de Docker en PID 1 et releguent tini en PID 2, ce
     # qui lui fait perdre precisement ce qu'on lui demande — il l'annonce
@@ -137,6 +165,23 @@ networks:
   partage:
     external: true
     name: ${RESEAU_PARTAGE:-portail_default}
+  # ⚠️ UN SECOND RESEAU, ET PAS LE RESEAU DU CADDY, POUR UNE RAISON DE PORTEE.
+  #
+  # Une autre application du serveur — FacturSCI — lit la base du CRM par
+  # PostgREST. La brancher sur `partage` aurait suffi techniquement, et aurait
+  # rendu PostgREST joignable par TOUT ce qui vit derriere le Caddy : n8n,
+  # cottns, portailrecup. Ce reseau-ci ne porte que le couple concerne.
+  #
+  # `external` comme `partage` : ce fichier ne le cree pas. `maj.sh` s'en charge
+  # s'il manque — un reseau vide est inerte, contrairement a celui du Caddy.
+  #
+  # Vecu : cette declaration existait depuis des mois DANS LE SEUL EXEMPLAIRE DU
+  # SERVEUR, jamais commitee. Le depot et l'instance divergeaient en silence, et
+  # le premier commit touchant ce fichier aurait fait echouer `git pull` au
+  # milieu d'une mise a jour.
+  lecture:
+    external: true
+    name: ${RESEAU_LECTURE:-crmcabinet_lecture}
 
 volumes:
   db_data:

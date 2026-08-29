@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { CollaboratorAvatar } from '../../components/ui/CollaboratorAvatar';
+import { codeErreur } from '../../lib/erreurs';
 import {
   type CabinetCollaboratorRole,
   type RoleColor,
@@ -168,7 +169,7 @@ export function SettingsCollaboratorRoles() {
         });
         showToast('Role mis a jour', 'success');
       } else {
-        let baseKey = slugifyRoleKey(label) || `role_${Date.now()}`;
+        const baseKey = slugifyRoleKey(label) || `role_${Date.now()}`;
         let key = baseKey;
         let i = 2;
         const existingKeys = new Set(roles.map((r) => r.key));
@@ -187,8 +188,8 @@ export function SettingsCollaboratorRoles() {
       }
       setShowModal(false);
       await load();
-    } catch (err: any) {
-      const message = err?.code === '23505'
+    } catch (err) {
+      const message = codeErreur(err) === '23505'
         ? 'Un role avec ce libelle existe deja'
         : 'Erreur lors de l\'enregistrement';
       showToast(message, 'error');

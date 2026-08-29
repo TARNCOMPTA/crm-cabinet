@@ -68,7 +68,10 @@ export function ClientServicesTable({
           setResolvedNames(map);
           if (map.size >= nonClientSirens.length) setLookupDone(true);
         }
-      } catch {} finally {
+      } catch {
+        // Les denominations viennent d'un cache d'appoint : leur absence laisse
+        // le SIREN affiche tel quel, ce qui reste exploitable.
+      } finally {
         setCacheLoaded(true);
       }
     })();
@@ -92,7 +95,10 @@ export function ClientServicesTable({
       });
       setLookupDone(true);
       saveSirenDenominations(results);
-    } catch {} finally {
+    } catch {
+      // Meme parti pris que ci-dessus : une recherche de denomination ratee ne
+      // doit pas interrompre l'affichage du tableau.
+    } finally {
       setIsLookingUp(false);
     }
   }, [nonClientSirens, resolvedNames]);

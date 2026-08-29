@@ -121,7 +121,10 @@ export function TaskFiltersBar({
               Mes taches
             </Button>
 
-            <div className="flex gap-2">
+            {/* `flex-wrap` : dans une cellule de grille a quatre colonnes, ces
+                deux boutons demandent 240 px pour 180 px disponibles a 1 024 px
+                de large — et faisaient deborder la PAGE de 29 px. */}
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
                 onClick={() =>

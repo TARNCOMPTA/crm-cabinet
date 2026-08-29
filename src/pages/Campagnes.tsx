@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Eye, Mail, Send, Users, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Eye, Mail, Send, Users, X } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -73,7 +72,6 @@ const OPTIONS_API: RequestInit = {
 };
 
 export function Campagnes() {
-  const { isAdmin } = useAuth();
   const { showToast } = useToast();
 
   const [statut, setStatut] = useState('actif');
@@ -145,10 +143,9 @@ export function Campagnes() {
   }
 
   useEffect(() => {
-    if (!isAdmin) return;
     void chargerHistorique();
     void chargerCodesNaf();
-  }, [isAdmin]);
+  }, []);
 
   /**
    * Un apercu ne survit pas a un changement de cible ni de message.
@@ -232,17 +229,6 @@ export function Campagnes() {
     } finally {
       setEnvoi(false);
     }
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <AlertTriangle className="w-5 h-5 text-amber-600" />
-        <p className="text-sm text-amber-800 dark:text-amber-200">
-          Ecrire a une liste de clients est reserve aux administrateurs du cabinet.
-        </p>
-      </div>
-    );
   }
 
   const pret = sujet.trim().length > 0 && corps.trim().length > 0;
@@ -467,6 +453,9 @@ export function Campagnes() {
                   className="rounded-lg border border-gray-200 dark:border-gray-700 p-3"
                 >
                   <summary className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer flex items-center justify-between gap-2">
+                    {/* Des ADRESSES, donc des courriels : c'est le nombre qui part.
+                        Un client a deux adresses y compte pour deux, et apparait
+                        deux fois dans la liste. */}
                     <span>{apercu.destinataires.length} destinataire(s) — cliquez pour retirer</span>
                     {retires.size > 0 && (
                       <button
@@ -482,8 +471,19 @@ export function Campagnes() {
                     )}
                   </summary>
                   <ul className="mt-2 max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                    {/* ⚠️ LA CLE PORTE L'ADRESSE, ET NON LE SEUL IDENTIFIANT DE
+                        CLIENT. Une fiche a deux adresses produit DEUX lignes, du
+                        meme client : `key={d.id}` seul se repeterait, et React
+                        recycle alors les lignes de travers — une adresse affichee
+                        en face du mauvais nom, sur un ecran dont l'unique role est
+                        de montrer qui recevra quoi avant un envoi irreversible.
+                        Le retrait, lui, reste par CLIENT : il coupe ses deux
+                        adresses, ce qu'on attend de « retirer untel de l'envoi ». */}
                     {apercu.destinataires.map((d) => (
-                      <li key={d.id} className="py-1.5 flex items-center justify-between gap-3">
+                      <li
+                        key={`${d.id}:${d.email}`}
+                        className="py-1.5 flex items-center justify-between gap-3"
+                      >
                         <span className="min-w-0 text-xs">
                           <span className="text-gray-900 dark:text-gray-100">{d.nom}</span>
                           <span className="text-gray-500 dark:text-gray-400"> — {d.email}</span>

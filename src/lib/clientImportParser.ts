@@ -1,3 +1,6 @@
+/** Ce qu'une cellule d'un classeur peut contenir une fois lue. */
+type CelluleExcel = string | number | boolean | Date | null | undefined;
+
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const MAX_ROWS = 2000;
 
@@ -21,7 +24,7 @@ export interface ParseResult {
   errorLines: number;
 }
 
-function cleanSIRET(value: any): string | null {
+function cleanSIRET(value: unknown): string | null {
   if (!value) return null;
   const cleaned = String(value).replace(/\s+/g, '').replace(/[^0-9]/g, '');
   if (!cleaned) return null;
@@ -48,7 +51,7 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as CelluleExcel[][];
 
         if (jsonData.length === 0) {
           reject(new Error('Le fichier Excel est vide'));

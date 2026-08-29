@@ -64,7 +64,12 @@ function parseCSVContent(text: string): HabilitationRow[] {
   return rows;
 }
 
-function parseExcelContent(data: Uint8Array, XLSX: any): HabilitationRow[] {
+/**
+ * `XLSX` arrive par `await import('xlsx')` : son type est celui du module.
+ * `typeof import(...)` le nomme sans charger la bibliotheque au demarrage — ce
+ * que l'import dynamique cherche precisement a eviter (elle pese lourd).
+ */
+function parseExcelContent(data: Uint8Array, XLSX: typeof import('xlsx')): HabilitationRow[] {
   const workbook = XLSX.read(data, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];

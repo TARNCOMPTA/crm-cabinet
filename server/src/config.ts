@@ -13,6 +13,37 @@ function requis(nom: string): string {
   return v;
 }
 
+/**
+ * Un secret dont on exige la ROBUSTESSE, et pas seulement la présence.
+ *
+ * ⚠️ POURQUOI CE CONTRÔLE EXISTE, et pourquoi il porte sur `SESSION_SECRET` en
+ * particulier. Ce secret ne signe pas seulement les sessions : c'est le MÊME que
+ * `PGRST_JWT_SECRET` (docker-compose.yml), choix délibéré qui évite de forger un
+ * second jeton. Conséquence directe : qui devine ce secret forge un jeton portant
+ * `role: authenticated` et atteint PostgREST — donc TOUTES les données du
+ * cabinet, sans passer par `app` et sans laisser de trace d'authentification.
+ *
+ * `installation/install.sh` génère 64 caractères (`openssl rand -hex 32`) : une
+ * installation par le script n'a jamais été concernée. Le trou était l'édition
+ * du `.env` à la main — un secret recopié, raccourci « pour essayer », ou repris
+ * d'un exemple. Rien ne le refusait.
+ *
+ * 32 caractères est un PLANCHER, pas une cible. Le message nomme la commande de
+ * génération : un contrôle qui bloque sans dire comment repartir se contourne.
+ */
+function secretRobuste(nom: string, minimum = 32): string {
+  const v = requis(nom);
+  if (v.length < minimum) {
+    throw new Error(
+      `${nom} fait ${v.length} caractères, ${minimum} au minimum sont exigés. ` +
+        'Ce secret signe les sessions ET les jetons transmis a PostgREST : ' +
+        "un secret faible ouvre l'acces a toute la base. " +
+        `Generez-en un : openssl rand -hex 32`
+    );
+  }
+  return v;
+}
+
 function optionnel(nom: string, defaut = ''): string {
   return process.env[nom] ?? defaut;
 }
@@ -150,7 +181,7 @@ export const config = {
 
   session: {
     /** Signe les jetons de session ET ceux transmis à PostgREST : même secret. */
-    secret: requis('SESSION_SECRET'),
+    secret: secretRobuste('SESSION_SECRET'),
     /** Durée d'une session, en secondes. Sept jours par défaut. */
     dureeSecondes: entier('SESSION_TTL', 60 * 60 * 24 * 7),
     nomCookie: 'crm_session',

@@ -8,7 +8,7 @@ import { Database } from '../../types/database';
 type CompanyOfficer = Database['public']['Tables']['company_officers']['Row'];
 type OfficerCompany = Database['public']['Tables']['officer_companies']['Row'];
 
-interface OfficerFormData {
+export interface OfficerFormData {
   personType: string;
   firstName: string;
   lastName: string;

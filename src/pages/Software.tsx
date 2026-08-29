@@ -10,6 +10,7 @@ import { useToast } from '../contexts/ToastContext';
 import { Plus, Search, Package, Trash2, Settings, Calendar, Building2, Filter, X } from 'lucide-react';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Link } from 'react-router-dom';
+import { codeErreur } from '../lib/erreurs';
 
 /**
  * `clients.statut` est nullable en base (DEFAULT 'actif', pas de NOT NULL) : la
@@ -124,7 +125,7 @@ export function Software() {
 
       setClients(clientsResult.data || []);
       setAvailableSoftware(softwareResult.data || []);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des données', 'error');
     } finally {
       setLoading(false);
@@ -233,8 +234,8 @@ export function Software() {
       setShowModal(false);
       await refreshClientData(selectedClient.id);
       setShowManageModal(true);
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error) {
+      if (codeErreur(error) === '23505') {
         showToast('Ce logiciel est déjà assigné à ce client', 'error');
       } else {
         showToast('Erreur lors de l\'assignation', 'error');
@@ -255,7 +256,7 @@ export function Software() {
       showToast('Logiciel retiré du client', 'success');
       setDeleteConfirm(null);
       await refreshClientData(selectedClient.id);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la suppression', 'error');
     }
   }

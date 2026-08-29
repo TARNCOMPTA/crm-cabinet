@@ -19,6 +19,7 @@ import {
   TaskTemplateWithCategory,
 } from '../../lib/taskService';
 import { Database } from '../../types/database';
+import { codeErreur } from '../../lib/erreurs';
 
 type TaskTemplate = Database['public']['Tables']['task_templates']['Row'];
 type TaskCategory = Database['public']['Tables']['task_categories']['Row'];
@@ -65,7 +66,7 @@ export function SettingsTaskTemplates() {
       ]);
       setTemplates(templatesData);
       setCategories(categoriesData);
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des modèles', 'error');
       setTemplates([]);
       setCategories([]);
@@ -146,7 +147,7 @@ export function SettingsTaskTemplates() {
       }
       setShowModal(false);
       loadData();
-    } catch (error) {
+    } catch {
       showToast(
         editingTemplate ? 'Erreur lors de la mise à jour' : 'Erreur lors de la création',
         'error'
@@ -160,8 +161,8 @@ export function SettingsTaskTemplates() {
       showToast('Modèle supprimé', 'success');
       setDeleteConfirm(null);
       loadData();
-    } catch (error: any) {
-      if (error?.code === '23503') {
+    } catch (error) {
+      if (codeErreur(error) === '23503') {
         showToast('Impossible de supprimer : des tâches utilisent ce modèle', 'error');
       } else {
         showToast('Erreur lors de la suppression', 'error');

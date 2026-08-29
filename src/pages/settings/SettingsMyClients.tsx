@@ -15,6 +15,7 @@ import { useRegimesFiscaux } from '../../hooks/useRegimesFiscaux';
 import { useSortableTable } from '../../hooks/useSortableTable';
 import { SortableTableWrapper } from '../../components/ui/SortableTableWrapper';
 import { SortableRow } from '../../components/ui/SortableRow';
+import { messageErreur } from '../../lib/erreurs';
 
 /**
  * La ligne complete, et la requete qui va avec (`select('*')`).
@@ -174,8 +175,8 @@ export function SettingsMyClients() {
         softwareMap.set(cs.client_id, existing);
       });
       setClientSoftware(softwareMap);
-    } catch (error: any) {
-      setError(error.message || 'Erreur lors du chargement des clients');
+    } catch (error) {
+      setError(messageErreur(error, 'Erreur lors du chargement des clients'));
       showToast('Erreur lors du chargement des clients', 'error');
     } finally {
       setLoading(false);
@@ -443,8 +444,8 @@ export function SettingsMyClients() {
       setSelectedClientIds(new Set());
       await Promise.all([loadData(), refreshAssignments()]);
       showToast('Modifications enregistrees avec succes', 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la sauvegarde', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la sauvegarde'), 'error');
     } finally {
       setSaving(false);
     }

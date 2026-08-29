@@ -1,6 +1,24 @@
 import { supabase } from './supabase';
 import type { Database } from '../types/database';
 
+/**
+ * Une declaration telle que la requete la ramene : la ligne, plus ses
+ * collaborateurs joints. Le champ joint est retire avant de rendre la
+ * `RevenueDeclaration`, d'ou la destructuration plus bas.
+ */
+interface LigneAvecCollaborateurs {
+  revenue_declaration_collaborators?: { user_id: string }[] | null;
+  [colonne: string]: unknown;
+}
+
+/** Un profil actif, tel que `select('id, prenom, nom, email')` le rend. */
+interface ProfilActif {
+  id: string;
+  prenom: string | null;
+  nom: string | null;
+  email: string;
+}
+
 export type RevenueDeclarationStatus =
   | 'a_faire'
   | 'donnees_a_transmettre'
@@ -115,14 +133,14 @@ export async function listDeclarations(
 
   // Collect all unique user_ids from collaborators to resolve names
   const allUserIds = new Set<string>();
-  for (const row of (data || []) as any[]) {
+  for (const row of (data || []) as LigneAvecCollaborateurs[]) {
     for (const c of row.revenue_declaration_collaborators || []) {
       allUserIds.add(c.user_id);
     }
   }
 
   // Fetch profile names in one query
-  let profilesMap: Record<string, { full_name: string; avatar_color: string | null }> = {};
+  const profilesMap: Record<string, { full_name: string; avatar_color: string | null }> = {};
   if (allUserIds.size > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
@@ -138,8 +156,8 @@ export async function listDeclarations(
     }
   }
 
-  const rows = (data || []).map((row: any) => {
-    const collabs: DeclarationCollaborator[] = (row.revenue_declaration_collaborators || []).map((c: any) => ({
+  const rows = (data || []).map((row: LigneAvecCollaborateurs) => {
+    const collabs: DeclarationCollaborator[] = (row.revenue_declaration_collaborators || []).map((c: { user_id: string }) => ({
       user_id: c.user_id,
       full_name: profilesMap[c.user_id]?.full_name || 'Utilisateur',
       avatar_color: profilesMap[c.user_id]?.avatar_color || null,
@@ -545,7 +563,7 @@ export async function listCabinetUsers(): Promise<CabinetUserOption[]> {
     .eq('is_active', true)
     .order('nom');
   if (error) throw error;
-  return (data || []).map((u: any) => ({
+  return (data || []).map((u: ProfilActif) => ({
     ...u,
     full_name: `${u.prenom || ''} ${u.nom || ''}`.trim() || u.email,
   }));

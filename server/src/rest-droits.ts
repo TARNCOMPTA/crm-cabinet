@@ -53,9 +53,17 @@ export const TABLES_ADMIN = new Set([
   'sync_settings',
   // Les campagnes : la lecture reste ouverte — savoir qui a recu quel rappel fait
   // partie du travail d'un collaborateur — mais ecrire dans ces tables, c'est
-  // ecrire aux clients du cabinet. L'envoi lui-meme passe de toute facon par
-  // `/api/campagnes`, qui exige un administrateur ; cette entree ferme la porte
-  // laterale du proxy PostgREST.
+  // ecrire aux clients du cabinet.
+  //
+  // ⚠️ CES DEUX ENTREES RESTENT FERMEES ALORS MEME QUE `/api/campagnes` EST
+  // DESORMAIS OUVERT A TOUT COLLABORATEUR, et le raisonnement s'est INVERSE :
+  // avant, la porte laterale doublait un verrou pose sur la route ; maintenant
+  // elle est le seul obstacle a une ecriture qui n'enverrait rien.
+  //
+  // Ecrire ici a la main creerait une ligne d'historique SANS courriel, sans
+  // trace d'auteur imposee, sans lien de desinscription — un envoi fantome dans
+  // le journal du cabinet. Passer par la route est le seul moyen d'envoyer, donc
+  // le seul moyen d'etre trace : c'est ce que cette fermeture garantit.
   'mailing_campagnes',
   'mailing_destinataires',
 ]);
@@ -117,6 +125,68 @@ export const COLONNES_PROFIL_PERSONNELLES = new Set([
   'show_my_dossiers',
   'updated_at',
 ]);
+
+/**
+ * Les fonctions que le NAVIGATEUR a le droit d'appeler.
+ * ---------------------------------------------------------------------------
+ * ⚠️ TOUT APPEL RPC ÉTAIT AUTORISÉ, ET C'ÉTAIT UN TROU BÉANT. `nomTable()` rend
+ * « rpc » pour `/rest/v1/rpc/n_importe_quoi` : une pseudo-table, absente des
+ * deux listes ci-dessus, donc relayée sans contrôle. Les huit fonctions du
+ * schéma `public` étaient ainsi ouvertes à tout collaborateur connecté.
+ *
+ * Ce que cela permettait, concrètement : `create_notification` est
+ * SECURITY DEFINER, son déclencheur `AFTER INSERT` remplit `email_queue`, et
+ * l'ordonnanceur la vide toutes les deux minutes. N'importe quel compte pouvait
+ * donc faire partir, DEPUIS LE SMTP DU CABINET, un courriel à n'importe quel
+ * utilisateur, avec titre, message et lien de son choix. Pour un cabinet
+ * comptable, c'est le scénario du RIB modifié — celui-là même que
+ * TABLES_LECTURE_ADMIN plus haut cherchait à empêcher.
+ *
+ * LA LISTE EST CELLE DES APPELS RÉELS DU FRONT, et rien d'autre : les quatre
+ * ci-dessous sont les seuls `supabase.rpc(...)` du code. Les autres fonctions —
+ * `create_notification`, `process_email_digest`, `auto_archive_done_tasks`,
+ * `build_notification_email_html` — sont appelées par le SERVEUR, en direct,
+ * sans passer par ce proxy : les fermer ici ne retire rien à personne.
+ *
+ * Elles restent ouvertes à TOUT collaborateur, administrateur ou non. Deux
+ * d'entre elles partent au chargement des écrans « Bilans » et « Opportunités » :
+ * les réserver aux administrateurs rejouerait exactement l'erreur consignée plus
+ * haut à propos de `checklist_templates` — une fonction rendue inutilisable pour
+ * la moitié du cabinet, en 403 muets.
+ */
+export const RPC_OUVERTES = new Set([
+  'get_dashboard_stats',
+  'initialize_bilan_defaults',
+  'initialize_opportunity_defaults',
+  'replace_client_collaborators',
+  // Remplace la repartition des parts d'un client en UNE transaction. Deux
+  // appels PostgREST — un DELETE puis un INSERT — laisseraient la fiche sans
+  // aucun associe si le second echouait. Voir schema/increments/014.
+  'replace_client_associes',
+]);
+
+/**
+ * Nom de la fonction visée par un appel RPC, ou null si l'URL n'en désigne pas.
+ *
+ * Le chemin est DÉCODÉ AVANT d'être découpé, pour la même raison que dans
+ * `nomTable` : PostgREST route sur le chemin décodé, et `/rest/v1/rpc%2fcreate_
+ * notification` y désigne bien la fonction. Découper d'abord laisserait passer
+ * cette forme sans jamais voir le nom qu'elle appelle.
+ */
+export function fonctionRpc(chemin: string): string | null {
+  const apres = chemin.replace(/^\/rest\/v1\/?/, '');
+  const sansQuery = apres.split('?')[0] ?? '';
+
+  let decode: string;
+  try {
+    decode = decodeURIComponent(sansQuery);
+  } catch {
+    return null;
+  }
+
+  const m = decode.match(/^rpc\/([A-Za-z0-9_]+)$/);
+  return m ? (m[1] ?? null) : null;
+}
 
 const METHODES_ECRITURE = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
@@ -198,6 +268,25 @@ export function deciderAcces(demande: Demande): Verdict {
   const table = nomTable(demande.url);
   if (table === null) {
     return { autorise: false, code: 400, message: 'Chemin de ressource invalide.' };
+  }
+
+  // Les appels RPC se decident sur le NOM DE LA FONCTION, pas sur la pseudo-table
+  // « rpc » que `nomTable` rend pour tous. Refus par defaut : une fonction
+  // ajoutee au schema n'est pas exposee au navigateur tant que personne ne l'a
+  // inscrite ci-dessus, et c'est le sens de marche voulu.
+  if (table === 'rpc') {
+    const fonction = fonctionRpc(demande.url);
+    if (fonction === null) {
+      return { autorise: false, code: 400, message: 'Appel RPC mal forme.' };
+    }
+    if (!RPC_OUVERTES.has(fonction)) {
+      return {
+        autorise: false,
+        code: 403,
+        message: `La fonction « ${fonction} » n'est pas appelable depuis l'application.`,
+      };
+    }
+    return { autorise: true };
   }
 
   // Les tables d'identifiants se ferment dans les deux sens, lecture comprise.

@@ -28,7 +28,21 @@ export function SortableRow({ id, children, className = '', disabled = false }: 
   };
 
   return (
-    <tr ref={setNodeRef} style={style} className={className} {...attributes}>
+    /**
+     * ⚠️ LES ATTRIBUTS DE dnd-kit NE SONT POSES QUE SI LA LIGNE EST REELLEMENT
+     * GLISSABLE. Ils valent `role="button" tabindex="0" aria-disabled="true"`
+     * quand `disabled` — soit, sur la liste des clients, LE CAS PAR DEFAUT.
+     *
+     * Une ligne de tableau annoncee comme un BOUTON DESACTIVE, ce n'est pas un
+     * detail de balisage : tout ce qu'elle contient herite du signal. Un lecteur
+     * d'ecran presente alors les cases a cocher et les champs de la ligne comme
+     * inutilisables, et Playwright — qui applique les memes regles — refuse d'y
+     * ecrire. Constate en ajoutant la saisie d'email dans la liste des clients.
+     *
+     * Quand le glisser-deposer est desactive, la poignee n'est meme pas rendue :
+     * ces attributs decrivent une interaction qui n'existe pas.
+     */
+    <tr ref={setNodeRef} style={style} className={className} {...(disabled ? {} : attributes)}>
       {!disabled && (
         <td className="w-8 px-1 py-0">
           <button

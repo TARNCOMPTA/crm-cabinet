@@ -7,6 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { messageErreur } from '../../lib/erreurs';
 import {
   type AgoAvancementStatus,
   type AgoStatusColor,
@@ -82,8 +83,8 @@ export function SettingsAGOStatuses() {
       }
       setShowModal(false);
       await loadData();
-    } catch (err: any) {
-      if (err?.message?.includes('duplicate')) {
+    } catch (err) {
+      if (messageErreur(err, '').includes('duplicate')) {
         showToast('Ce libelle existe deja', 'error');
       } else {
         showToast('Erreur lors de la sauvegarde', 'error');

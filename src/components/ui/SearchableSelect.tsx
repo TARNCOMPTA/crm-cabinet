@@ -1,4 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+/**
+ * Le libelle est LIE au champ, par `htmlFor`/`id` — comme dans `Input` et
+ * `Select`.
+ *
+ * ⚠️ IL NE L'ETAIT PAS, ET CE COMPOSANT-CI AVAIT ETE OUBLIE. L'en-tete de
+ * `Select.tsx` raconte le defaut et annonce qu'il « valait pour les trois
+ * composants de formulaire » ; deux ont ete corriges, le troisieme non. Un
+ * lecteur d'ecran annoncait donc un champ sans nom, cliquer le libelle ne
+ * placait pas le curseur dedans, et `getByLabel` ne trouvait rien — retrouve
+ * exactement comme le premier : en pilotant l'application dans un navigateur.
+ *
+ * Le controle alterne entre un `<button>` (ferme) et un `<input>` (ouvert) ;
+ * l'identifiant est porte par les deux, puisqu'un seul est monte a la fois.
+ */
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 
 interface SearchableSelectOption {
@@ -32,6 +46,7 @@ export function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -142,7 +157,7 @@ export function SearchableSelect({
   return (
     <div className="w-full" ref={containerRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -151,6 +166,7 @@ export function SearchableSelect({
       <div className="relative">
         {!isOpen ? (
           <button
+            id={id}
             type="button"
             onClick={handleTriggerClick}
             onKeyDown={handleKeyDown}
@@ -197,6 +213,7 @@ export function SearchableSelect({
               <Search className="w-4 h-4" />
             </div>
             <input
+              id={id}
               ref={inputRef}
               type="text"
               value={query}

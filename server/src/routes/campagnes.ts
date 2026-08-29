@@ -1,7 +1,23 @@
 /**
  * Campagnes — écrire à une liste de clients.
  * ---------------------------------------------------------------------------
- * Trois routes d'administration et une page publique.
+ * Trois routes de session et une page publique.
+ *
+ * ⚠️ TOUT COLLABORATEUR PEUT LANCER UNE CAMPAGNE, ET CE N'EST PAS UN OUBLI. Le
+ * cabinet l'a decide : ecrire a un groupe de clients fait partie du travail
+ * courant, pas de l'administration de l'outil. Ce que cela change par rapport a
+ * un ecran de consultation doit rester en tete — un envoi PART, il ne se reprend
+ * pas, et il part AU NOM DU CABINET.
+ *
+ * Trois choses le rendent tenable, et elles doivent le rester :
+ *   · `mailing_campagnes.cree_par` porte l'auteur de chaque envoi, et
+ *     l'historique de `GET /api/campagnes` le montre a tout le monde — un envoi
+ *     n'est jamais anonyme ;
+ *   · l'apercu (`POST /api/campagnes/apercu`) precede l'envoi et affiche
+ *     nommement qui recevra le message et qui en est exclu ;
+ *   · l'ecriture DIRECTE dans `mailing_campagnes` reste fermee aux
+ *     administrateurs (TABLES_ADMIN, rest-droits.ts) : passer par cette route est
+ *     le seul moyen d'envoyer, donc le seul moyen d'etre trace.
  *
  * CE QUI EST DÉLÉGUÉ À LA FILE, ET POURQUOI. L'envoi n'est pas fait ici : chaque
  * destinataire devient une ligne de `email_queue`, que `viderFile()` écoule par
@@ -19,6 +35,18 @@
  * lien de désinscription l'exigent — et une erreur de champ sur un envoi groupé
  * divulguerait la liste des clients du cabinet à chacun d'entre eux.
  *
+ * UN DESTINATAIRE EST UNE ADRESSE, PAS UN CLIENT. Une fiche portant `email` ET
+ * `email_2` reçoit sur les deux : deux lignes d'`email_queue`, deux lignes de
+ * `mailing_destinataires`, et deux dans le compte annoncé avant l'envoi. Le
+ * dédoublonnage reste par adresse — une seconde adresse recopiée de la première,
+ * ou déjà servie chez une société sœur, ne produit rien de plus
+ * (`resoudreDestinataires`, campagnes/gabarit.ts).
+ *
+ * La désinscription, elle, reste PAR CLIENT : le lien signe un identifiant de
+ * fiche et `accepte_mailings` vit sur la fiche, donc se désinscrire depuis l'une
+ * des deux adresses coupe les deux. C'est la seule lecture défendable d'un « je
+ * ne veux plus recevoir ».
+ *
  * ⚠️ LA PAGE DE DÉSINSCRIPTION EST RENDUE ICI, en HTML, et non par le front. Deux
  * raisons : elle doit fonctionner pour quelqu'un qui n'a pas de session, et le
  * service worker de la PWA rabat toute navigation non exclue sur `index.html`. Le
@@ -30,7 +58,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../config.js';
 import { requete, requeteUne, transaction } from '../db.js';
-import { exigerAdmin } from '../gardes.js';
+import { exigerSession } from '../gardes.js';
 import { echapperHtml } from '../html.js';
 import {
   construireCourriel,
@@ -61,8 +89,16 @@ interface Filtres {
   codesNaf?: string[];
 }
 
+/**
+ * ⚠️ `email_2` DOIT RESTER DANS CETTE LISTE. `requete<ClientDestinataire>` type le
+ * resultat sans le verifier : une colonne absente du SELECT arrive `undefined`,
+ * `resoudreDestinataires` ne voit qu'une adresse, et la seconde cesse d'etre
+ * servie SANS QU'AUCUN TYPE NI AUCUN TEST UNITAIRE NE BRONCHE. Le seul signe
+ * serait un compte de destinataires plus bas que prevu, dans un ecran ou
+ * personne ne connait le chiffre attendu.
+ */
 const COLONNES_CLIENT = `id, nom_entreprise, dirigeant, numero_dossier,
-                         date_cloture, regime_fiscal, email`;
+                         date_cloture, regime_fiscal, email, email_2`;
 
 /**
  * `code_ape` réduit à ce qui se compare : `62.01 Z`, `62.01Z` et `6201z`
@@ -188,7 +224,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
    * « on ne sait pas quel est son métier ».
    */
   app.get('/api/campagnes/codes-naf', async (request, reply) => {
-    const session = await exigerAdmin(request, reply);
+    const session = await exigerSession(request, reply);
     if (!session) return;
 
     // Le seau vide est un groupe comme les autres : une seule passe sur la table,
@@ -219,7 +255,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
   app.post<{ Body: { filtres?: Filtres; corps?: string; retires?: string[] } }>(
     '/api/campagnes/apercu',
     async (request, reply) => {
-      const session = await exigerAdmin(request, reply);
+      const session = await exigerSession(request, reply);
       if (!session) return;
 
       const { filtres = {}, corps = '', retires = [] } = request.body ?? {};
@@ -269,7 +305,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
   app.post<{ Body: { filtres?: Filtres; sujet?: string; corps?: string; retires?: string[] } }>(
     '/api/campagnes',
     async (request, reply) => {
-      const session = await exigerAdmin(request, reply);
+      const session = await exigerSession(request, reply);
       if (!session) return;
 
       const sujet = (request.body?.sujet ?? '').trim();
@@ -357,7 +393,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
 
   /** L'historique, avec l'etat reel des envois lu dans la file. */
   app.get('/api/campagnes', async (request, reply) => {
-    const session = await exigerAdmin(request, reply);
+    const session = await exigerSession(request, reply);
     if (!session) return;
 
     const lignes = await requete<{

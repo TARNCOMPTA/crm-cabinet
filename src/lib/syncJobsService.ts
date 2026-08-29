@@ -1,12 +1,14 @@
 import { supabase } from './supabase';
+import type { Json } from '../types/database';
 
-// sync_jobs is not yet present in the generated Database types, so we cast the
-// client to `any` for this table only.
-const db = supabase as unknown as {
-  from: (table: string) => any;
-  channel: (name: string) => any;
-  removeChannel: (channel: unknown) => void;
-};
+/**
+ * Le client typé, sans détour.
+ *
+ * Ce fichier portait « sync_jobs n'est pas encore dans les types générés » et
+ * castait le client en conséquence. La table y est maintenant : le commentaire
+ * était devenu faux, et le cast ne faisait plus que désarmer le compilateur.
+ */
+const db = supabase;
 
 export type SyncJobType =
   | 'inpi_single'
@@ -30,7 +32,7 @@ export interface SyncJob {
   processed: number;
   success_count: number;
   error_count: number;
-  payload: Record<string, unknown>;
+  payload: Json;
   result: Record<string, unknown>;
   message: string;
   started_at: string | null;
@@ -50,7 +52,7 @@ interface CreateSyncJobInput {
   userId: string;
   jobType: SyncJobType;
   total?: number;
-  payload?: Record<string, unknown>;
+  payload?: Json;
   message?: string;
 }
 
@@ -77,10 +79,11 @@ export async function createSyncJob(input: CreateSyncJobInput): Promise<SyncJob 
 
 interface UpdateSyncJobInput {
   processed?: number;
+  total?: number;
   success_count?: number;
   error_count?: number;
   message?: string;
-  result?: Record<string, unknown>;
+  result?: Json;
   status?: SyncJobStatus;
 }
 
@@ -91,7 +94,7 @@ export async function updateSyncJob(jobId: string, patch: UpdateSyncJobInput): P
 interface FinalizeSyncJobInput {
   status: SyncJobStatus;
   message?: string;
-  result?: Record<string, unknown>;
+  result?: Json;
   successCount?: number;
   errorCount?: number;
   processed?: number;
@@ -99,7 +102,7 @@ interface FinalizeSyncJobInput {
 }
 
 export async function finalizeSyncJob(jobId: string, input: FinalizeSyncJobInput): Promise<void> {
-  const patch: Record<string, unknown> = {
+  const patch: UpdateSyncJobInput & { finished_at: string } = {
     status: input.status,
     finished_at: new Date().toISOString(),
   };

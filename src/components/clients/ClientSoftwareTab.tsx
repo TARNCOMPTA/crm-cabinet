@@ -9,6 +9,7 @@ import { Input } from '../ui/Input';
 import { SearchableSelect } from '../ui/SearchableSelect';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Package, Plus, Trash2, Calendar } from 'lucide-react';
+import { codeErreur } from '../../lib/erreurs';
 
 interface Software {
   id: string;
@@ -130,8 +131,8 @@ export function ClientSoftwareTab({ clientId }: Props) {
       setShowModal(false);
       setFormData({ software_id: '', start_date: '', end_date: '', notes: '' });
       loadData();
-    } catch (error: any) {
-      if (error.code === '23505') {
+    } catch (error) {
+      if (codeErreur(error) === '23505') {
         showToast('Ce logiciel est deja assigne', 'error');
       } else {
         showToast("Erreur lors de l'assignation", 'error');

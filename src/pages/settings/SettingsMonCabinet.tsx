@@ -76,7 +76,7 @@ export function SettingsMonCabinet() {
           logo_url: data.logo_url || '',
         });
       }
-    } catch (error) {
+    } catch {
       showToast('Erreur lors du chargement des informations du cabinet', 'error');
     } finally {
       setLoading(false);
@@ -106,7 +106,7 @@ export function SettingsMonCabinet() {
       if (error) throw error;
 
       showToast('Informations du cabinet mises a jour', 'success');
-    } catch (error: any) {
+    } catch {
       showToast('Erreur lors de la mise a jour', 'error');
     } finally {
       setSaving(false);
@@ -164,7 +164,7 @@ export function SettingsMonCabinet() {
       setFormData((prev) => ({ ...prev, logo_url: publicUrl }));
       setPreviewUrl(null);
       showToast('Logo mis a jour', 'success');
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de l\'upload du logo', 'error');
     } finally {
       setUploadingLogo(false);
@@ -192,7 +192,7 @@ export function SettingsMonCabinet() {
       setFormData((prev) => ({ ...prev, logo_url: '' }));
       setPreviewUrl(null);
       showToast('Logo supprime', 'success');
-    } catch (error) {
+    } catch {
       showToast('Erreur lors de la suppression du logo', 'error');
     } finally {
       setDeletingLogo(false);

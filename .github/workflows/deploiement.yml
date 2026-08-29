@@ -47,6 +47,17 @@ on:
         type: boolean
         default: false
         required: false
+      # L'ISSUE DE SECOURS DU GARDE-FOU CI, ET ELLE EST INDISPENSABLE. Une
+      # protection sans issue devient un piege : le jour ou la CI est rouge pour
+      # une raison etrangere au produit — GitHub en panne, un miroir npm
+      # injoignable — le cabinet doit pouvoir deployer un correctif urgent sans
+      # attendre. Cochee, elle ne desactive pas le controle : elle en fait un
+      # avertissement, et le compte rendu garde la trace de ce qu'on a passe outre.
+      ignorer_ci:
+        description: "Deployer meme si la CI n'est pas verte (a justifier)"
+        type: boolean
+        default: false
+        required: false
 
 # Deux mises a jour en meme temps, ce sont deux `docker compose up` concurrents
 # sur la meme instance. `cancel-in-progress: false` : une mise a jour deja lancee
@@ -58,6 +69,9 @@ concurrency:
 
 permissions:
   contents: read
+  # Lire les check runs d'un commit, pour le garde-fou ci-dessous. En
+  # lecture seule : ce workflow ne relance ni ne modifie jamais une CI.
+  checks: read
 
 jobs:
   deployer:
@@ -107,10 +121,300 @@ jobs:
             exit 1
           fi
           cd "$INSTANCE"
+          # ⚠️ `-c safe.directory`, ICI AUSSI. Le commentaire de l'etape suivante
+          # notait que ces trois `git` echouaient sans que rien ne le montre —
+          # ils sont dans des `echo`, qui avalent le code de sortie. Le journal
+          # de chaque deploiement portait donc deux « fatal: detected dubious
+          # ownership » et un compte rendu vide :
+          #
+          #     Branche    :
+          #     Revision   :
+          #
+          # Constate le 2026-08-28. Le defaut etait decrit, jamais corrige.
+          GITSUR="safe.directory=$INSTANCE"
           echo "Instance   : $INSTANCE"
-          echo "Branche    : $(git rev-parse --abbrev-ref HEAD)"
-          echo "Revision   : $(git rev-parse --short HEAD)"
+          echo "Branche    : $(git -c "$GITSUR" rev-parse --abbrev-ref HEAD)"
+          echo "Revision   : $(git -c "$GITSUR" rev-parse --short HEAD)"
           echo "Utilisateur: $(id -un)"
+
+      # ==========================================================================
+      # LE GARDE-FOU : ON NE DEPLOIE PAS UN COMMIT DONT LA CI N'EST PAS VERTE.
+      #
+      # POURQUOI IL EXISTE. Ce depot est prive sur un compte personnel, et
+      # GitHub y reserve la protection de branche aux offres payantes : l'entree
+      # « Branches » n'apparait meme pas dans les reglages, et l'API des
+      # rulesets repond « Upgrade to GitHub Pro ». Rien n'empeche donc un commit
+      # d'atterrir sur `main` sans passer la CI.
+      #
+      # Ce n'est pas une crainte theorique. Les 18 et 19 aout 2026, quatre
+      # commits pousses directement sur `main` ont supprime 223 fichiers, dont
+      # tout `schema/` — que le Dockerfile copie. `main` ne construisait plus. La
+      # CI etait rouge depuis trois executions et PERSONNE NE L'A VU. Seul le
+      # fait que le deploiement soit manuel a epargne la production.
+      #
+      # Ce garde-fou remplace ce qui a manque : il n'empeche pas un mauvais
+      # commit d'atteindre `main`, il l'empeche d'atteindre le cabinet.
+      #
+      # SUR QUEL COMMIT IL PORTE. Pas `github.sha` — celui du lancement — mais la
+      # tete REELLE de la branche distante que `maj.sh` va tirer. Entre le clic
+      # et le `git pull` il peut s'ecouler une minute, et c'est precisement dans
+      # cette minute qu'un commit non verifie pourrait se glisser.
+      #
+      # TROIS FACONS D'ECHOUER, AUCUNE N'EST UN LAISSEZ-PASSER :
+      #   · aucune execution de CI sur ce commit — l'absence de preuve n'est pas
+      #     une preuve ;
+      #   · une execution encore en cours — « pas encore rouge » n'est pas vert ;
+      #   · une conclusion autre que success / skipped / neutral.
+      #
+      # `skipped` ET `neutral` PASSENT, ET C'EST VOULU : le job `image` de la CI
+      # se declare `skipped` hors de la branche par defaut, et GitHub compte
+      # `neutral` comme un succes. Les refuser rendrait le garde-fou toujours
+      # rouge — donc toujours contourne, donc inutile.
+      #
+      # S'IL NE PEUT PAS S'EXECUTER (python3 absent, API injoignable), IL REFUSE.
+      # Un garde-fou qui laisse passer quand il tombe en panne ne garde rien.
+      # `ignorer_ci` existe pour ces cas-la.
+      #
+      # Cette etape ne touche RIEN sur le serveur : elle lit la branche courante
+      # et interroge GitHub. Un refus laisse l'instance exactement dans l'etat ou
+      # elle etait — pas de sauvegarde, pas de `git pull`, pas de reconstruction.
+      # ==========================================================================
+      - name: Controle de la CI du commit a deployer
+        env:
+          INSTANCE: ${{ inputs.instance }}
+          IGNORER: ${{ inputs.ignorer_ci }}
+          DEPOT: ${{ github.repository }}
+          SHA_LANCEMENT: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          # ⚠️ LE NOM DU JOB DE CE WORKFLOW, A EXCLURE DU VERDICT — SANS QUOI LE
+          # GARDE-FOU DEVIENT UN PIEGE. Un deploiement rate depose lui aussi un
+          # check run sur le commit, nomme comme son job. Le compter reviendrait
+          # a refuser de RELANCER un deploiement apres un echec — exactement le
+          # moment ou il faut pouvoir relancer. Un echec de maj.sh ne dit rien de
+          # la CI, et maj.sh sait deja revenir en arriere tout seul.
+          # Doit rester identique a la cle du job ci-dessus (`deployer`).
+          JOB_DEPLOIEMENT: deployer
+        run: |
+          set -e
+          cd "$INSTANCE"
+
+          # ⚠️ `-c safe.directory` : SANS LUI, CETTE ETAPE NE PEUT MEME PAS LIRE
+          # LA BRANCHE. `$INSTANCE` appartient a root — c'est dit plus haut, et
+          # c'est voulu — tandis que le runner tourne sous un compte dedie. Git
+          # refuse alors d'ouvrir le depot (« detected dubious ownership ») et
+          # sort en 128. Les autres etapes ne le voyaient pas : leurs `git` sont
+          # dans des `echo` ou suivis de `|| echo '?'`, qui avalent l'echec.
+          #
+          # L'exception ne vaut que pour ce chemin precis, et la protection
+          # qu'elle leve vise le cas inverse du notre : un repertoire appartenant
+          # a MOINS privilegie que celui qui lance git. Ici c'est root qui
+          # possede le depot, et le runner qui lit.
+          GITSUR="safe.directory=$INSTANCE"
+
+          # Un depot illisible n'est pas un feu vert : on refuse, avec un motif
+          # lisible plutot qu'un code 128 nu.
+          VERDICT=""
+          BRANCHE=$(git -c "$GITSUR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+          if [ -z "$BRANCHE" ]; then
+            VERDICT="REFUS|impossible de lire la branche de $INSTANCE"
+            CIBLE="?"
+          else
+            # La tete distante telle que `git pull` la ramenera, demandee a
+            # L'API GITHUB ET NON A `git ls-remote`.
+            #
+            # ⚠️ POURQUOI PAS `ls-remote` : IL NE PEUT PAS MARCHER ICI. Le depot
+            # de l'instance a une URL SSH (`git@github.com:...`). `maj.sh` tourne
+            # sous `sudo` en root, qui porte la cle ; cette etape tourne sous le
+            # compte du runner, qui ne l'a pas. Constate au deploiement du
+            # 2026-08-24 : « origin/main injoignable », repli silencieux sur le
+            # commit du lancement — donc la fenetre entre le clic et le `git
+            # pull` restait ouverte, ce que ce controle est cense fermer.
+            #
+            # L'API repond avec le jeton du workflow, sans cle SSH, et rend
+            # exactement la reference que `git pull` ira chercher.
+            CIBLE=$(curl -sS --max-time 20 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$DEPOT/git/ref/heads/$BRANCHE" 2>/dev/null \
+              | python3 -c 'import sys,json;print(json.load(sys.stdin).get("object",{}).get("sha",""))' 2>/dev/null \
+              || true)
+            if [ -z "$CIBLE" ]; then
+              echo "::warning::tete de $BRANCHE introuvable chez GitHub, controle sur le commit du lancement."
+              CIBLE="$SHA_LANCEMENT"
+            fi
+            echo "Branche deployee : $BRANCHE"
+            echo "Commit controle  : $CIBLE"
+            if [ "$CIBLE" != "$SHA_LANCEMENT" ]; then
+              echo "::notice::$BRANCHE a bouge depuis le lancement ($SHA_LANCEMENT -> $CIBLE) ; c'est la tete actuelle qui est controlee."
+            fi
+          fi
+
+          if [ -z "$VERDICT" ]; then
+            REPONSE=$(curl -sS --max-time 30 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$DEPOT/commits/$CIBLE/check-runs?per_page=100" \
+              || echo '')
+
+            VERDICT=$(printf '%s' "$REPONSE" | python3 -c '
+          import os, sys, json
+          try:
+              runs = json.load(sys.stdin).get("check_runs", [])
+          except Exception as e:
+              print("REFUS|reponse GitHub illisible : %s" % e)
+              raise SystemExit
+          # Les tentatives de deploiement anterieures ne sont pas un verdict sur
+          # le code : on les retire avant de juger.
+          runs = [r for r in runs if r.get("name") != os.environ.get("JOB_DEPLOIEMENT")]
+          if not runs:
+              print("REFUS|aucune execution de CI sur ce commit")
+              raise SystemExit
+          encours = sorted(r["name"] for r in runs if r.get("status") != "completed")
+          if encours:
+              print("REFUS|CI encore en cours : %s" % ", ".join(encours))
+              raise SystemExit
+          mauvais = sorted(
+              "%s (%s)" % (r["name"], r.get("conclusion"))
+              for r in runs
+              if r.get("conclusion") not in ("success", "skipped", "neutral")
+          )
+          if mauvais:
+              print("REFUS|%s" % ", ".join(mauvais))
+              raise SystemExit
+          print("VERT|%d controles passes" % len(runs))
+          ' 2>/dev/null || echo "REFUS|controle impossible (python3 absent ou API injoignable)")
+          fi
+
+          ETAT=${VERDICT%%|*}
+          MOTIF=${VERDICT#*|}
+
+          if [ "$ETAT" = "VERT" ]; then
+            echo "CI verte : $MOTIF."
+            exit 0
+          fi
+
+          if [ "$IGNORER" = "true" ]; then
+            echo "::warning::CI NON VERTE ($MOTIF) — deploiement force par « ignorer_ci »."
+            {
+              echo "### ⚠️ Deploiement force malgre la CI"
+              echo ""
+              echo "Commit \`$CIBLE\` sur \`$BRANCHE\` : **$MOTIF**."
+              echo ""
+              echo "L'option « ignorer_ci » a ete cochee : cette mise a jour n'a pas ete verifiee."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::error::Deploiement refuse — $MOTIF."
+          {
+            echo "### ⛔ Deploiement refuse"
+            echo ""
+            echo "Commit \`$CIBLE\` sur \`$BRANCHE\` : **$MOTIF**."
+            echo ""
+            echo "Rien n'a ete touche sur le serveur : ni sauvegarde, ni \`git pull\`, ni reconstruction."
+            echo ""
+            echo "Corrigez la CI puis relancez. En cas d'urgence, relancez en cochant **« Deployer meme si la CI n'est pas verte »**."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      # ==========================================================================
+      # LES MODIFICATIONS LOCALES DE L'INSTANCE.
+      #
+      # Le depot du serveur n'est pas une copie propre : on y edite parfois un
+      # fichier a la main. `docker-compose.partage.yml` l'est depuis un moment,
+      # sans que personne ne s'en souvienne exactement.
+      #
+      # Tant que les commits a tirer ne touchent pas ces fichiers, `git pull`
+      # passe et rien ne se voit. Le jour ou ils y touchent, il refuse — au
+      # milieu de `maj.sh`, APRES la sauvegarde. `set -e` fait echouer le script,
+      # donc rien n'est casse ; mais le deploiement s'arrete la, et il faut aller
+      # trancher sur le serveur, dans l'urgence, sans savoir ce que la
+      # modification contenait ni pourquoi.
+      #
+      # CETTE ETAPE DEPLACE LA DECISION AVANT LE PREMIER GESTE. Elle refuse le
+      # deploiement quand — et seulement quand — un fichier modifie localement
+      # figure parmi ceux que le pull va reecrire. Un depot avec des
+      # modifications sans rapport passe, avec un simple avertissement : bloquer
+      # tous les deploiements pour un fichier qu'on ne touche pas serait un
+      # remede pire que le mal.
+      #
+      # ⚠️ ON N'AFFICHE QUE DES NOMS DE FICHIERS, jamais un diff. Ces journaux
+      # sont lisibles par qui a acces au depot, et une modification locale de
+      # `docker-compose` est precisement l'endroit ou peut trainer une valeur
+      # qu'on ne veut pas y voir.
+      - name: Modifications locales sur l'instance
+        env:
+          INSTANCE: ${{ inputs.instance }}
+          DEPOT: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "$INSTANCE"
+          GITSUR="safe.directory=$INSTANCE"
+
+          # `--no-optional-locks` : le depot appartient a root, le runner n'y
+          # ecrit pas. Sans ce drapeau, `status` tente de rafraichir l'index et
+          # echoue sur un « permission denied » qui n'a rien a voir avec l'objet
+          # du controle.
+          # `cut -c4-` et non `awk '{print $NF}'` : un nom de fichier peut
+          # contenir des espaces, et porcelain le rend alors entre guillemets.
+          # Le `sed` ramene un renommage « ancien -> nouveau » a sa cible.
+          MODIFS=$(git -c "$GITSUR" --no-optional-locks status --porcelain 2>/dev/null \
+                   | grep -v '^??' | cut -c4- | sed 's/.* -> //' | tr -d '"' | sort -u || true)
+
+          if [ -z "$MODIFS" ]; then
+            echo "Depot de l'instance : propre."
+            exit 0
+          fi
+
+          echo "::warning::Le depot de l'instance porte des modifications locales."
+          echo "Fichiers modifies sur le serveur :"
+          echo "$MODIFS" | sed 's/^/  - /'
+
+          LOCAL=$(git -c "$GITSUR" rev-parse HEAD 2>/dev/null || true)
+          BRANCHE=$(git -c "$GITSUR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+          # Les fichiers que le pull va reecrire, demandes a l'API pour la meme
+          # raison que le garde-fou ci-dessus : le runner n'a pas la cle SSH du
+          # depot et ne peut donc rien tirer lui-meme.
+          ENTRANTS=$(curl -sS --max-time 20 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$DEPOT/compare/$LOCAL...$BRANCHE" 2>/dev/null \
+            | python3 -c 'import sys,json;print("\n".join(f["filename"] for f in json.load(sys.stdin).get("files",[])))' 2>/dev/null \
+            || true)
+
+          if [ -z "$ENTRANTS" ]; then
+            echo "::warning::Liste des fichiers entrants indisponible ; on laisse maj.sh trancher."
+            exit 0
+          fi
+
+          CONFLITS=$(echo "$MODIFS" | grep -Fxf <(echo "$ENTRANTS") || true)
+          if [ -z "$CONFLITS" ]; then
+            echo "Aucun de ces fichiers n'est touche par les commits a tirer : le pull passera."
+            exit 0
+          fi
+
+          {
+            echo "## Deploiement refuse — modification locale en travers du pull"
+            echo ""
+            echo "Ces fichiers sont modifies **sur le serveur** ET reecrits par les commits a tirer :"
+            echo ""
+            echo "$CONFLITS" | sed 's/^/- `/;s/$/`/'
+            echo ""
+            echo "\`git pull\` les refuserait, au milieu de \`maj.sh\` et apres la sauvegarde."
+            echo "Rien n'a ete touche : ni sauvegarde, ni \`git pull\`, ni reconstruction."
+            echo ""
+            echo "Sur le serveur, dans \`$INSTANCE\`, regardez d'abord ce que contient la modification :"
+            echo ""
+            echo "\`\`\`sh"
+            echo "sudo git diff -- $CONFLITS"
+            echo "\`\`\`"
+            echo ""
+            echo "Puis, selon ce qu'elle vaut : la porter dans le depot et la commiter, ou"
+            echo "\`sudo git checkout --\` le fichier si elle n'a plus lieu d'etre."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Modification locale en travers du pull : $(echo "$CONFLITS" | tr '\n' ' ')"
+          exit 1
 
       # maj.sh s'arrete de lui-meme si la sauvegarde est suspecte, et affiche la
       # marche a suivre pour revenir en arriere si l'application ne repond pas.
@@ -143,8 +447,12 @@ jobs:
           INSTANCE: ${{ inputs.instance }}
         run: |
           cd "$INSTANCE" || exit 0
-          REVISION=$(git rev-parse --short HEAD 2>/dev/null || echo '?')
-          BRANCHE=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
+          # Sans l'exception, ces deux lectures echouent et le compte rendu
+          # affiche « ? » a la place de ce qui tourne — c'est-a-dire l'inverse
+          # de ce qu'il existe pour dire.
+          GITSUR="safe.directory=$INSTANCE"
+          REVISION=$(git -c "$GITSUR" rev-parse --short HEAD 2>/dev/null || echo '?')
+          BRANCHE=$(git -c "$GITSUR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
           SANTE=$(sudo -n docker compose exec -T app node -e \
             "fetch('http://localhost:3000/api/sante').then(r=>r.json()).then(d=>console.log(JSON.stringify(d)))" \
             2>/dev/null || echo 'injoignable')

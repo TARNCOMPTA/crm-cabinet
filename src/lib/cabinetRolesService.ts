@@ -1,9 +1,11 @@
 import { supabase } from './supabase';
 import { parLots } from './lots';
 
-const db = supabase as unknown as {
-  from: (table: string) => any;
-};
+/**
+ * Le client typé, sans détour : `cabinet_collaborator_roles` figure maintenant
+ * dans les types générés, le cast qui la contournait n'a plus d'objet.
+ */
+const db = supabase;
 
 export type RoleColor =
   | 'teal'

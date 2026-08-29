@@ -17,6 +17,7 @@ import { AssembliesTab } from '../components/legal/AssembliesTab';
 import { OfficerToCompanyTab } from '../components/legal/OfficerToCompanyTab';
 import { CompanyToOfficerTab } from '../components/legal/CompanyToOfficerTab';
 import { DepotComptesTab } from '../components/legal/DepotComptesTab';
+import { messageErreur } from '../lib/erreurs';
 import {
   ClientWithCollaborators,
   ClientWithOfficers,
@@ -24,7 +25,19 @@ import {
   LegalAct,
   TabType,
   Client,
+  CompanyOfficer,
+  OfficerCompany,
 } from '../components/legal/legalTypes';
+
+/**
+ * Les lignes de `officer_companies` telles que les deux requetes les demandent :
+ * la ligne de mandat, plus le dirigeant et le client joints en entier.
+ *
+ * `parLots()` rend `unknown` — il ne peut pas deviner le `select`. C'est ce qui
+ * poussait a ecrire `(oc: any)`, et ce qui masquait que `officer` et `client`
+ * peuvent manquer si la jointure ne ramene rien.
+ */
+type MandatJoint = OfficerCompany & { officer: CompanyOfficer; client: Client };
 
 export function Legal() {
   const { profile } = useAuth();
@@ -85,8 +98,8 @@ export function Legal() {
         .order('nom_entreprise');
       if (err) throw err;
       setAllClients((data || []) as ClientWithCollaborators[]);
-    } catch (err: any) {
-      setError(err?.message || 'Erreur lors du chargement');
+    } catch (err) {
+      setError(messageErreur(err, 'Erreur lors du chargement'));
     } finally {
       setLoading(false);
     }
@@ -127,7 +140,7 @@ export function Legal() {
     );
 
     const idMap = new Map<string, OfficerWithCompanies>();
-    (data || []).forEach((oc: any) => {
+    (data as MandatJoint[] || []).forEach((oc) => {
       const id = oc.officer.id;
       if (!idMap.has(id)) idMap.set(id, { ...oc.officer, mandates: [] });
       const officer = idMap.get(id)!;
@@ -171,7 +184,7 @@ export function Legal() {
 
     const map = new Map<string, ClientWithOfficers>();
     clientsList.forEach(c => map.set(c.id, { ...c, officers: [] }));
-    (data || []).forEach((oc: any) => {
+    (data as MandatJoint[] || []).forEach((oc) => {
       map.get(oc.client_id)?.officers.push({ ...oc, officer: oc.officer });
     });
     setClientsWithOfficers(Array.from(map.values()));
@@ -196,8 +209,8 @@ export function Legal() {
         else if (activeTab === 'assemblies' || activeTab === 'depot-comptes') await loadDepotComptes(filteredClients);
         else if (activeTab === 'officer-to-company') await loadOfficersWithCompanies(filteredClients);
         else if (activeTab === 'company-to-officer') await loadClientsWithOfficers(filteredClients);
-      } catch (err: any) {
-        setError(err?.message || 'Erreur lors du chargement');
+      } catch (err) {
+        setError(messageErreur(err, 'Erreur lors du chargement'));
       }
     };
     loadTabData();

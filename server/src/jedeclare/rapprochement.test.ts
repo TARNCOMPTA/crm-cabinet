@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { indexerClients, rapprocher, type ClientRapprochable } from './rapprochement';
+import {
+  estHorsPortefeuille,
+  indexerClients,
+  rapprocher,
+  type ClientRapprochable,
+} from './rapprochement';
 
 /**
  * Le rapprochement société ↔ client.
@@ -118,5 +123,75 @@ describe('societes hors portefeuille', () => {
   it('un SIRET trop court ne vaut pas un SIREN', () => {
     const index = indexerClients([client({ id: 'a', siren: '123456789' })]);
     expect(rapprocher({ siret: '1234567' }, index).niveau).toBe('aucun');
+  });
+});
+
+/**
+ * Qui disparaît du suivi des échéances.
+ *
+ * La règle décide de ce que le cabinet VOIT COMME TRAVAIL À FAIRE. Une clause
+ * de trop et un dossier bien vivant s'évapore de l'écran sans que personne ne
+ * s'en aperçoive ; une clause de moins et le suivi se remplit de dossiers
+ * partis. C'est aussi la seule partie du calcul d'échéances qui soit partagée
+ * entre l'écran et l'outil MCP — la tester ici, c'est la tester pour les deux.
+ */
+describe('estHorsPortefeuille', () => {
+  const fiche = (p: Partial<Parameters<typeof estHorsPortefeuille>[0]> = {}) => ({
+    statut: 'actif',
+    date_sortie_cabinet: null,
+    ...p,
+  });
+
+  it('garde un dossier actif sans date de sortie', () => {
+    expect(estHorsPortefeuille(fiche())).toBe(false);
+  });
+
+  it('écarte un dossier qui porte une date de sortie', () => {
+    expect(estHorsPortefeuille(fiche({ date_sortie_cabinet: '2024-03-31' }))).toBe(true);
+  });
+
+  /**
+   * La date n'est comparée à RIEN. Un dossier parti ne doit pas réapparaître
+   * parce qu'on regarde une fenêtre antérieure à son départ, ni — comme ici —
+   * parce que sa sortie est encore à venir.
+   */
+  it('écarte même une date de sortie future', () => {
+    expect(estHorsPortefeuille(fiche({ date_sortie_cabinet: '2099-12-31' }))).toBe(true);
+  });
+
+  /**
+   * Beaucoup d'archivages anciens n'ont jamais reçu de date : ne regarder que
+   * `date_sortie_cabinet` laissait ces dossiers-là dans le suivi.
+   */
+  it('écarte une fiche archivée sans date de sortie', () => {
+    expect(estHorsPortefeuille(fiche({ statut: 'archive' }))).toBe(true);
+  });
+
+  it('écarte une fiche inactive sans date de sortie', () => {
+    expect(estHorsPortefeuille(fiche({ statut: 'inactif' }))).toBe(true);
+  });
+
+  /**
+   * Un prospect qui télédéclare est une ANOMALIE, pas un dossier rangé : le
+   * suivi doit la montrer, au même titre qu'une société non rapprochée.
+   */
+  it('garde un prospect', () => {
+    expect(estHorsPortefeuille(fiche({ statut: 'prospect' }))).toBe(false);
+  });
+
+  it('garde une fiche dont le statut est absent', () => {
+    expect(estHorsPortefeuille(fiche({ statut: null }))).toBe(false);
+  });
+
+  /**
+   * `statut` vient d'une colonne texte libre côté base : une valeur inconnue ne
+   * doit pas faire disparaître le dossier en silence.
+   */
+  it('garde une fiche au statut inconnu', () => {
+    expect(estHorsPortefeuille(fiche({ statut: 'en_cours_de_reprise' }))).toBe(false);
+  });
+
+  it('écarte une chaîne vide de date comme une absence de date', () => {
+    expect(estHorsPortefeuille(fiche({ date_sortie_cabinet: '' }))).toBe(false);
   });
 });

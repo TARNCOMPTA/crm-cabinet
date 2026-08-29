@@ -10,42 +10,21 @@
  * JavaScript de la page — c'est ce qui protège d'un vol par XSS.
  */
 
-import jwt from 'jsonwebtoken';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from '../config.js';
+import { signerAvec, verifierAvec, type Revendications } from './jeton.js';
 
-/** Rôle Postgres endossé par les requêtes du front via PostgREST. */
-export const ROLE_POSTGREST = 'authenticated';
-
-export interface Revendications {
-  /** Identifiant du profil. `sub` est le nom attendu par PostgREST. */
-  sub: string;
-  /** Rôle Postgres, pas rôle applicatif. */
-  role: string;
-  /** Rôle applicatif : 'admin' ou 'user'. */
-  roleApp: string;
-  email: string;
-  exp?: number;
-}
+// La signature et la vérification vivent dans `jeton.ts`, sans configuration :
+// c'est ce qui les rend exerçables. Ici on ne fait que leur passer le secret.
+export { ROLE_POSTGREST } from './jeton.js';
+export type { Revendications } from './jeton.js';
 
 export function signerJeton(profil: { id: string; email: string; role: string }): string {
-  const revendications: Revendications = {
-    sub: profil.id,
-    role: ROLE_POSTGREST,
-    roleApp: profil.role,
-    email: profil.email,
-  };
-  return jwt.sign(revendications, config.session.secret, {
-    expiresIn: config.session.dureeSecondes,
-  });
+  return signerAvec(profil, config.session.secret, config.session.dureeSecondes);
 }
 
 export function verifierJeton(jeton: string): Revendications | null {
-  try {
-    return jwt.verify(jeton, config.session.secret) as Revendications;
-  } catch {
-    return null;
-  }
+  return verifierAvec(jeton, config.session.secret);
 }
 
 export function poserCookie(reply: FastifyReply, jeton: string): void {

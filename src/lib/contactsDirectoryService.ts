@@ -442,7 +442,7 @@ export async function fetchContactsForClient(
 
   if (error) throw error;
 
-  const contacts: ClientDirectoryContactLink[] = (links || []).map((l: any) => ({
+  const contacts: ClientDirectoryContactLink[] = (links || []).map((l) => ({
     linkId: l.id,
     contactId: l.contact_id,
     firstName: l.directory_contacts?.first_name || '',
@@ -509,23 +509,35 @@ export async function ensureDirectoryCompanyForClientData(
   return created.id;
 }
 
-export async function searchCabinetClients(
-  query: string
-): Promise<Array<{
+/**
+ * Une fiche client telle que la recherche du cabinet la rend.
+ *
+ * ⚠️ `adresse_ligne1`, `code_postal` et `ville` ONT ETE AJOUTES POUR CORRIGER UN
+ * DEFAUT REEL. `CompanyFormModal.handleSelectClient()` les lisait deja pour
+ * pre-remplir le formulaire, mais la requete ne les demandait pas : le
+ * parametre etant type `any`, les trois champs recevaient `undefined` sans que
+ * rien ne le signale, et l'adresse restait vide apres avoir choisi un client.
+ */
+export interface ClientTrouve {
   id: string;
   nom_entreprise: string;
   siren: string | null;
   siret: string | null;
   forme_juridique: string | null;
   adresse: string | null;
+  adresse_ligne1: string | null;
+  code_postal: string | null;
+  ville: string | null;
   email: string | null;
   telephone: string | null;
   contact_principal: string | null;
-}>> {
+}
+
+export async function searchCabinetClients(query: string): Promise<ClientTrouve[]> {
   const term = `%${query}%`;
   const { data, error } = await supabase
     .from('clients')
-    .select('id, nom_entreprise, siren, siret, forme_juridique, adresse, email, telephone, contact_principal')
+    .select('id, nom_entreprise, siren, siret, forme_juridique, adresse, adresse_ligne1, code_postal, ville, email, telephone, contact_principal')
     .eq('statut', 'actif')
     .or(`nom_entreprise.ilike.${term},siren.ilike.${term},siret.ilike.${term}`)
     .order('nom_entreprise')

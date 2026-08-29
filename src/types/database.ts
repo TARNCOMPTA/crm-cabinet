@@ -980,6 +980,73 @@ export interface Database {
           },
         ]
       }
+      client_associes: {
+        Row: {
+          id: string
+          client_id: string
+          officer_id: string
+          nb_parts: number
+          demembrement: string
+          date_effet: string | null
+          legal_act_id: string | null
+          acte_source: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+          source: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          officer_id: string
+          nb_parts: number
+          demembrement?: string
+          date_effet?: string | null
+          legal_act_id?: string | null
+          acte_source?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          source?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          officer_id?: string
+          nb_parts?: number
+          demembrement?: string
+          date_effet?: string | null
+          legal_act_id?: string | null
+          acte_source?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_associes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_associes_legal_act_id_fkey"
+            columns: ["legal_act_id"]
+            isOneToOne: false
+            referencedRelation: "legal_acts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_associes_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "company_officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_collaborators: {
         Row: {
           id: string
@@ -1187,6 +1254,11 @@ export interface Database {
           nom_commercial: string | null
           date_immatriculation: string | null
           greffe: string | null
+          /** Surcharge du jour d'echeance TVA. `null` = applique la regle CA3. */
+          tva_jour_echeance: number | null
+          email_2: string | null
+          parts_totales: number | null
+          accepte_mailings: boolean
         }
         Insert: {
           id?: string
@@ -1247,6 +1319,10 @@ export interface Database {
           nom_commercial?: string | null
           date_immatriculation?: string | null
           greffe?: string | null
+          tva_jour_echeance?: number | null
+          email_2?: string | null
+          parts_totales?: number | null
+          accepte_mailings?: boolean
         }
         Update: {
           id?: string
@@ -1307,6 +1383,10 @@ export interface Database {
           nom_commercial?: string | null
           date_immatriculation?: string | null
           greffe?: string | null
+          tva_jour_echeance?: number | null
+          email_2?: string | null
+          parts_totales?: number | null
+          accepte_mailings?: boolean
         }
         Relationships: [
           {
@@ -1870,6 +1950,7 @@ export interface Database {
       jedeclare_teletransmissions: {
         Row: {
           id: string
+          compte: number
           numero: string
           type_piece: string
           ligne: number
@@ -1895,6 +1976,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          compte?: number
           numero: string
           type_piece: string
           ligne?: number
@@ -1920,6 +2002,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          compte?: number
           numero?: string
           type_piece?: string
           ligne?: number
@@ -2155,6 +2238,92 @@ export interface Database {
         }
         Relationships: []
       }
+      mailing_campagnes: {
+        Row: {
+          id: string
+          sujet: string
+          corps: string
+          filtres: Json
+          cree_par: string | null
+          created_at: string
+          envoye_le: string | null
+          nb_destinataires: number
+          nb_exclus: number
+        }
+        Insert: {
+          id?: string
+          sujet: string
+          corps: string
+          filtres?: Json
+          cree_par?: string | null
+          created_at?: string
+          envoye_le?: string | null
+          nb_destinataires?: number
+          nb_exclus?: number
+        }
+        Update: {
+          id?: string
+          sujet?: string
+          corps?: string
+          filtres?: Json
+          cree_par?: string | null
+          created_at?: string
+          envoye_le?: string | null
+          nb_destinataires?: number
+          nb_exclus?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailing_campagnes_cree_par_fkey"
+            columns: ["cree_par"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mailing_destinataires: {
+        Row: {
+          id: string
+          campagne_id: string
+          client_id: string | null
+          email: string
+          email_queue_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          campagne_id: string
+          client_id?: string | null
+          email: string
+          email_queue_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          campagne_id?: string
+          client_id?: string | null
+          email?: string
+          email_queue_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailing_destinataires_campagne_id_fkey"
+            columns: ["campagne_id"]
+            isOneToOne: false
+            referencedRelation: "mailing_campagnes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailing_destinataires_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mcp_api_keys: {
         Row: {
           id: string
@@ -2166,6 +2335,7 @@ export interface Database {
           created_by: string | null
           created_at: string
           revoked_at: string | null
+          peut_ecrire: boolean
         }
         Insert: {
           id?: string
@@ -2177,6 +2347,7 @@ export interface Database {
           created_by?: string | null
           created_at?: string
           revoked_at?: string | null
+          peut_ecrire?: boolean
         }
         Update: {
           id?: string
@@ -2188,11 +2359,157 @@ export interface Database {
           created_by?: string | null
           created_at?: string
           revoked_at?: string | null
+          peut_ecrire?: boolean
         }
         Relationships: [
           {
             foreignKeyName: "mcp_api_keys_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_oauth_clients: {
+        Row: {
+          id: string
+          client_id: string
+          client_secret_hash: string | null
+          client_name: string
+          redirect_uris: string[]
+          is_active: boolean
+          created_at: string
+          last_used_at: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          client_secret_hash?: string | null
+          client_name?: string
+          redirect_uris?: string[]
+          is_active?: boolean
+          created_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          client_secret_hash?: string | null
+          client_name?: string
+          redirect_uris?: string[]
+          is_active?: boolean
+          created_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      mcp_oauth_codes: {
+        Row: {
+          id: string
+          code_hash: string
+          client_id: string
+          redirect_uri: string
+          code_challenge: string
+          code_challenge_method: string
+          scope: string
+          user_id: string
+          expire_le: string
+          utilise_le: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code_hash: string
+          client_id: string
+          redirect_uri: string
+          code_challenge: string
+          code_challenge_method?: string
+          scope?: string
+          user_id: string
+          expire_le: string
+          utilise_le?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code_hash?: string
+          client_id?: string
+          redirect_uri?: string
+          code_challenge?: string
+          code_challenge_method?: string
+          scope?: string
+          user_id?: string
+          expire_le?: string
+          utilise_le?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_oauth_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_oauth_tokens: {
+        Row: {
+          id: string
+          chaine: string
+          acces_hash: string
+          rafraichir_hash: string | null
+          client_id: string
+          user_id: string
+          scope: string
+          resource: string
+          acces_expire_le: string
+          rafraichir_expire_le: string | null
+          remplace_le: string | null
+          revoque_le: string | null
+          created_at: string
+          last_used_at: string | null
+        }
+        Insert: {
+          id?: string
+          chaine: string
+          acces_hash: string
+          rafraichir_hash?: string | null
+          client_id: string
+          user_id: string
+          scope?: string
+          resource?: string
+          acces_expire_le: string
+          rafraichir_expire_le?: string | null
+          remplace_le?: string | null
+          revoque_le?: string | null
+          created_at?: string
+          last_used_at?: string | null
+        }
+        Update: {
+          id?: string
+          chaine?: string
+          acces_hash?: string
+          rafraichir_hash?: string | null
+          client_id?: string
+          user_id?: string
+          scope?: string
+          resource?: string
+          acces_expire_le?: string
+          rafraichir_expire_le?: string | null
+          remplace_le?: string | null
+          revoque_le?: string | null
+          created_at?: string
+          last_used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_oauth_tokens_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3091,6 +3408,33 @@ export interface Database {
         }
         Relationships: []
       }
+      taches_planifiees: {
+        Row: {
+          nom: string
+          derniere_execution: string
+          dernier_succes: string | null
+          duree_ms: number
+          statut: string
+          detail: string | null
+        }
+        Insert: {
+          nom: string
+          derniere_execution: string
+          dernier_succes?: string | null
+          duree_ms: number
+          statut: string
+          detail?: string | null
+        }
+        Update: {
+          nom?: string
+          derniere_execution?: string
+          dernier_succes?: string | null
+          duree_ms?: number
+          statut?: string
+          detail?: string | null
+        }
+        Relationships: []
+      }
       task_attachments: {
         Row: {
           id: string
@@ -3768,7 +4112,17 @@ export interface Database {
         Returns: undefined
       }
       process_email_digest: {
-        Args: Record<PropertyKey, never>
+        Args: {
+          p_base_url: string
+        }
+        Returns: undefined
+      }
+      replace_client_associes: {
+        Args: {
+          p_client_id: string
+          p_lignes: Json
+          p_source?: string
+        }
         Returns: undefined
       }
       replace_client_collaborators: {
@@ -3805,6 +4159,24 @@ export interface BilanCardWithDetails extends BilanCard {
   } | null
   checklist_items: Array<BilanChecklistItem & {
     template: { name: string; position: number } | null
+    /**
+     * OPTIONNEL, et il faut que ça le reste : `fetchBilanCards()` a DEUX
+     * requêtes, et la seconde — celle de repli quand la table des pièces
+     * jointes est absente — ne les demande pas. Les déclarer obligatoires
+     * mentirait sur la moitié des appels.
+     *
+     * Leur absence de ce type est ce qui poussait `BilanCard` et
+     * `BilanCardDetailModal` à écrire `(item as any).attachments`.
+     */
+    attachments?: Array<{
+      id: string
+      file_name: string
+      file_size: number | null
+      mime_type: string | null
+      storage_path: string
+      uploaded_by: string | null
+      created_at: string | null
+    }>
   }>
 }
 

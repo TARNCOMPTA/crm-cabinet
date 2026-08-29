@@ -2,7 +2,7 @@
 # ============================================================================
 # CRM Cabinet — installation sur un VPS Ubuntu (22.04 / 24.04 / 26.04)
 #
-#   curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crmcabinet/main/installation/install.sh -o install.sh
+#   curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/installation/install.sh -o install.sh
 #   sudo sh install.sh
 #
 # Le script installe Docker si besoin, ouvre le pare-feu (80/443/SSH), récupère
@@ -17,7 +17,24 @@
 # ============================================================================
 set -e
 
-REPO="https://github.com/TARNCOMPTA/crmcabinet.git"
+# ⚠️ LE DEPOT PUBLIC, et c'est tout l'objet de cette ligne.
+#
+# Elle a designe le depot PRIVE, et l'installation etait donc impossible
+# pour quiconque n'est pas TARN COMPTA : le `curl` de l'en-tete repondait
+# 404, et celui qui trouvait tout de meme ce script tombait sur un
+# `git clone` refuse. Un logiciel sous licence MIT que personne ne peut
+# installer.
+#
+# LE MEME DEFAUT AVAIT DEJA ETE CORRIGE UNE FOIS, sur le manifeste de mise
+# a jour (`server/src/config.ts`), avec ce constat : « Un tiret separait
+# les deux depots. » Il n'avait pas ete balaye sur les cinq autres
+# renvois. D'ou la garde de `tests/depot-public.test.ts`.
+#
+# Le depot prive porte dans son historique un export de la base de
+# production et ne deviendra jamais public ; `scripts/publier.mjs` recopie
+# l'arbre vers le depot public en un commit unique. C'est celui-la, et lui
+# seul, que suit un confrere.
+REPO="https://github.com/TARNCOMPTA/crm-cabinet.git"
 DIR="/opt/crmcabinet"
 
 echo ""
@@ -138,6 +155,10 @@ fi
 
 echo ""
 echo "--- 5/6 Démarrage (construction de l'image : plusieurs minutes) ---"
+# Le conteneur applicatif tourne sous l'uid 10001 : `data/` doit lui appartenir.
+# Voir installation/preparer-data.sh, qui porte le raisonnement.
+sh "$DIR/installation/preparer-data.sh" "$DIR"
+
 docker compose up -d --build
 
 echo ""

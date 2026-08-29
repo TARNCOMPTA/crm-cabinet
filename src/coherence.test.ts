@@ -37,6 +37,18 @@ describe('navigation', () => {
    * fiscales, Support — pointaient vers des pages supprimées, dupliquées dans
    * la palette de commandes et dans les réglages : dix liens morts offerts à
    * l'utilisateur, qui tombaient sur la route attrape-tout.
+   *
+   * ⚠️ `link:` A ÉTÉ AJOUTÉ APRÈS COUP, ET IL A FALLU DEUX RÉCIDIVES POUR LE
+   * VOIR. Ce test ne cherchait que `to:` et `to="`, les deux formes de
+   * `<Link>` / `<NavLink>`. Or une destination peut aussi vivre dans une table
+   * de configuration sous un autre nom, puis partir à `navigate()` — c'est le
+   * cas des tuiles du tableau de bord et des cartes de la synthèse client. Deux
+   * liens vers `/fiscal-deadlines` et `/documents`, écrans retirés du produit,
+   * ont ainsi survécu sous le nez de ce test.
+   *
+   * La chaîne de requête est retirée avant comparaison : `/x?filtre=proche`
+   * n'est pas une route distincte de `/x`, et l'un des deux liens morts la
+   * portait — sans ce nettoyage il aurait échappé au contrôle une seconde fois.
    */
   it('chaque lien interne mène à une route déclarée', () => {
     const app = lire('src/App.tsx');
@@ -50,16 +62,17 @@ describe('navigation', () => {
     const liens = new Set<string>();
     for (const fichier of fichiersSources('src')) {
       const contenu = lire(fichier);
-      for (const m of contenu.matchAll(/\bto:\s*'(\/[a-z0-9/-]*)'/g)) liens.add(m[1]);
-      for (const m of contenu.matchAll(/\bto="(\/[a-z0-9/-]*)"/g)) liens.add(m[1]);
+      for (const m of contenu.matchAll(/\bto:\s*'(\/[a-z0-9/?=&-]*)'/g)) liens.add(m[1]);
+      for (const m of contenu.matchAll(/\bto="(\/[a-z0-9/?=&-]*)"/g)) liens.add(m[1]);
+      for (const m of contenu.matchAll(/\blink:\s*'(\/[a-z0-9/?=&-]*)'/g)) liens.add(m[1]);
     }
 
     // Les routes à paramètre (`/clients/:id`) sont ramenées à leur préfixe : un
     // lien construit dynamiquement vers `/clients/<uuid>` est légitime.
     const prefixes = [...routes].map((r) => r.replace(/\/:[^/]+/g, ''));
-    const morts = [...liens].filter(
-      (l) => l !== '/' && !routes.has(l) && !prefixes.includes(l)
-    );
+    const morts = [...liens]
+      .map((l) => l.split('?')[0])
+      .filter((l) => l !== '/' && !routes.has(l) && !prefixes.includes(l));
 
     expect(morts, `liens sans route : ${morts.join(', ')}`).toEqual([]);
   });

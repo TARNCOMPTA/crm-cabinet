@@ -11,7 +11,7 @@ Personne d'autre n'y accède.
 Un VPS Ubuntu, un nom de domaine, une commande :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crmcabinet/main/installation/install.sh -o install.sh && sudo sh install.sh
+curl -fsSL https://raw.githubusercontent.com/TARNCOMPTA/crm-cabinet/main/installation/install.sh -o install.sh && sudo sh install.sh
 ```
 
 Le script installe Docker, ouvre le pare-feu, génère les secrets, démarre

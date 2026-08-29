@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
-  "notes": "Suivi jedeclare : les cabinets a plusieurs comptes de flux voyaient la moitie de leurs teletransmissions. Diagnostic compte par compte, bilan d'analyse ventile, et mode prudent ouvrable sur un compte que personne ne releve. Mise a jour : maj.sh reconstruit aussi quand le .env a change.",
+  "version": "2.3.0",
+  "notes": "Repartition des parts dans la fiche client et par le connecteur. Statuts scannes enfin lisibles. Onglets, fenetres et notifications annonces aux lecteurs d'ecran. Conteneur non-root, journaux sans donnees clients, image et actions figees. Et l'installation par un autre cabinet, qui etait impossible : les adresses visaient le depot prive.",
   "url": "https://github.com/TARNCOMPTA/crm-cabinet"
 }

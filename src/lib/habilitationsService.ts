@@ -34,7 +34,7 @@ const PAGES_SIMULTANEES = 3;
  * coûterait des lignes.
  */
 async function fetchAllPaginated<T>(
-  queryFn: (offset: number, limit: number) => Promise<{ data: T[] | null; error: any }>
+  queryFn: (offset: number, limit: number) => Promise<{ data: T[] | null; error: { message: string } | null }>
 ): Promise<T[]> {
   const tout: T[] = [];
   let page = 0;
@@ -91,9 +91,44 @@ export async function fetchCabinetClients(includeInactive: boolean) {
   });
 }
 
+/**
+ * Les deux entrees du regroupement, taillees sur les `select` de
+ * `fetchCabinetHabilitations()` et `fetchCabinetClients()` juste au-dessus.
+ *
+ * `HabilitationLigne` garde un index ouvert : `select('*')` ramene toute la
+ * table, et les colonnes de services y sont NOMMEES DYNAMIQUEMENT — c'est le
+ * principe meme de cet ecran. L'ouverture est donc reelle, mais bornee a des
+ * valeurs, la ou `any[]` ouvrait aussi les cles connues.
+ */
+export interface ClientHabilitation {
+  id: string;
+  nom_entreprise: string;
+  siren: string | null;
+  habilitation_non_concerne: boolean | null;
+  habilitation_avancement: string | null;
+  habilitation_commentaire: string | null;
+  statut: string | null;
+}
+
+export interface HabilitationLigne {
+  client: { id: string; nom_entreprise: string; siren: string | null } | null;
+  id: string;
+  client_id: string | null;
+  // Non nullables en base, contrairement aux autres : c'est le compilateur qui
+  // le dit, a partir des types generes.
+  siren: string;
+  service: string;
+  etat: string | null;
+  role: string | null;
+  date_creation_habilitation: string | null;
+  created_at: string | null;
+  /** Les colonnes de services, nommees dynamiquement selon le cabinet. */
+  [colonne: string]: unknown;
+}
+
 export function buildGroupedData(
-  allHabilitations: any[],
-  allCabClients: any[]
+  allHabilitations: HabilitationLigne[],
+  allCabClients: ClientHabilitation[]
 ): { clientGroups: GroupedClient[]; unknownGroups: GroupedUnknown[]; allServices: string[]; lastImportDate: string | null } {
   if (allHabilitations.length === 0) {
     const clientsWithoutHab: GroupedClient[] = allCabClients.map((c) => ({
@@ -110,15 +145,19 @@ export function buildGroupedData(
     return { clientGroups: clientsWithoutHab, unknownGroups: [], allServices: [], lastImportDate: null };
   }
 
-  const mostRecent = allHabilitations.reduce((latest, row) => {
-    if (!latest || row.created_at > latest) return row.created_at;
-    return latest;
+  // `created_at` est nullable : sans le filtrer, une ligne sans horodatage
+  // devenait la « date du dernier import », et l'ecran l'affichait vide. `any`
+  // rendait le compilateur muet la-dessus.
+  const mostRecent = allHabilitations.reduce<string>((latest, row) => {
+    const d = row.created_at;
+    if (!d) return latest;
+    return !latest || d > latest ? d : latest;
   }, '');
 
   const servicesSet = new Set<string>();
   const clientMap = new Map<string, GroupedClient>();
   const unknownMap = new Map<string, GroupedUnknown>();
-  const cabClientMap = new Map<string, any>();
+  const cabClientMap = new Map<string, ClientHabilitation>();
 
   for (const c of allCabClients) {
     cabClientMap.set(c.id, c);

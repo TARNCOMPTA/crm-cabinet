@@ -1,6 +1,11 @@
 import { supabase } from './supabase';
 
-const db = supabase as unknown as { from: (table: string) => any };
+/**
+ * Le client typé, sans détour. Ce fichier passait par un cast `as any` parce que
+ * `ago_avancement_statuses` manquait aux types générés ; elle y figure
+ * désormais, et le cast ne masquait plus qu'une vérification utile.
+ */
+const db = supabase;
 
 export type AgoStatusColor = 'gray' | 'blue' | 'amber' | 'teal' | 'green' | 'emerald' | 'red' | 'rose' | 'orange' | 'slate';
 
@@ -10,7 +15,8 @@ export interface AgoAvancementStatus {
   color: AgoStatusColor;
   position: number;
   is_default: boolean;
-  created_at: string;
+  // Nullable en base, comme `updated_at` plus bas : le cast le cachait.
+  created_at: string | null;
 }
 
 export interface ClientAgoAvancement {
@@ -19,7 +25,8 @@ export interface ClientAgoAvancement {
   exercice_year: number;
   status_id: string | null;
   updated_by: string | null;
-  updated_at: string;
+  // Nullable en base : `as any` faisait croire l'inverse.
+  updated_at: string | null;
 }
 
 export const AGO_STATUS_COLORS: { value: AgoStatusColor; label: string; badgeClass: string; dotClass: string }[] = [
@@ -43,13 +50,38 @@ export function getAgoStatusDotClass(color: string | null | undefined): string {
   return AGO_STATUS_COLORS.find(c => c.value === color)?.dotClass ?? AGO_STATUS_COLORS[0].dotClass;
 }
 
+const COULEURS_AGO: AgoStatusColor[] = [
+  'gray', 'blue', 'amber', 'teal', 'green', 'emerald', 'red', 'rose', 'orange', 'slate',
+];
+
+/**
+ * La couleur telle qu'elle sort de la base, ramenée dans l'union attendue.
+ *
+ * `ago_avancement_statuses.color` est une colonne TEXTE : rien en base
+ * n'empêche d'y écrire « fuchsia ». Le cast `as any` qui régnait ici laissait
+ * cette valeur traverser jusqu'à une classe Tailwind inexistante — le badge
+ * s'affichait alors sans couleur, sans que rien ne le signale. Le repli sur
+ * `gray` est visible et volontaire.
+ */
+function couleurAgo(brut: string | null): AgoStatusColor {
+  return COULEURS_AGO.includes(brut as AgoStatusColor) ? (brut as AgoStatusColor) : 'gray';
+}
+
+/** Une ligne de la base ramenée à la forme que l'application manipule. */
+function versStatut(l: {
+  id: string; label: string; color: string; position: number; is_default: boolean;
+  created_at: string | null;
+}): AgoAvancementStatus {
+  return { ...l, color: couleurAgo(l.color) };
+}
+
 export async function listAgoStatuses(): Promise<AgoAvancementStatus[]> {
   const { data, error } = await db
     .from('ago_avancement_statuses')
     .select('*')
     .order('position', { ascending: true });
   if (error) throw error;
-  return data || [];
+  return (data || []).map(versStatut);
 }
 
 export async function createAgoStatus(payload: { label: string; color: AgoStatusColor; position: number; is_default?: boolean }): Promise<AgoAvancementStatus> {
@@ -65,7 +97,7 @@ export async function createAgoStatus(payload: { label: string; color: AgoStatus
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return versStatut(data);
 }
 
 export async function updateAgoStatus(id: string, payload: { label?: string; color?: AgoStatusColor; position?: number; is_default?: boolean }): Promise<void> {

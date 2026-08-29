@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { computeARDWithDeficits, formatCurrency, type ARDResults } from '../../lib/ardUtils';
+import { messageErreur } from '../../lib/erreurs';
 import {
   Plus,
   Save,
@@ -157,7 +158,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setRows(data.map((d: any) => ({
+        setRows(data.map((d) => ({
           id: d.id,
           annee: d.annee,
           ca: Number(d.ca) || 0,
@@ -254,8 +255,8 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
       }
       showToast('Donnees ARD enregistrees', 'success');
       await loadData();
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de l\'enregistrement', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de l\'enregistrement'), 'error');
     } finally {
       setSaving(false);
     }

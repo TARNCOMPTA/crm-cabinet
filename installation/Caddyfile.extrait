@@ -47,4 +47,29 @@ crm.moncabinet.fr {
 
 	encode gzip zstd
 	reverse_proxy crmcabinet:3000
+
+	# ⚠️ VOTRE JOURNAL D'ACCÈS CONTIENDRA LES DONNÉES DE VOS CLIENTS.
+	#
+	# Le front interroge la base par l'URL : filtres, tris et sélections y sont
+	# écrits en clair. Un Caddy qui journalise les accès enregistre donc
+	# `?email=eq.jean.dupont@exemple.fr`, `?last_name=eq.DUPONT`, le nom des
+	# pièces déposées, et la signature des URL de téléchargement — qui est un
+	# secret d'accès.
+	#
+	# Ce bloc-ci est COMMENTÉ à dessein : il changerait la destination des
+	# journaux de ce site, et votre Caddy en sert d'autres. Décommentez-le après
+	# avoir vérifié qu'il ne perturbe pas votre configuration globale ; le
+	# `Caddyfile` du dépôt, celui du VPS dédié, applique exactement cela.
+	#
+	# log {
+	# 	format filter {
+	# 		wrap console
+	# 		fields {
+	# 			request>remote_ip delete
+	# 			request>client_ip delete
+	# 			request>headers delete
+	# 			request>uri delete
+	# 		}
+	# 	}
+	# }
 }

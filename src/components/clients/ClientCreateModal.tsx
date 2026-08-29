@@ -16,6 +16,7 @@ import { Loader, CheckCircle, AlertTriangle } from 'lucide-react';
 import { searchCompanyByINPI, convertDDMMToDate } from '../../lib/inpiService';
 import { getLegalFormLabel } from '../../lib/legalFormsUtils';
 import type { ClientStatus } from '../../types/database';
+import { messageErreur } from '../../lib/erreurs';
 
 interface ClientCreateModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ const EMPTY_FORM = {
   ville: '',
   pays: 'France',
   email: '',
+  email_2: '',
   telephone: '',
   telephone_2: '',
   contact_principal: '',
@@ -213,8 +215,8 @@ export function ClientCreateModal({ isOpen, onClose, onCreated, initialSiret, in
       showToast('Client cree avec succes', 'success');
       onCreated();
       onClose();
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la creation du client', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la creation du client'), 'error');
     }
   }
 
@@ -427,6 +429,12 @@ export function ClientCreateModal({ isOpen, onClose, onCreated, initialSiret, in
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+            <Input
+              label="Email 2"
+              type="email"
+              value={formData.email_2}
+              onChange={(e) => setFormData({ ...formData, email_2: e.target.value })}
             />
             <Input
               label="Telephone"

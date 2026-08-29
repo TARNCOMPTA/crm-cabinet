@@ -1,10 +1,19 @@
 /**
  * Suivi des échéances — les déclarations télétransmises via jedeclare.
  * ---------------------------------------------------------------------------
- * Un onglet par type de déclaration, DÉDUIT de ce que jedeclare a renvoyé :
- * aucun référentiel n'est tenu à jour ici. Un cabinet qui ne dépose pas de DAS2
- * n'a pas d'onglet DAS2, et un type nouveau apparaît de lui-même. L'inverse —
- * une liste écrite en dur — se serait périmée à la première évolution fiscale.
+ * TROIS ONGLETS — TVA, Bilan, Autres — puis une pastille par type à
+ * l'intérieur. Il y en avait un par type de déclaration : sur un portefeuille
+ * réel cela fait une douzaine d'entrées, plus les trois rythmes de TVA, dans une
+ * barre qui défilait horizontalement et ne se lisait plus. Les trois familles
+ * sont les trois moments de production d'un cabinet — la TVA au fil des mois, le
+ * bilan à la clôture, le reste — et c'est ainsi que le travail se répartit.
+ *
+ * CE QUI N'A PAS CHANGÉ, ET NE DOIT PAS : rien n'est déduit d'un référentiel
+ * tenu à jour à la main. La famille sort de la téléprocédure (`familleDe`,
+ * serveur), les pastilles sortent de ce que jedeclare a réellement renvoyé. Un
+ * cabinet qui ne dépose pas de DAS2 n'a pas de pastille DAS2, un type nouveau
+ * apparaît de lui-même, et une famille sans aucune déclaration sur la période
+ * n'a pas d'onglet du tout.
  *
  * Les filtres vivent dans l'URL. C'est ce qui rend une vue partageable : « la
  * TVA CA3 de mars, chez moi » tient dans un lien collé à un collègue, et le
@@ -37,21 +46,88 @@ import {
   chargerCatalogue,
   chargerSuivi,
   enregistrerStatut,
+  fixerJourEcheance,
+  colonnesDe,
+  grouperParFamille,
   lancerAnalyse,
   periodeParDefaut,
   type Catalogue,
   type CelluleSuivi,
+  type Echeance,
   type SocieteSuivie,
   type StatutInterne,
   type Suivi,
+  type TableSuivi,
 } from '../lib/jedeclareService';
 
 interface CelluleOuverte {
   societe: SocieteSuivie;
   mois: string;
   cellule: CelluleSuivi;
+  /** Le tableau d'ou vient la cellule — voir `changerStatut`. */
+  cleTable: string;
   typeDeclaration: string;
   libelleType: string;
+}
+
+/**
+ * Le choix du type À L'INTÉRIEUR d'un onglet.
+ * ---------------------------------------------------------------------------
+ * Des boutons plutôt qu'un second niveau d'onglets : deux barres d'onglets
+ * l'une sous l'autre se ressemblent trop, et on ne sait plus laquelle commande
+ * l'autre. `aria-pressed` dit ce qu'un lecteur d'écran doit entendre — une
+ * sélection, pas un interrupteur isolé.
+ *
+ * ⚠️ UNE SEULE PASTILLE NE FAIT PAS UN BOUTON, MAIS LE NOM RESTE. Un contrôle
+ * qui ne tranche rien est du bruit ; en revanche le type doit continuer d'être
+ * nommé quelque part. C'est l'onglet qui le portait avant le regroupement, et
+ * un écran affichant « Bilan » sans dire si l'on regarde les liasses ou l'IS
+ * laisserait deviner — d'autant que le bandeau « Destinataires » juste en
+ * dessous nomme la banque, ce qui n'a de sens qu'en sachant de quoi il parle.
+ */
+function PastillesType({
+  tables,
+  actif,
+  onChoisir,
+}: {
+  tables: TableSuivi[];
+  actif: string;
+  onChoisir: (cle: string) => void;
+}) {
+  const seule = tables.length === 1 ? tables[0] : null;
+  if (seule) {
+    return (
+      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{seule.libelle}</p>
+    );
+  }
+
+  return (
+    <div
+      className="flex gap-2 overflow-x-auto pb-1"
+      role="group"
+      aria-label="Type de déclaration"
+    >
+      {tables.map((t) => {
+        const choisi = t.cle === actif;
+        return (
+          <button
+            key={t.cle}
+            type="button"
+            onClick={() => onChoisir(t.cle)}
+            aria-pressed={choisi}
+            className={`flex shrink-0 items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+              choisi
+                ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-700'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-teal-300 dark:hover:border-teal-700'
+            }`}
+          >
+            <span className="whitespace-nowrap">{t.libelle}</span>
+            <Badge variant="gray">{t.societes.length}</Badge>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function SuiviEcheances() {
@@ -63,7 +139,6 @@ export function SuiviEcheances() {
   const defauts = useMemo(periodeParDefaut, []);
   const debut = params.get('debut') ?? defauts.debut;
   const fin = params.get('fin') ?? defauts.fin;
-  const procedure = params.get('procedure') ?? 'TOUTES';
   const axe = params.get('axe') === 'depot' ? 'depot' : 'periode';
   const typeUrl = params.get('type') ?? '';
 
@@ -91,14 +166,14 @@ export function SuiviEcheances() {
     setChargement(true);
     setErreur(null);
     try {
-      setSuivi(await chargerSuivi({ debut, fin, procedure, axe }));
+      setSuivi(await chargerSuivi({ debut, fin, axe }));
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Chargement impossible.');
       setSuivi(null);
     } finally {
       setChargement(false);
     }
-  }, [debut, fin, procedure, axe]);
+  }, [debut, fin, axe]);
 
   useEffect(() => {
     void charger();
@@ -108,19 +183,46 @@ export function SuiviEcheances() {
     chargerCatalogue().then(setCatalogue).catch(() => setCatalogue(null));
   }, []);
 
-  /**
-   * L'onglet actif.
-   *
-   * Changer de période fait disparaître des types : sans ce repli, un lien
-   * partagé vers un type absent de la nouvelle période afficherait un écran
-   * vide sans le dire.
-   */
-  const tables = suivi?.tables ?? [];
-  const typeActif = tables.some((t) => t.typeDeclaration === typeUrl)
-    ? typeUrl
-    : (tables[0]?.typeDeclaration ?? '');
+  // Mémorisé pour lui-même : sans cela `?? []` rend un nouveau tableau à chaque
+  // rendu quand le suivi est vide, et le regroupement se rejoue pour rien.
+  const tables = useMemo(() => suivi?.tables ?? [], [suivi]);
+  const groupes = useMemo(() => grouperParFamille(tables), [tables]);
 
-  const tableActive = tables.find((t) => t.typeDeclaration === typeActif) ?? null;
+  /**
+   * Le tableau affiché, et l'onglet qui s'en déduit.
+   *
+   * ⚠️ L'URL NE PORTE QUE `?type=<cle>`, ET L'ONGLET SE DÉDUIT DE LA TABLE.
+   * Ajouter un second paramètre pour la famille aurait créé deux états à tenir
+   * d'accord — et un lien partagé avant le regroupement, qui ne porte que
+   * `type`, ouvre ainsi le bon onglet ET la bonne pastille sans rien réécrire.
+   *
+   * La pastille est désignée par `cle` et non par `typeDeclaration` : la TVA
+   * produit trois tableaux — mensuelle, trimestrielle, annuelle — qui portent
+   * tous le même code de déclaration, et indexer dessus les masquerait l'un
+   * l'autre. `typeDeclaration` reste ce qu'on écrit en base pour le suivi
+   * interne.
+   *
+   * Le repli existe parce que changer de période fait disparaître des types :
+   * sans lui, un lien partagé vers un type absent de la nouvelle période
+   * afficherait un écran vide sans le dire. Il emporte l'onglet avec lui.
+   */
+  const tableActive = tables.find((t) => t.cle === typeUrl) ?? tables[0] ?? null;
+  const groupeActif =
+    groupes.find((g) => g.famille === tableActive?.famille) ?? groupes[0] ?? null;
+
+  /**
+   * Les colonnes de la grille, au pas du tableau affiche.
+   *
+   * La fenetre de mois est GLOBALE — le serveur la calcule une fois pour toutes
+   * les tables — mais le pas ne l'est pas : une TVA trimestrielle se lit par
+   * trimestres, un bilan par annees, une DSN au mois. Le regroupement se fait
+   * donc ici, a l'affichage, et non dans la reponse : les memes mois servent
+   * plusieurs tableaux qui ne les decoupent pas pareil.
+   */
+  const colonnes = useMemo(
+    () => colonnesDe(suivi?.mois ?? [], tableActive?.decoupage ?? 'mois'),
+    [suivi?.mois, tableActive?.decoupage]
+  );
 
   /**
    * Écriture optimiste : la pastille change avant l'aller-retour, et revient à
@@ -129,6 +231,7 @@ export function SuiviEcheances() {
    */
   const changerStatut = useCallback(
     async (
+      cleTable: string,
       typeDeclaration: string,
       societe: SocieteSuivie,
       mois: string,
@@ -143,7 +246,13 @@ export function SuiviEcheances() {
           return {
             ...etat,
             tables: etat.tables.map((t) =>
-              t.typeDeclaration !== typeDeclaration
+              // ⚠️ ON VISE LE TABLEAU, PAS LE TYPE. Les trois tableaux de TVA
+              // partagent un meme `typeDeclaration` : filtrer dessus toucherait
+              // aussi les deux autres, et poserait une pastille « Cab. » sur un
+              // mois que ce tableau-la n'affiche pas — un fantome qui disparait
+              // au rechargement, puisque le serveur n'attache l'etat interne
+              // qu'aux mois reellement presents dans la table.
+              t.cle !== cleTable
                 ? t
                 : {
                     ...t,
@@ -186,6 +295,65 @@ export function SuiviEcheances() {
       }
     },
     [axe, showToast]
+  );
+
+  /**
+   * Fixe le jour d'echeance TVA d'un client, ou le retire.
+   *
+   * ⚠️ LA SURCHARGE VIT SUR LA FICHE CLIENT, PAS SUR LA SOCIETE : elle vaut donc
+   * pour TOUS les tableaux ou ce client apparait — une societe qui a change de
+   * regime figure a la fois en mensuelle et en trimestrielle, et son jour ne
+   * saurait differer de l'un a l'autre. D'ou le balayage de toutes les tables
+   * sur `clientId`, et non sur le SIREN de la seule ligne cliquee.
+   *
+   * `jourRegle` est conserve tel quel : c'est ce que la regle donnerait, et
+   * poser une surcharge ne le change pas.
+   */
+  const fixerJour = useCallback(
+    async (societe: SocieteSuivie, jour: number | null) => {
+      const clientId = societe.clientId;
+      if (!clientId) return;
+      const avant = societe.echeance;
+
+      const appliquer = (valeur: Echeance | null) => {
+        setSuivi((etat) => {
+          if (!etat) return etat;
+          return {
+            ...etat,
+            tables: etat.tables.map((t) => ({
+              ...t,
+              societes: t.societes.map((s) =>
+                s.clientId !== clientId || !s.echeance ? s : { ...s, echeance: valeur ?? s.echeance }
+              ),
+            })),
+          };
+        });
+      };
+
+      appliquer(
+        jour === null
+          ? {
+              jour: avant?.jourRegle ?? null,
+              origine: avant?.jourRegle == null ? 'inconnue' : 'regle',
+              motif: 'Retour à la règle. Rechargez pour le détail.',
+              jourRegle: avant?.jourRegle ?? null,
+            }
+          : {
+              jour,
+              origine: 'surcharge',
+              motif: 'Jour fixé sur la fiche client.',
+              jourRegle: avant?.jourRegle ?? null,
+            }
+      );
+
+      try {
+        await fixerJourEcheance({ clientId, jour });
+      } catch (e) {
+        appliquer(avant);
+        showToast(e instanceof Error ? e.message : 'Enregistrement refusé.', 'error');
+      }
+    },
+    [showToast]
   );
 
   if (chargement && !suivi) return <PageSkeleton />;
@@ -270,20 +438,6 @@ export function SuiviEcheances() {
             onChange={(e) => majFiltre({ fin: e.target.value })}
           />
         </div>
-        <div className="w-56">
-          <Select
-            label="Téléprocédure"
-            value={procedure}
-            onChange={(e) => majFiltre({ procedure: e.target.value })}
-          >
-            <option value="TOUTES">Toutes</option>
-            {Object.entries(catalogue?.teleprocedures ?? {}).map(([code, libelle]) => (
-              <option key={code} value={code}>
-                {libelle}
-              </option>
-            ))}
-          </Select>
-        </div>
         <div className="w-48">
           <Select
             label="Colonnes"
@@ -341,41 +495,66 @@ export function SuiviEcheances() {
         </Card>
       )}
 
-      {tables.length > 0 && (
+      {groupes.length > 0 && (
         <Tabs
-          defaultValue={typeActif}
-          value={typeActif}
-          onValueChange={(v) => majFiltre({ type: v })}
+          defaultValue={groupeActif?.famille ?? ''}
+          value={groupeActif?.famille ?? ''}
+          /*
+            Changer d'onglet, c'est choisir sa PREMIÈRE PASTILLE. L'URL ne porte
+            que `type`, et lui laisser désigner un tableau précis est ce qui rend
+            un lien reproductible : « la TVA trimestrielle de mars » se colle à un
+            collègue, et il voit exactement la même chose.
+          */
+          onValueChange={(f) => {
+            const premiere = groupes.find((g) => g.famille === f)?.tables[0];
+            if (premiere) majFiltre({ type: premiere.cle });
+          }}
         >
-          <TabsList className="overflow-x-auto">
-            {tables.map((t) => (
-              <TabsTrigger key={t.typeDeclaration} value={t.typeDeclaration}>
+          <TabsList aria-label="Familles d'echeances" className="overflow-x-auto">
+            {groupes.map((g) => (
+              <TabsTrigger key={g.famille} value={g.famille}>
                 <span className="flex items-center gap-2 whitespace-nowrap">
-                  {t.libelle}
-                  <Badge variant="gray">{t.societes.length}</Badge>
+                  {g.libelle}
+                  {/* Sociétés DISTINCTES : une société déclarant en TVA mensuelle
+                      et en remboursement ne compte qu'une fois. Voir
+                      `grouperParFamille`. */}
+                  <Badge variant="gray">{g.nbSocietes}</Badge>
                 </span>
               </TabsTrigger>
             ))}
           </TabsList>
 
-          {tableActive && (
-            <TabsContent value={tableActive.typeDeclaration} className="pt-4">
+          {groupeActif && tableActive && (
+            <TabsContent value={groupeActif.famille} className="pt-4 space-y-4">
+              <PastillesType
+                tables={groupeActif.tables}
+                actif={tableActive.cle}
+                onChoisir={(cle) => majFiltre({ type: cle })}
+              />
               <MatriceSuivi
                 table={tableActive}
-                mois={suivi?.mois ?? []}
+                colonnes={colonnes}
                 filtreMesDossiers={mesDossiers}
                 onOuvrirDetail={(societe, mois, cellule) =>
                   setOuverte({
                     societe,
                     mois,
                     cellule,
+                    cleTable: tableActive.cle,
                     typeDeclaration: tableActive.typeDeclaration,
                     libelleType: tableActive.libelle,
                   })
                 }
                 onChangerStatut={(societe, mois, statut) =>
-                  void changerStatut(tableActive.typeDeclaration, societe, mois, statut)
+                  void changerStatut(
+                    tableActive.cle,
+                    tableActive.typeDeclaration,
+                    societe,
+                    mois,
+                    statut
+                  )
                 }
+                onFixerJour={(societe, jour) => void fixerJour(societe, jour)}
               />
             </TabsContent>
           )}
@@ -392,6 +571,7 @@ export function SuiviEcheances() {
         onEnregistrer={async (statut, commentaire) => {
           if (!ouverte) return;
           await changerStatut(
+            ouverte.cleTable,
             ouverte.typeDeclaration,
             ouverte.societe,
             ouverte.mois,
@@ -406,7 +586,6 @@ export function SuiviEcheances() {
         onFermer={() => setAnalyseOuverte(false)}
         debut={debut}
         fin={fin}
-        procedure={procedure}
         teleprocedures={catalogue?.teleprocedures ?? {}}
         onLancer={async (demande) => {
           const bilan = await lancerAnalyse(demande);

@@ -88,6 +88,21 @@ export interface DashboardData {
   recentCompanies: RecentCompanyItem[];
 }
 
+/**
+ * Le nom du client attache a une ligne, quand la requete l'a demande par une
+ * jointure `clients(nom_entreprise)`.
+ *
+ * Les types generes de Supabase ne decrivent pas la forme des relations
+ * imbriquees : le code contournait par `as any`, cinq fois. Ce lecteur dit ce
+ * qu'on attend vraiment — un objet, la relation etant un PLUSIEURS-VERS-UN — et
+ * rend la chaine vide si la jointure n'a rien ramene, exactement comme avant.
+ */
+function nomClient(relation: unknown): string {
+  if (typeof relation !== 'object' || relation === null) return '';
+  const nom = (relation as { nom_entreprise?: unknown }).nom_entreprise;
+  return typeof nom === 'string' ? nom : '';
+}
+
 function parseClotureDate(raw: string): { day: number; month: number } | null {
   if (!raw || raw.length !== 4) return null;
   const day = parseInt(raw.substring(0, 2), 10);
@@ -217,9 +232,9 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
   const opportunitesEnCours = stats.opportunites_en_cours || 0;
   const legalActsRecent = stats.legal_acts_recent || 0;
 
-  const topCities: TopCityItem[] = (stats.top_cities || []).map((t: any) => ({ city: t.city, count: Number(t.count) }));
-  const regimeFiscalCounts: RegimeFiscalCount[] = (stats.regime_fiscal_counts || []).map((r: any) => ({ regime: r.regime, count: Number(r.count) }));
-  const formeJuridiqueCounts: FormeJuridiqueCount[] = (stats.forme_juridique_counts || []).map((f: any) => ({ forme: f.forme, count: Number(f.count) }));
+  const topCities: TopCityItem[] = (stats.top_cities || []).map((t) => ({ city: t.city, count: Number(t.count) }));
+  const regimeFiscalCounts: RegimeFiscalCount[] = (stats.regime_fiscal_counts || []).map((r) => ({ regime: r.regime, count: Number(r.count) }));
+  const formeJuridiqueCounts: FormeJuridiqueCount[] = (stats.forme_juridique_counts || []).map((f) => ({ forme: f.forme, count: Number(f.count) }));
 
   // Alerts from RPC counts
   //
@@ -284,7 +299,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       const agDate = new Date(ag.date_prevue);
       const diff = daysDiff(agDate, now);
       if (diff >= -7 && diff <= 90) {
-        const clientName = (ag.clients as any)?.nom_entreprise || '';
+        const clientName = nomClient(ag.clients);
         deadlines.push({ id: `ag-${ag.id}`, date: agDate, type: 'ag', label: 'AG prévue', clientName, clientId: ag.client_id });
       }
     }
@@ -296,7 +311,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       const taskDate = new Date(task.date_echeance);
       const diff = daysDiff(taskDate, now);
       if (diff >= -7 && diff <= 90) {
-        const clientName = (task.clients as any)?.nom_entreprise || '';
+        const clientName = nomClient(task.clients);
         deadlines.push({ id: `task-${task.id}`, date: taskDate, type: 'tache', label: task.titre, clientName, clientId: task.client_id || '' });
       }
     }
@@ -341,15 +356,15 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     ajouter(c.created_at, { id: `client-${c.id}`, type: 'client_created', description: 'Nouveau client ajouté', clientName: c.nom_entreprise, clientId: c.id });
   }
   for (const s of recentInpiRes.data || []) {
-    const clientName = (s.clients as any)?.nom_entreprise || '';
+    const clientName = nomClient(s.clients);
     ajouter(s.sync_date, { id: `inpi-${s.id}`, type: 'inpi_sync', description: 'Synchronisation INPI', clientName, clientId: s.client_id, status: s.status });
   }
   for (const a of recentLegalActsRes.data || []) {
-    const clientName = (a.clients as any)?.nom_entreprise || '';
+    const clientName = nomClient(a.clients);
     ajouter(a.created_at, { id: `legal-${a.id}`, type: 'legal_act', description: `Acte juridique : ${a.act_type}`, clientName, clientId: a.client_id });
   }
   for (const b of recentBodaccRes.data || []) {
-    const clientName = (b.clients as any)?.nom_entreprise || '';
+    const clientName = nomClient(b.clients);
     ajouter(b.created_at, { id: `bodacc-${b.id}`, type: 'bodacc', description: 'Publication BODACC', clientName, clientId: b.client_id });
   }
   recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

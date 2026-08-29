@@ -59,6 +59,19 @@ const ACT_CATEGORY_LABELS: Record<string, string> = {
   autre: 'Autre',
 };
 
+/**
+ * La description libre rangee dans `legal_acts.metadata`, ou `null`.
+ *
+ * `metadata` est une colonne JSONB : son contenu n'est garanti par rien. Le code
+ * la castait en `any` pour lire `.description`, ce qui aurait affiche un nombre
+ * ou un objet tel quel si la cle avait porte autre chose qu'un texte.
+ */
+function descriptionActe(metadata: unknown): string | null {
+  if (typeof metadata !== 'object' || metadata === null) return null;
+  const d = (metadata as { description?: unknown }).description;
+  return typeof d === 'string' && d ? d : null;
+}
+
 export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, excludedClientIds = new Set(), sortField, sortDir, onSortChange }: ActsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -346,9 +359,9 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug" title={act.act_type}>
                                 {act.act_type}
                               </p>
-                              {act.metadata && typeof act.metadata === 'object' && (act.metadata as any).description && (act.metadata as any).description !== act.act_type && (
+                              {descriptionActe(act.metadata) && descriptionActe(act.metadata) !== act.act_type && (
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
-                                  {(act.metadata as any).description}
+                                  {descriptionActe(act.metadata)}
                                 </p>
                               )}
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">

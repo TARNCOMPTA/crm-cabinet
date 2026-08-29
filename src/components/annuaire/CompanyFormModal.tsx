@@ -12,6 +12,7 @@ import {
   linkContactToCompany,
   searchCabinetClients,
   type CompanyWithContacts,
+  type ClientTrouve,
 } from '../../lib/contactsDirectoryService';
 import { searchCompanyByINPI, type INPICompanyData } from '../../lib/inpiService';
 import { getLegalFormLabel } from '../../lib/legalFormsUtils';
@@ -56,9 +57,9 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [clientQuery, setClientQuery] = useState('');
-  const [clientResults, setClientResults] = useState<any[]>([]);
+  const [clientResults, setClientResults] = useState<ClientTrouve[]>([]);
   const [searchingClients, setSearchingClients] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientTrouve | null>(null);
   const [createPrimaryContact, setCreatePrimaryContact] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
   const inpiTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -120,7 +121,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
     }, 300);
   }
 
-  function handleSelectClient(client: any) {
+  function handleSelectClient(client: ClientTrouve) {
     setSelectedClient(client);
     setForm({
       name: client.nom_entreprise || '',

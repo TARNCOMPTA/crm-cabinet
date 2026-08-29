@@ -20,6 +20,7 @@ import {
   ChevronRight,
   UserCog,
   ArrowUpCircle,
+  Timer,
   Plug,
   ClipboardList,
   Mail,
@@ -55,6 +56,7 @@ const SettingsAGOStatuses = lazyRetryNamed(() => import('./settings/SettingsAGOS
 const SettingsSmtp = lazyRetryNamed(() => import('./settings/SettingsSmtp'), 'SettingsSmtp');
 const SettingsNavigation = lazyRetryNamed(() => import('./settings/SettingsNavigation'), 'SettingsNavigation');
 const SettingsMiseAJour = lazyRetryNamed(() => import('./settings/SettingsMiseAJour'), 'SettingsMiseAJour');
+const SettingsTachesPlanifiees = lazyRetryNamed(() => import('./settings/SettingsTachesPlanifiees'), 'SettingsTachesPlanifiees');
 
 
 type SettingsItem = {
@@ -224,7 +226,11 @@ const GROUPS: SettingsGroup[] = [
         description: 'Connecter un LLM a vos donnees',
         icon: Plug,
         component: SettingsMCPConnector,
-        requiresAdmin: true,
+        // Ouvert a tout collaborateur : le connecteur n'expose que des outils en
+        // LECTURE SEULE, sur des donnees que chacun consulte deja a l'ecran.
+        // Chacun n'y gere que SES cles et SES autorisations — c'est le serveur
+        // qui le garantit (routes/mcp-cles.ts, routes/mcp-oauth.ts), pas cette
+        // ligne : un menu masque n'a jamais ete un controle d'acces.
         keywords: 'mcp connecteur ia llm api cles claude cursor',
       },
       {
@@ -235,6 +241,18 @@ const GROUPS: SettingsGroup[] = [
         component: SettingsMiseAJour,
         requiresAdmin: true,
         keywords: 'version mise a jour maj update changelog nouveautes',
+      },
+      {
+        key: 'taches-planifiees',
+        label: 'Taches planifiees',
+        description: 'Ce que l\'instance fait toute seule, et son dernier tour',
+        icon: Timer,
+        component: SettingsTachesPlanifiees,
+        // Reserve aux administrateurs, comme les routes qui l'alimentent : le
+        // bouton « lancer maintenant » declenche une synchronisation INPI ou un
+        // envoi de digests, ce qui sort de la consultation.
+        requiresAdmin: true,
+        keywords: 'taches planifiees cron ordonnanceur jedeclare digests synchro nocturne',
       },
     ],
   },

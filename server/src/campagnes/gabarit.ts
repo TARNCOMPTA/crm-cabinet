@@ -41,6 +41,26 @@ export interface ClientDestinataire {
   date_cloture: string | null;
   regime_fiscal: string | null;
   email: string | null;
+  /**
+   * La seconde adresse de la fiche. Facultative, et jamais privilégiée : elle
+   * vient APRÈS `email` dans l'ordre d'envoi, et le dédoublonnage la traite
+   * exactement comme la première.
+   */
+  email_2: string | null;
+}
+
+/**
+ * Un client ET l'adresse qu'on vise pour lui.
+ *
+ * UNE LIGNE PAR ADRESSE, PAS PAR CLIENT : un client à deux adresses produit
+ * deux entrées, donc deux courriels. `email` y est une chaîne — l'adresse est
+ * résolue, il n'y a plus rien à décider ni à vérifier en aval.
+ *
+ * `email_2` reste porté tel quel, sans signification pour l'envoi : c'est la
+ * fiche, pas la cible. Lire `email` et lui seul.
+ */
+export interface Destinataire extends ClientDestinataire {
+  email: string;
 }
 
 // ------------------------------------------------------------------ code NAF
@@ -129,42 +149,79 @@ export interface Exclu {
 }
 
 export interface Selection {
-  retenus: ClientDestinataire[];
+  /** Une entrée PAR ADRESSE, donc par courriel a envoyer. */
+  retenus: Destinataire[];
+  /** Une entrée PAR CLIENT qui ne recevra rien. Voir `resoudreDestinataires`. */
   exclus: Exclu[];
 }
 
 /**
  * Résout la liste finale : une adresse, un envoi.
  *
+ * ⚠️ DEUX UNITÉS DIFFÉRENTES, ET LES CONFONDRE FAUSSE TOUS LES COMPTES.
+ *
+ *   · `retenus` se compte EN ADRESSES. Une fiche qui en porte deux produit deux
+ *     entrées, donc deux courriels, donc deux lignes de file. C'est ce nombre
+ *     que l'écran annonce et que `nb_destinataires` enregistre — et c'est le
+ *     bon : ce qu'on veut savoir avant d'appuyer, c'est combien de messages
+ *     partent ;
+ *   · `exclus` se compte EN CLIENTS, et n'y figure QUE celui qui ne recevra
+ *     RIEN, sur aucune de ses adresses. La liste répond à « pourquoi untel
+ *     n'a-t-il rien reçu ? » ; un client servi sur sa première adresse a reçu,
+ *     et n'a donc rien à y faire.
+ *
+ * COROLLAIRE ASSUMÉ : une seconde adresse invalide, sur une fiche dont la
+ * première est bonne, est ÉCARTÉE SANS ÊTRE ANNONCÉE COMME UNE EXCLUSION — le
+ * client reçoit. Elle reste visible là où elle compte : la liste nominative de
+ * l'aperçu montre les adresses réellement visées, et celle-là n'y est pas.
+ * L'inscrire dans `exclus` ferait mentir le compteur « n écarté(s) », qui
+ * désignerait alors des clients servis.
+ *
  * L'ORDRE DES EXCLUSIONS EST CELUI DU DIAGNOSTIC, pas du hasard. « Sans adresse »
  * avant « invalide » avant « désinscrit » avant « doublon » : on annonce à
- * l'utilisateur la cause la plus en amont, celle sur laquelle il peut agir.
+ * l'utilisateur la cause la plus en amont, celle sur laquelle il peut agir. Avec
+ * deux adresses, chaque motif porte donc sur LES DEUX — « sans adresse » veut
+ * dire qu'aucune des deux n'est renseignée, « invalide » qu'aucune des deux
+ * n'est utilisable.
  *
  * ⚠️ LE DÉDOUBLONNAGE N'EST PAS UN DÉTAIL. 23 adresses du portefeuille sont
  * partagées par 54 clients — un groupe, un dirigeant de plusieurs sociétés. Sans
  * cette étape, ces personnes reçoivent deux ou trois fois le même courriel, ce qui
  * est le signe le plus reconnaissable d'un publipostage mal fait.
  *
+ * LA SECONDE ADRESSE PASSE PAR LE MÊME TAMIS, et le cas le plus fréquent est
+ * qu'elle RÉPÈTE la première — recopiée dans les deux champs. Le dédoublonnage
+ * l'absorbe sans un mot : le client est déjà servi, il n'y a rien à signaler.
+ *
  * Le premier retenu l'emporte : l'appelant trie donc la liste comme il veut la
- * voir décidée (par nom, en pratique).
+ * voir décidée (par nom, en pratique). Pour un même client, la première adresse
+ * l'emporte sur la seconde.
  */
 export function resoudreDestinataires(
   clients: ClientDestinataire[],
   desinscrits: ReadonlySet<string>,
   retiresALaMain: ReadonlySet<string> = new Set()
 ): Selection {
-  const retenus: ClientDestinataire[] = [];
+  const retenus: Destinataire[] = [];
   const exclus: Exclu[] = [];
   const vues = new Map<string, string>();
 
   for (const c of clients) {
     const nom = c.nom_entreprise ?? '(sans nom)';
 
-    if (!normaliserAdresse(c.email)) {
+    // Les deux adresses de la fiche, dans l'ordre : la première d'abord.
+    // `renseignees` sépare « le champ est vide » de « le champ est faux », qui
+    // sont deux motifs distincts et deux corrections distinctes.
+    const renseignees = [c.email, c.email_2].filter(
+      (a): a is string => normaliserAdresse(a) !== ''
+    );
+    const utilisables = renseignees.filter((a) => adresseValide(a));
+
+    if (renseignees.length === 0) {
       exclus.push({ clientId: c.id, nom, motif: 'sans-adresse' });
       continue;
     }
-    if (!adresseValide(c.email)) {
+    if (utilisables.length === 0) {
       exclus.push({ clientId: c.id, nom, motif: 'adresse-invalide' });
       continue;
     }
@@ -188,15 +245,32 @@ export function resoudreDestinataires(
       continue;
     }
 
-    const cle = normaliserAdresse(c.email);
-    const dejaVue = vues.get(cle);
-    if (dejaVue) {
-      exclus.push({ clientId: c.id, nom, motif: 'doublon', auProfitDe: dejaVue });
-      continue;
+    // Le dédoublonnage porte sur CHAQUE adresse de la fiche, et le compteur sur
+    // le CLIENT : tant qu'une seule de ses adresses est retenue, il est servi et
+    // n'a rien à faire dans les exclus.
+    let servi = 0;
+    let premierDoublon: string | undefined;
+
+    for (const adresse of utilisables) {
+      const cle = normaliserAdresse(adresse);
+      const dejaVue = vues.get(cle);
+      if (dejaVue) {
+        premierDoublon ??= dejaVue;
+        continue;
+      }
+      vues.set(cle, nom);
+      // `email` porte l'adresse VISEE, et non plus celle de la fiche : c'est
+      // elle que l'appelant met en file, sans avoir a savoir de quel champ elle
+      // sort.
+      retenus.push({ ...c, email: adresse });
+      servi += 1;
     }
 
-    vues.set(cle, nom);
-    retenus.push(c);
+    // Aucune des deux n'a passé : toutes sont déjà servies ailleurs. Un seul
+    // motif pour le client, au profit du premier qui a pris l'adresse.
+    if (servi === 0) {
+      exclus.push({ clientId: c.id, nom, motif: 'doublon', auProfitDe: premierDoublon });
+    }
   }
 
   return { retenus, exclus };

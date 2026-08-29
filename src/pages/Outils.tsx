@@ -164,7 +164,7 @@ export function Outils() {
       </div>
 
       <Tabs defaultValue="csg" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList aria-label="Outils de calcul">
           <TabsTrigger value="csg">
             <TrendingDown className="w-4 h-4 mr-2" />
             CSG / CRDS

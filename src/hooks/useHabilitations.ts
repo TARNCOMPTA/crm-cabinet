@@ -16,6 +16,7 @@ import {
 } from '../lib/habilitationsService';
 import { getCompleteness } from '../lib/habilitationsReference';
 import type { GroupedClient, GroupedUnknown, EnrichedClient, HabilitationStats } from '../types/habilitations';
+import { messageErreur } from '../lib/erreurs';
 
 interface UseHabilitationsReturn {
   loading: boolean;
@@ -115,8 +116,8 @@ export function useHabilitations(): UseHabilitationsReturn {
       setIsRefreshing(true);
       await loadData();
       setIsRefreshing(false);
-    } catch (error: any) {
-      showToast(error.message || "Erreur lors de l'import", 'error');
+    } catch (error) {
+      showToast(messageErreur(error, "Erreur lors de l'import"), 'error');
     } finally {
       setIsImporting(false);
     }
@@ -130,8 +131,8 @@ export function useHabilitations(): UseHabilitationsReturn {
       await clearAllHabilitations();
       showToast('Toutes les habilitations ont ete supprimees', 'success');
       await loadData();
-    } catch (error: any) {
-      showToast(error.message || 'Erreur lors de la suppression', 'error');
+    } catch (error) {
+      showToast(messageErreur(error, 'Erreur lors de la suppression'), 'error');
     } finally {
       setIsClearing(false);
     }

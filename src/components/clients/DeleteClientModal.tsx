@@ -36,7 +36,7 @@ export default function DeleteClientModal({
     try {
       await onConfirm();
       onClose();
-    } catch (error) {
+    } catch {
       // error handled by parent
     } finally {
       setIsLoading(false);
@@ -128,6 +128,15 @@ export default function DeleteClientModal({
               {stats.client_software > 0 && (
                 <div className="text-gray-700">
                   <span className="font-medium">{stats.client_software}</span> logiciel(s)
+                </div>
+              )}
+              {/* ⚠️ CHAQUE COMPTEUR DE `DeletionStats` DOIT AVOIR SA LIGNE ICI.
+                  `totalItems` somme l'objet ENTIER : un compteur ajoute sans sa
+                  ligne annoncerait « 17 elements » sous une liste qui n'en
+                  montre que 16, et personne ne saurait ce qui manque. */}
+              {stats.client_associes > 0 && (
+                <div className="text-gray-700">
+                  <span className="font-medium">{stats.client_associes}</span> detention(s) de parts
                 </div>
               )}
             </div>

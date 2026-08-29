@@ -6,7 +6,7 @@ import { ChevronDown, ChevronRight, Users, Building2, Search, Plus, Pencil, Tras
 import { supabase } from '../../lib/supabase';
 import { isEntrepreneurIndividuel, EI_LABEL } from '../../lib/legalFormsUtils';
 import { LegalFormDisplay } from '../clients/LegalFormDisplay';
-import { OfficerFormModal } from './OfficerFormModal';
+import { OfficerFormModal, type OfficerFormData } from './OfficerFormModal';
 import { SyncSettingsPanel } from './SyncSettingsPanel';
 import { ClientWithOfficers, CompanyOfficer, OfficerCompany } from './legalTypes';
 
@@ -93,7 +93,7 @@ export function CompanyToOfficerTab({
   const withoutOfficers = clientsWithOfficers.length - withOfficers;
 
   async function handleSaveOfficer(
-    data: any,
+    data: OfficerFormData,
     officerId?: string,
     relationId?: string
   ) {

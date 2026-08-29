@@ -34,6 +34,58 @@ export interface ClientRapprochable {
   nom_entreprise: string;
 }
 
+/**
+ * Ce qu'il faut d'une fiche pour savoir si elle est encore au portefeuille.
+ *
+ * Volontairement plus étroit que `ClientRapprochable` : la règle ne regarde que
+ * deux champs, et une signature qui n'en demande pas plus rend impossible d'en
+ * introduire un troisième sans le décider ici.
+ */
+export interface ClientPortefeuille {
+  statut: string | null;
+  date_sortie_cabinet: string | null;
+}
+
+/**
+ * La fiche est-elle sortie du portefeuille ?
+ *
+ * ⚠️ RÈGLE PARTAGÉE. L'écran « Suivi échéances » (`routes/jedeclare.ts`) et
+ * l'outil MCP `list_fiscal_deadlines` (`mcp/outils.ts`) filtrent tous deux
+ * là-dessus. Le reste de leur enrichissement est dupliqué exprès, mais PAS
+ * ceci : deux copies de cette règle finiraient par diverger, et le cabinet
+ * lirait alors deux portefeuilles différents selon qu'il regarde l'écran ou
+ * qu'il interroge son assistant.
+ *
+ * TROIS FAÇONS DE NE PLUS ÊTRE DU TRAVAIL À FAIRE, et une fiche n'en porte pas
+ * forcément plusieurs :
+ *
+ *   · `date_sortie_cabinet` dit QUAND le dossier est parti ;
+ *   · `statut = 'archive'` dit que la fiche est rangée — beaucoup d'archivages
+ *     anciens n'ont jamais reçu de date, donc ne regarder que la date les
+ *     laissait dans le suivi ;
+ *   · `statut = 'inactif'` dit que le dossier ne produit plus rien.
+ *
+ * `inactif` A ÉTÉ AJOUTÉ APRÈS COUP, ET CE N'EST PAS GRATUIT. Un dossier
+ * inactif reste au portefeuille : le masquer fait disparaître précisément la
+ * fiche dont on pourrait vouloir vérifier qu'elle n'a effectivement rien à
+ * déclarer. Le cabinet a tranché dans l'autre sens — un dossier inactif qui
+ * télédéclare encore est assez rare pour ne pas encombrer l'écran de tous les
+ * autres. Si un jour on veut le revoir, c'est un filtre à ajouter, pas cette
+ * ligne à défaire.
+ *
+ * LA DATE N'EST PAS COMPARÉE À LA PÉRIODE AFFICHÉE : un dossier parti ne
+ * revient pas dans le suivi parce qu'on regarde une fenêtre antérieure à son
+ * départ. Ses déclarations d'alors sont exactes, mais elles ne sont plus du
+ * travail à faire — et c'est de travail à faire que cet écran parle.
+ *
+ * `prospect` N'EST PAS ICI, et c'est délibéré : un prospect qui télédéclare est
+ * une anomalie qui mérite d'être vue, au même titre qu'une société non
+ * rapprochée.
+ */
+export function estHorsPortefeuille(c: ClientPortefeuille): boolean {
+  return Boolean(c.date_sortie_cabinet) || c.statut === 'archive' || c.statut === 'inactif';
+}
+
 export interface Rapprochement {
   clientId: string | null;
   clientNom: string | null;
