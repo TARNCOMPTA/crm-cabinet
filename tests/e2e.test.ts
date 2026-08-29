@@ -330,7 +330,7 @@ suite('parcours de bout en bout', () => {
    * de saisie complet y serait fragile — il faudrait semer une personne dans
    * `company_officers` — et il est couvert ailleurs, sur le harnais local.
    */
-  it('dit « aucune repartition saisie » sans jamais afficher 0 %', async () => {
+  it('dit « aucune répartition saisie » sans jamais afficher 0 %', async () => {
     await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
 
     const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
@@ -353,9 +353,20 @@ suite('parcours de bout en bout', () => {
     expect(await page.getByRole('tabpanel').count()).toBe(1);
 
     // L'etat vide nomme ce qui manque : la SAISIE, et non les associes.
+    //
+    // ⚠️ L'ACCENT DE « répartition » EST DANS LE MOTIF, ET C'EST VOLONTAIRE.
+    // `getByText` est insensible a la casse quand on le lui demande, JAMAIS aux
+    // accents : `/repartition/i` ne trouve pas « répartition ». Ce test a casse
+    // exactement comme ca, le 2026-08-29, quand l'onglet est passe d'un texte
+    // sans accents a du francais correct — et il a casse EN CI, pas avant,
+    // parce que `npm test` saute cette suite faute de `E2E_BASE_URL`.
+    //
+    // Le motif reste donc strict sur la forme accentuee : il ne se contente pas
+    // de suivre le produit, il retient la correction. Un retour a
+    // « Aucune repartition saisie » le ferait echouer, ce qui est le but.
     await expect
       .poll(
-        () => page.getByText(/Aucune repartition saisie/i).first().isVisible().catch(() => false),
+        () => page.getByText(/Aucune répartition saisie/i).first().isVisible().catch(() => false),
         { timeout: 20_000 }
       )
       .toBe(true);

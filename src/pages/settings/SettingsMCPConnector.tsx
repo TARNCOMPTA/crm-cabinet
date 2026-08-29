@@ -160,8 +160,8 @@ export function SettingsMCPConnector() {
       }
       showToast(
         voulu
-          ? `« ${nom} » peut desormais ecrire la repartition des parts.`
-          : `« ${nom} » est repasse en lecture seule.`,
+          ? `« ${nom} » peut désormais écrire la répartition des parts.`
+          : `« ${nom} » est repassé en lecture seule.`,
         'success'
       );
       await chargerAutorisations();
@@ -187,8 +187,8 @@ export function SettingsMCPConnector() {
       }
       showToast(
         key.peut_ecrire
-          ? `La cle « ${key.name} » est repassee en lecture seule.`
-          : `La cle « ${key.name} » peut desormais ecrire la repartition des parts.`,
+          ? `La clé « ${key.name} » est repassée en lecture seule.`
+          : `La clé « ${key.name} » peut désormais écrire la répartition des parts.`,
         'success'
       );
       await loadKeys();
@@ -206,15 +206,15 @@ export function SettingsMCPConnector() {
         method: 'DELETE',
         ...OPTIONS_API,
       });
-      if (!r.ok) throw new Error('Revocation impossible');
+      if (!r.ok) throw new Error('Révocation impossible');
       const d = await r.json();
       showToast(
-        `Autorisation « ${nom} » revoquee${d.jetonsRevoques ? `, ${d.jetonsRevoques} jeton(s) coupe(s)` : ''}.`,
+        `Autorisation « ${nom} » révoquée${d.jetonsRevoques ? `, ${d.jetonsRevoques} jeton(s) coupé(s)` : ''}.`,
         'success'
       );
       await chargerAutorisations();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Revocation impossible', 'error');
+      showToast(e instanceof Error ? e.message : 'Révocation impossible', 'error');
     } finally {
       setRevocationEnCours(null);
     }
@@ -232,7 +232,7 @@ export function SettingsMCPConnector() {
         ...OPTIONS_API,
       });
 
-      if (!response.ok) throw new Error('Erreur lors du chargement des cles');
+      if (!response.ok) throw new Error('Erreur lors du chargement des clés');
       const data = await response.json();
       setKeys(data.keys || []);
     } catch (err) {
@@ -244,7 +244,7 @@ export function SettingsMCPConnector() {
 
   async function handleGenerate() {
     if (!newKeyName.trim()) {
-      showToast('Veuillez donner un nom a la cle', 'error');
+      showToast('Veuillez donner un nom à la clé', 'error');
       return;
     }
 
@@ -289,7 +289,7 @@ export function SettingsMCPConnector() {
         throw new Error(err.error || 'Erreur lors de la revocation');
       }
 
-      showToast('Cle revoquee avec succes', 'success');
+      showToast('Clé révoquée avec succès', 'success');
       setShowRevokeModal(false);
       setRevokeTarget(null);
       loadKeys();
@@ -432,8 +432,8 @@ export function SettingsMCPConnector() {
                 <tr>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400">Nom</th>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400">Client ID</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 hidden sm:table-cell">Creee le</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Derniere utilisation</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 hidden sm:table-cell">Créée le</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Dernière utilisation</th>
                   <th className="text-left px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400">Statut</th>
                   <th className="text-right px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400">Actions</th>
                 </tr>
@@ -480,11 +480,11 @@ export function SettingsMCPConnector() {
                             }`}
                             title={
                               key.peut_ecrire
-                                ? "Cette cle peut enregistrer la repartition des parts. Cliquer pour la repasser en lecture seule."
-                                : "Cette cle ne peut rien ecrire. Cliquer pour l'autoriser a enregistrer la repartition des parts."
+                                ? "Cette clé peut enregistrer la répartition des parts. Cliquer pour la repasser en lecture seule."
+                                : "Cette clé ne peut rien écrire. Cliquer pour l'autoriser à enregistrer la répartition des parts."
                             }
                           >
-                            {key.peut_ecrire ? 'ecriture des parts' : 'lecture seule'}
+                            {key.peut_ecrire ? 'écriture des parts' : 'lecture seule'}
                           </button>
                         </div>
                       ) : (
@@ -498,7 +498,7 @@ export function SettingsMCPConnector() {
                         <button
                           onClick={() => { setRevokeTarget(key); setShowRevokeModal(true); }}
                           className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Revoquer cette cle"
+                          title="Révoquer cette clé"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -524,8 +524,8 @@ export function SettingsMCPConnector() {
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {isAdmin
-                ? "Les assistants connectes par OAuth, pour tout le cabinet. Revoquer coupe l'acces immediatement — les jetons en cours sont invalides, pas seulement les prochains, et le client ne peut plus en obtenir de nouveaux."
-                : "Les assistants que VOUS avez autorises. Revoquer coupe votre acces immediatement, sans toucher a celui de vos collegues."}
+                ? "Les assistants connectés par OAuth, pour tout le cabinet. Révoquer coupe l'accès immédiatement — les jetons en cours sont invalides, pas seulement les prochains, et le client ne peut plus en obtenir de nouveaux."
+                : "Les assistants que VOUS avez autorisés. Révoquer coupe votre accès immédiatement, sans toucher à celui de vos collègues."}
             </p>
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {autorisations.map((a) => (
@@ -563,11 +563,11 @@ export function SettingsMCPConnector() {
                       }`}
                       title={
                         a.peutEcrire
-                          ? "Cet assistant peut enregistrer la repartition des parts d'un client."
+                          ? "Cet assistant peut enregistrer la répartition des parts d'un client."
                           : 'Cet assistant peut lire, mais rien enregistrer.'
                       }
                     >
-                      {a.peutEcrire ? 'lecture + ecriture des parts' : 'lecture seule'}
+                      {a.peutEcrire ? 'lecture + écriture des parts' : 'lecture seule'}
                     </span>
                     <Button
                       variant="outline"
@@ -582,15 +582,15 @@ export function SettingsMCPConnector() {
                       {porteeEnCours === a.clientId
                         ? 'Modification...'
                         : a.peutEcrire
-                          ? "Retirer l'ecriture"
-                          : "Autoriser l'ecriture des parts"}
+                          ? "Retirer l'écriture"
+                          : "Autoriser l'écriture des parts"}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => void revoquerAutorisation(a.clientId, a.nom)}
                       disabled={revocationEnCours === a.clientId}
                     >
-                      {revocationEnCours === a.clientId ? 'Revocation...' : 'Revoquer'}
+                      {revocationEnCours === a.clientId ? 'Révocation...' : 'Révoquer'}
                     </Button>
                   </div>
                 </div>
@@ -627,17 +627,17 @@ export function SettingsMCPConnector() {
                 c'est que certains clients n'offrent aucun champ pour un en-tête. */}
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
               <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                Voie 1 — claude.ai (OAuth), sans aucune cle a copier
+                Voie 1 — claude.ai (OAuth), sans aucune clé à copier
               </p>
               <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal pl-4">
                 <li>
-                  Restez connecte au CRM <strong>dans ce navigateur</strong> : c'est votre session qui
-                  autorise l'acces.
+                  Restez connecté au CRM <strong>dans ce navigateur</strong> : c'est votre session qui
+                  autorise l'accès.
                 </li>
                 <li>Dans claude.ai, ajoutez un connecteur avec l'URL ci-dessus.</li>
                 <li>
                   <strong>Laissez les champs « Client ID » et « Client Secret » vides.</strong> Claude
-                  s'enregistre tout seul ; y coller une cle du tableau ci-dessous ferait echouer la
+                  s'enregistre tout seul ; y coller une clé du tableau ci-dessous ferait échouer la
                   connexion.
                 </li>
                 <li>Un ecran « Autoriser Claude ? » s'affiche. Vous acceptez, et c'est fini.</li>
@@ -650,10 +650,10 @@ export function SettingsMCPConnector() {
 
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
               <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                Voie 2 — Claude Code, Cursor, VS Code : une cle dans un en-tete
+                Voie 2 — Claude Code, Cursor, VS Code : une clé dans un en-tête
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Ces clients acceptent un en-tete fixe. Creez une cle ci-dessous, puis :
+                Ces clients acceptent un en-tête fixe. Créez une clé ci-dessous, puis :
               </p>
               <div className="relative">
                 <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
@@ -712,14 +712,14 @@ export function SettingsMCPConnector() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); setNewKeyName(''); }}
-        title="Generer une nouvelle cle MCP"
+        title="Générer une nouvelle clé MCP"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Donnez un nom a cette cle pour l'identifier facilement (ex: "Claude Desktop", "Cursor IDE").
+            Donnez un nom à cette clé pour l'identifier facilement (ex: "Claude Desktop", "Cursor IDE").
           </p>
           <Input
-            label="Nom de la cle"
+            label="Nom de la clé"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Ex: Claude Desktop bureau"
@@ -741,14 +741,14 @@ export function SettingsMCPConnector() {
       <Modal
         isOpen={showSecretModal}
         onClose={() => { setShowSecretModal(false); setNewKeyData(null); setShowSecret(false); }}
-        title="Cle generee avec succes"
+        title="Clé générée avec succès"
       >
         {newKeyData && (
           <div className="space-y-4">
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                Le secret ne sera plus jamais affiche apres la fermeture de cette fenetre. Copiez-le maintenant.
+                Le secret ne sera plus jamais affiché après la fermeture de cette fenêtre. Copiez-le maintenant.
               </p>
             </div>
 
@@ -790,7 +790,7 @@ export function SettingsMCPConnector() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Configuration complete</label>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Configuration complète</label>
                 <div className="relative mt-1">
                   <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
                     {JSON.stringify({
@@ -836,12 +836,12 @@ export function SettingsMCPConnector() {
       <Modal
         isOpen={showRevokeModal}
         onClose={() => { setShowRevokeModal(false); setRevokeTarget(null); }}
-        title="Revoquer cette cle ?"
+        title="Révoquer cette clé ?"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            La cle <strong>"{revokeTarget?.name}"</strong> sera immediatement desactivee.
-            Tout LLM utilisant cette cle ne pourra plus acceder a vos donnees.
+            La clé <strong>"{revokeTarget?.name}"</strong> sera immédiatement désactivée.
+            Tout LLM utilisant cette clé ne pourra plus accéder à vos données.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => { setShowRevokeModal(false); setRevokeTarget(null); }}>
@@ -849,7 +849,7 @@ export function SettingsMCPConnector() {
             </Button>
             <Button variant="danger" onClick={handleRevoke}>
               <Trash2 className="w-4 h-4 mr-1" />
-              Revoquer
+              Révoquer
             </Button>
           </div>
         </div>

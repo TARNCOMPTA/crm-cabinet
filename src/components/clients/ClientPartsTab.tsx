@@ -218,8 +218,8 @@ export function ClientPartsTab({
       setPersonnes((personneRes.data || []) as Associe[]);
       setActes((acteRes.data || []) as ActeLeger[]);
     } catch (e) {
-      setErreurChargement(messageErreur(e, 'La repartition n’a pas pu etre lue.'));
-      showToast('Erreur lors du chargement de la repartition', 'error');
+      setErreurChargement(messageErreur(e, 'La répartition n’a pas pu être lue.'));
+      showToast('Erreur lors du chargement de la répartition', 'error');
     } finally {
       setLoading(false);
       setPremierAffichage(false);
@@ -262,7 +262,7 @@ export function ClientPartsTab({
     const morale = identite.person_type === 'morale';
     const nom = morale ? identite.denomination.trim() : identite.last_name.trim();
     if (!nom) {
-      showToast(morale ? 'Denomination obligatoire' : 'Nom obligatoire', 'error');
+      showToast(morale ? 'Dénomination obligatoire' : 'Nom obligatoire', 'error');
       return null;
     }
 
@@ -284,7 +284,7 @@ export function ClientPartsTab({
       // Index unique sur (prenom, nom, type, date de naissance) : la personne
       // existe deja, et le dire vaut mieux qu'un « erreur inconnue ».
       if (codeErreur(error) === '23505') {
-        showToast('Cette personne existe deja : choisissez-la dans la liste', 'error');
+        showToast('Cette personne existe déjà : choisissez-la dans la liste', 'error');
       } else {
         showToast("Erreur lors de la création de l'associé", 'error');
       }
@@ -296,7 +296,7 @@ export function ClientPartsTab({
   async function enregistrer() {
     const parts = Number(form.nb_parts.replace(',', '.'));
     if (!Number.isFinite(parts) || parts <= 0) {
-      showToast(`Le nombre ${mots.de} doit etre superieur a zero`, 'error');
+      showToast(`Le nombre ${mots.de} doit être supérieur à zéro`, 'error');
       return;
     }
 
@@ -343,7 +343,7 @@ export function ClientPartsTab({
           'error'
         );
       } else if (codeErreur(e) === '23514') {
-        showToast('Valeur refusee par la base : verifiez le nombre de parts', 'error');
+        showToast('Valeur refusée par la base : vérifiez le nombre de parts', 'error');
       } else {
         showToast("Erreur lors de l'enregistrement", 'error');
       }
@@ -416,14 +416,14 @@ export function ClientPartsTab({
             <div className="text-center">
               <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
               <p className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                La repartition n&apos;a pas pu etre lue
+                La répartition n&apos;a pas pu être lue
               </p>
               <p className="mt-1 text-sm text-gray-500">
                 Ce client a peut-être des associés enregistrés : cet écran ne peut pas le dire.
               </p>
               <p className="mt-2 text-xs text-gray-400">{erreurChargement}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={charger}>
-                Reessayer
+                Réessayer
               </Button>
             </div>
           </CardContent>
@@ -465,7 +465,7 @@ export function ClientPartsTab({
             <div className="text-center">
               <PieChart className="mx-auto h-10 w-10 text-gray-300" />
               <p className="mt-3 text-sm text-gray-500">
-                Aucune repartition saisie pour ce client
+                Aucune répartition saisie pour ce client
               </p>
               <Button variant="outline" size="sm" className="mt-4" onClick={ouvrirAjout}>
                 <Plus className="w-4 h-4 mr-1.5" />
@@ -538,7 +538,7 @@ export function ClientPartsTab({
                               le cabinet a verifie. */}
                           {ligne.source === 'statuts' && (
                             <Badge variant="warning" className="mr-1.5">
-                              D&apos;apres les statuts
+                              D&apos;après les statuts
                             </Badge>
                           )}
                           {acte
@@ -559,7 +559,7 @@ export function ClientPartsTab({
                             <button
                               type="button"
                               onClick={() => setASupprimer(ligne)}
-                              aria-label={`Supprimer la detention de ${nomAssocie(ligne.officer)}`}
+                              aria-label={`Supprimer la détention de ${nomAssocie(ligne.officer)}`}
                               title="Supprimer"
                               className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30"
                             >
@@ -598,7 +598,7 @@ export function ClientPartsTab({
           {!nouvelleIdentite ? (
             <div className="space-y-2">
               <SearchableSelect
-                label="Associe"
+                label="Associé"
                 value={form.officer_id}
                 onChange={(v) => setForm({ ...form, officer_id: v })}
                 placeholder="Rechercher une personne..."
@@ -642,14 +642,14 @@ export function ClientPartsTab({
               />
               {identite.person_type === 'morale' ? (
                 <Input
-                  label="Denomination sociale"
+                  label="Dénomination sociale"
                   value={identite.denomination}
                   onChange={(e) => setIdentite({ ...identite, denomination: e.target.value })}
                 />
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <Input
-                    label="Prenom"
+                    label="Prénom"
                     value={identite.first_name}
                     onChange={(e) => setIdentite({ ...identite, first_name: e.target.value })}
                   />
@@ -686,7 +686,7 @@ export function ClientPartsTab({
               type="date"
               value={form.date_effet}
               onChange={(e) => setForm({ ...form, date_effet: e.target.value })}
-              helperText="La date de l'acte qui a etabli cette detention"
+              helperText="La date de l'acte qui a établi cette détention"
             />
             <Select
               label="Acte du registre"
@@ -710,7 +710,7 @@ export function ClientPartsTab({
             value={form.acte_source}
             onChange={(e) => setForm({ ...form, acte_source: e.target.value })}
             placeholder="Cession de parts du 12/03/2019, Me Durand"
-            helperText="Pour un acte absent du registre : cession notariee, acte sous seing prive"
+            helperText="Pour un acte absent du registre : cession notariée, acte sous seing privé"
           />
 
           <Input
@@ -745,7 +745,7 @@ export function ClientPartsTab({
         isOpen={!!aSupprimer}
         onClose={() => setASupprimer(null)}
         onConfirm={() => aSupprimer && supprimer(aSupprimer)}
-        title="Supprimer la detention"
+        title="Supprimer la détention"
         message={
           aSupprimer
             ? `Retirer ${formatNombre(aSupprimer.nb_parts)} ${mots.pluriel} de ${nomAssocie(aSupprimer.officer)} ? La répartition deviendra incomplète.`
@@ -779,7 +779,7 @@ function BandeauEtat({
 
   const message =
     etat.etat === 'total-inconnu'
-      ? `Le nombre total ${mots.de} n'est pas renseigne dans la fiche : les pourcentages ne peuvent pas etre calcules. Renseignez-le dans l'onglet Informations.`
+      ? `Le nombre total ${mots.de} n'est pas renseigné dans la fiche : les pourcentages ne peuvent pas être calculés. Renseignez-le dans l'onglet Informations.`
       : etat.etat === 'incomplete'
         ? `Répartition incomplète : ${formatNombre(etat.somme)} ${mots.pluriel} saisies sur ${formatNombre(etat.total)}, il en manque ${formatNombre(etat.manquant)}. Les pourcentages affichés sont justes, mais la liste ne couvre pas tout le capital.`
         : `Répartition incohérente : la somme saisie (${formatNombre(etat.somme)}) dépasse le total déclaré (${formatNombre(etat.total)}) de ${formatNombre(etat.excedent)} ${mots.pluriel}. L'une des deux valeurs est fausse.`;
