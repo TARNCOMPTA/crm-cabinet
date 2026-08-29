@@ -365,9 +365,9 @@ export function SettingsMCPConnector() {
               seulement si on le lui accorde ici, acces par acces. Laisser la
               promesse d'origine aurait ete la pire des deux erreurs : elle
               rassure sur ce qui a change. */}
-          Connectez un assistant IA (Claude Desktop, Cursor, VS Code) a vos donnees via le protocole
-          MCP (Model Context Protocol). En lecture par defaut : seule la repartition des parts peut
-          etre ecrite, et uniquement si vous l'autorisez ci-dessous, acces par acces.
+          Connectez un assistant IA (Claude Desktop, Cursor, VS Code) à vos données via le protocole
+          MCP (Model Context Protocol). En lecture par défaut : seule la répartition des parts peut
+          être écrite, et uniquement si vous l'autorisez ci-dessous, accès par accès.
         </p>
       </div>
 
@@ -377,18 +377,18 @@ export function SettingsMCPConnector() {
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
             <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-              <p className="font-medium text-gray-900 dark:text-white">Comment ca fonctionne</p>
+              <p className="font-medium text-gray-900 dark:text-white">Comment ça fonctionne</p>
               <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                <li>Generez une paire de cles (ID + Secret) ci-dessous</li>
+                <li>Générez une paire de clés (ID + Secret) ci-dessous</li>
                 <li>Configurez votre client IA avec l'URL et les identifiants</li>
-                <li>L'IA <strong>consulte</strong> les donnees de votre cabinet</li>
+                <li>L'IA <strong>consulte</strong> les données de votre cabinet</li>
                 {/* ⚠️ « AUCUNE MODIFICATION N'EST POSSIBLE » ETAIT ECRIT ICI, et
                     ne l'etait plus depuis `set_client_repartition`. Une promesse
                     perimee sur un ecran de securite vaut moins que pas de
                     promesse du tout. */}
                 <li>
-                  Elle ne peut rien <strong>modifier</strong>, a une exception que vous accordez
-                  vous-meme : la repartition des parts d'un client
+                  Elle ne peut rien <strong>modifier</strong>, à une exception que vous accordez
+                  vous-même : la répartition des parts d'un client
                 </li>
                 <li>Aucune suppression, jamais</li>
               </ul>
@@ -404,11 +404,11 @@ export function SettingsMCPConnector() {
               l'administrateur voit celles de tout le cabinet, et le titre doit le
               dire plutot que de lui laisser croire qu'il n'a que les siennes. */}
           <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-            {isAdmin ? "Les cles d'acces du cabinet" : "Vos cles d'acces"}
+            {isAdmin ? "Les clés d'accès du cabinet" : "Vos clés d'accès"}
           </h3>
           <Button size="sm" onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4 mr-1" />
-            Nouvelle cle
+            Nouvelle clé
           </Button>
         </div>
 
@@ -421,7 +421,7 @@ export function SettingsMCPConnector() {
             <CardContent className="p-8 text-center">
               <Key className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Aucune cle generee. Creez votre premiere cle pour connecter un LLM.
+                Aucune clé générée. Créez votre première clé pour connecter un LLM.
               </p>
             </CardContent>
           </Card>

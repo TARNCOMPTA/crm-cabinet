@@ -786,7 +786,7 @@ export function ClientDetail() {
           <TabsTrigger value="parts" className="flex items-center gap-1.5"><PieChart className="w-3.5 h-3.5" />Parts</TabsTrigger>
           <TabsTrigger value="logiciels" className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5" />Logiciels</TabsTrigger>
           {client.is_lmnp && <TabsTrigger value="outils" className="flex items-center gap-1.5"><Calculator className="w-3.5 h-3.5" />Outils</TabsTrigger>}
-          <TabsTrigger value="synthese">Synthese</TabsTrigger>
+          <TabsTrigger value="synthese">Synthèse</TabsTrigger>
         </TabsList>
 
         <TabsContent value="informations" className="mt-6">

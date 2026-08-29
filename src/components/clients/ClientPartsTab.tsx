@@ -79,8 +79,8 @@ interface Props {
 }
 
 const DEMEMBREMENTS: Record<string, string> = {
-  'pleine-propriete': 'Pleine propriete',
-  'nue-propriete': 'Nue-propriete',
+  'pleine-propriete': 'Pleine propriété',
+  'nue-propriete': 'Nue-propriété',
   usufruit: 'Usufruit',
 };
 
@@ -286,7 +286,7 @@ export function ClientPartsTab({
       if (codeErreur(error) === '23505') {
         showToast('Cette personne existe deja : choisissez-la dans la liste', 'error');
       } else {
-        showToast("Erreur lors de la creation de l'associe", 'error');
+        showToast("Erreur lors de la création de l'associé", 'error');
       }
       return null;
     }
@@ -309,7 +309,7 @@ export function ClientPartsTab({
         officerId = cree;
       }
       if (!officerId) {
-        showToast('Veuillez choisir un associe', 'error');
+        showToast('Veuillez choisir un associé', 'error');
         return;
       }
 
@@ -333,13 +333,13 @@ export function ClientPartsTab({
 
       if (error) throw error;
 
-      showToast(enEdition ? 'Detention modifiee' : 'Associe ajoute', 'success');
+      showToast(enEdition ? 'Détention modifiée' : 'Associé ajouté', 'success');
       setModale(false);
       charger();
     } catch (e) {
       if (codeErreur(e) === '23505') {
         showToast(
-          `Cet associe a deja une ligne en ${DEMEMBREMENTS[form.demembrement]?.toLowerCase()} : modifiez-la`,
+          `Cet associé a déjà une ligne en ${DEMEMBREMENTS[form.demembrement]?.toLowerCase()} : modifiez-la`,
           'error'
         );
       } else if (codeErreur(e) === '23514') {
@@ -356,7 +356,7 @@ export function ClientPartsTab({
     try {
       const { error } = await supabase.from('client_associes').delete().eq('id', ligne.id);
       if (error) throw error;
-      showToast('Detention supprimee', 'success');
+      showToast('Détention supprimée', 'success');
       setASupprimer(null);
       charger();
     } catch {
@@ -385,7 +385,7 @@ export function ClientPartsTab({
         <div className="flex items-center gap-2">
           <PieChart className="w-5 h-5 text-gray-500" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Repartition des {mots.pluriel}
+            Répartition des {mots.pluriel}
           </h2>
           {lignes.length > 0 && (
             <Badge className="bg-gray-100 text-gray-700">{lignes.length}</Badge>
@@ -403,7 +403,7 @@ export function ClientPartsTab({
           </Button>
           <Button size="sm" onClick={ouvrirAjout} disabled={!!erreurChargement}>
             <Plus className="w-4 h-4 mr-1.5" />
-            Ajouter un associe
+            Ajouter un associé
           </Button>
         </div>
       </div>
@@ -419,7 +419,7 @@ export function ClientPartsTab({
                 La repartition n&apos;a pas pu etre lue
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                Ce client a peut-etre des associes enregistres : cet ecran ne peut pas le dire.
+                Ce client a peut-être des associés enregistrés : cet écran ne peut pas le dire.
               </p>
               <p className="mt-2 text-xs text-gray-400">{erreurChargement}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={charger}>
@@ -469,7 +469,7 @@ export function ClientPartsTab({
               </p>
               <Button variant="outline" size="sm" className="mt-4" onClick={ouvrirAjout}>
                 <Plus className="w-4 h-4 mr-1.5" />
-                Ajouter un associe
+                Ajouter un associé
               </Button>
             </div>
           </CardContent>
@@ -481,12 +481,12 @@ export function ClientPartsTab({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs uppercase text-gray-500 dark:text-gray-400">
-                    <th className="px-4 py-2 font-medium">Associe</th>
+                    <th className="px-4 py-2 font-medium">Associé</th>
                     <th className="px-4 py-2 font-medium text-right">
                       {mots.pluriel.charAt(0).toUpperCase() + mots.pluriel.slice(1)}
                     </th>
                     <th className="px-4 py-2 font-medium text-right">%</th>
-                    <th className="px-4 py-2 font-medium">Detention</th>
+                    <th className="px-4 py-2 font-medium">Détention</th>
                     <th className="px-4 py-2 font-medium">Depuis</th>
                     <th className="px-4 py-2 font-medium">Acte</th>
                     <th className="px-4 py-2" />
@@ -550,7 +550,7 @@ export function ClientPartsTab({
                             <button
                               type="button"
                               onClick={() => ouvrirEdition(ligne)}
-                              aria-label={`Modifier la detention de ${nomAssocie(ligne.officer)}`}
+                              aria-label={`Modifier la détention de ${nomAssocie(ligne.officer)}`}
                               title="Modifier"
                               className="p-1.5 text-gray-400 hover:text-teal-600 rounded-md hover:bg-teal-50 dark:hover:bg-teal-900/30"
                             >
@@ -578,7 +578,7 @@ export function ClientPartsTab({
             {lignes.some((x) => x.demembrement === 'usufruit') && (
               <p className="px-4 py-3 text-xs text-gray-500 border-t border-gray-100 dark:border-gray-800">
                 L&apos;usufruit n&apos;entre pas dans le total : il porte sur des {mots.pluriel} dont
-                une autre personne est nu-proprietaire, et les compter deux fois ferait dépasser le
+                une autre personne est nu-propriétaire, et les compter deux fois ferait dépasser le
                 capital.
               </p>
             )}
@@ -591,7 +591,7 @@ export function ClientPartsTab({
       <Modal
         isOpen={modale}
         onClose={() => setModale(false)}
-        title={enEdition ? 'Modifier la detention' : 'Ajouter un associe'}
+        title={enEdition ? 'Modifier la détention' : 'Ajouter un associé'}
         size="lg"
       >
         <div className="space-y-4">
@@ -614,14 +614,14 @@ export function ClientPartsTab({
                 onClick={() => setNouvelleIdentite(true)}
                 className="text-sm text-teal-600 hover:underline"
               >
-                L&apos;associe n&apos;est pas dans la liste
+                L&apos;associé n&apos;est pas dans la liste
               </button>
             </div>
           ) : (
             <div className="space-y-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nouvel associe
+                  Nouvel associé
                 </span>
                 <button
                   type="button"
@@ -673,7 +673,7 @@ export function ClientPartsTab({
               onChange={(e) => setForm({ ...form, nb_parts: e.target.value })}
             />
             <Select
-              label="Detention"
+              label="Détention"
               value={form.demembrement}
               onChange={(e) => setForm({ ...form, demembrement: e.target.value })}
               options={Object.entries(DEMEMBREMENTS).map(([value, label]) => ({ value, label }))}
@@ -748,7 +748,7 @@ export function ClientPartsTab({
         title="Supprimer la detention"
         message={
           aSupprimer
-            ? `Retirer ${formatNombre(aSupprimer.nb_parts)} ${mots.pluriel} de ${nomAssocie(aSupprimer.officer)} ? La repartition deviendra incomplete.`
+            ? `Retirer ${formatNombre(aSupprimer.nb_parts)} ${mots.pluriel} de ${nomAssocie(aSupprimer.officer)} ? La répartition deviendra incomplète.`
             : ''
         }
         confirmText="Supprimer"
@@ -781,8 +781,8 @@ function BandeauEtat({
     etat.etat === 'total-inconnu'
       ? `Le nombre total ${mots.de} n'est pas renseigne dans la fiche : les pourcentages ne peuvent pas etre calcules. Renseignez-le dans l'onglet Informations.`
       : etat.etat === 'incomplete'
-        ? `Repartition incomplete : ${formatNombre(etat.somme)} ${mots.pluriel} saisies sur ${formatNombre(etat.total)}, il en manque ${formatNombre(etat.manquant)}. Les pourcentages affiches sont justes, mais la liste ne couvre pas tout le capital.`
-        : `Repartition incoherente : la somme saisie (${formatNombre(etat.somme)}) depasse le total declare (${formatNombre(etat.total)}) de ${formatNombre(etat.excedent)} ${mots.pluriel}. L'une des deux valeurs est fausse.`;
+        ? `Répartition incomplète : ${formatNombre(etat.somme)} ${mots.pluriel} saisies sur ${formatNombre(etat.total)}, il en manque ${formatNombre(etat.manquant)}. Les pourcentages affichés sont justes, mais la liste ne couvre pas tout le capital.`
+        : `Répartition incohérente : la somme saisie (${formatNombre(etat.somme)}) dépasse le total déclaré (${formatNombre(etat.total)}) de ${formatNombre(etat.excedent)} ${mots.pluriel}. L'une des deux valeurs est fausse.`;
 
   return (
     <div

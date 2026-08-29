@@ -223,7 +223,7 @@ const GROUPS: SettingsGroup[] = [
       {
         key: 'mcp-connector',
         label: 'Connecteur IA (MCP)',
-        description: 'Connecter un LLM a vos donnees',
+        description: 'Connecter un LLM à vos données',
         icon: Plug,
         component: SettingsMCPConnector,
         // Ouvert a tout collaborateur : le connecteur n'expose que des outils en
