@@ -283,12 +283,29 @@ suite('parcours de bout en bout', () => {
       .toBe(true);
 
     // --- le régime : un choix, pas une frappe. LA CELLULE DOIT AFFICHER LE
-    //     LIBELLÉ (« IS reel »), pas le code stocké (« IS_REEL ») ---
-    await ligne.getByLabel(/Regime fiscal du client/i).selectOption('IS_REEL');
+    //     LIBELLÉ, pas le code stocké (« IS_REEL ») ---
+    //
+    // ⚠️ LE LIBELLÉ SE LIT DANS L'OPTION, IL NE S'ÉCRIT PAS ICI. Ce test a
+    // longtemps attendu la chaîne « IS reel » — celle que `ci.yml` sème — ce qui
+    // l'attachait au jeu de données autant qu'au produit : le lancer sur une
+    // base semée autrement le faisait échouer sans qu'aucun défaut existe.
+    // Constaté le 2026-08-29 contre `scripts/donnees-demonstration.sql`, qui
+    // nomme ce régime « IS réel normal ».
+    //
+    // En lisant l'option, l'assertion dit exactement ce qu'elle prétend dire :
+    // la cellule rend le LIBELLÉ du régime, quel qu'il soit, et jamais son code.
+    const selecteurRegime = ligne.getByLabel(/Regime fiscal du client/i);
+    const libelleRegime = (
+      await selecteurRegime.locator('option[value="IS_REEL"]').textContent()
+    )?.trim();
+    expect(libelleRegime, 'le regime IS_REEL doit exister dans le selecteur').toBeTruthy();
+    expect(libelleRegime, "le libelle ne doit pas etre le code").not.toBe('IS_REEL');
+    await selecteurRegime.selectOption('IS_REEL');
     await expect
-      .poll(() => ligne.getByText('IS reel', { exact: true }).first().isVisible().catch(() => false), {
-        timeout: 15_000,
-      })
+      .poll(
+        () => ligne.getByText(libelleRegime!, { exact: true }).first().isVisible().catch(() => false),
+        { timeout: 15_000 }
+      )
       .toBe(true);
 
     // --- la clôture : un mois, affiché en toutes lettres ---
@@ -305,7 +322,12 @@ suite('parcours de bout en bout', () => {
     await page.reload({ waitUntil: 'networkidle' });
     const relue = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
     await relue.waitFor({ timeout: 30_000 });
-    for (const attendu of ['contact@sans-email.invalid', 'D-2026-001', 'IS reel', 'juin']) {
+    for (const attendu of [
+      'contact@sans-email.invalid',
+      'D-2026-001',
+      libelleRegime!, // le libelle du jeu de donnees, jamais une chaine en dur
+      'juin',
+    ]) {
       await expect
         .poll(() => relue.getByText(attendu, { exact: true }).first().isVisible().catch(() => false), {
           timeout: 15_000,

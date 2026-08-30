@@ -114,18 +114,65 @@ Premier compte :
 cd server && npm run enrolement -- --creer vous@exemple.fr Prenom Nom admin
 ```
 
+### Le harnais local
+
+Une instance complète — PostgreSQL, PostgREST, le serveur, le front construit et
+un portefeuille de démonstration — en une commande :
+
+```bash
+sh scripts/harnais.sh
+```
+
+Elle rend l'adresse et un code d'enrôlement. Comptez quelques secondes si Docker
+tourne, un peu plus au premier lancement (le binaire PostgREST est téléchargé
+dans `.harnais/`, à la version qu'épingle `docker-compose.yml`).
+
+```bash
+sh scripts/harnais.sh etat      # ce qui tourne
+sh scripts/harnais.sh code      # un nouveau code d'enrôlement
+sh scripts/harnais.sh arreter   # arrêter, garder la base
+sh scripts/harnais.sh raser     # tout supprimer
+```
+
+Les données sont **entièrement fictives** (`scripts/donnees-demonstration.sql`) :
+treize sociétés, sept dirigeants, des tâches, des opportunités. Aucune société,
+personne ni SIREN réel — de quoi montrer le produit sans jamais ouvrir un dossier
+client. Le fichier refuse de s'appliquer à une base qui porte déjà des clients.
+
+Deux bases sont montées, et ce n'est pas du confort : `schema.test.ts` et
+`mcp-sql.test.ts` commencent par `DROP SCHEMA public CASCADE`. La base d'essai
+est donc séparée de celle de l'instance, et jetable.
+
 ### Vérifications
 
 ```bash
+npm run test:tout   # la totale : typecheck, eslint, 753 tests
+```
+
+Prérequis : le harnais tourne.
+
+⚠️ **`npm test` seul ne dit pas tout, et son chiffre est trompeur.** Il affiche
+`643 passed | 110 skipped` : les 110 sont `schema.test.ts`, `mcp-sql.test.ts` et
+`e2e.test.ts`, c'est-à-dire **toute la couche base de données et toute la couche
+navigateur**. Elles s'ignorent d'elles-mêmes faute de `DATABASE_URL_TEST` et de
+`E2E_BASE_URL`.
+
+Le problème n'est pas qu'elles s'ignorent — c'est raisonnable sur un poste sans
+base. Le problème est que **sauter ressemble à réussir** : la sortie est verte,
+le compte est gros, et rien ne distingue « tout va bien » de « on n'a pas
+regardé ». Le 2026-08-29 une régression est partie en CI pour ce motif exact, un
+test e2e cherchant « repartition » quand le produit écrivait « répartition ».
+
+`npm run test:tout` **échoue si un seul test est ignoré**, et nomme le fichier.
+
+Les commandes séparées restent disponibles :
+
+```bash
 npm run typecheck   # front
-npm run test        # vitest
+npm run test        # vitest, sans infrastructure
 npm run build       # vite
 cd server && npm run typecheck && npm run build
 ```
-
-`npm test` s'exécute sans rien installer : les suites qui demandent une
-infrastructure — le schéma appliqué à un vrai PostgreSQL, le parcours dans un
-navigateur — s'ignorent d'elles-mêmes quand elle n'est pas là.
 
 ### Le parcours de bout en bout
 
@@ -134,19 +181,16 @@ authentificateur : aucun script ne peut ouvrir une session. Chromium en expose u
 **virtuel** par le protocole DevTools, et c'est le seul angle depuis lequel
 l'enrôlement et la connexion sont observables.
 
-Contre une instance qui tourne :
+`npm run test:tout` s'en charge. À la main, contre une instance qui tourne :
 
 ```bash
-npx playwright install chromium          # une fois
-
-cd server && npm run enrolement -- vous@exemple.fr   # un code, valable une heure
-
-E2E_BASE_URL=http://localhost:3000 E2E_CODE_ENROLEMENT=XXXXX-XXXXX npm run test:e2e
+npx playwright install chromium                      # une fois
+sh scripts/harnais.sh code                           # un code, valable une heure
+E2E_BASE_URL=http://localhost:3100 E2E_CODE_ENROLEMENT=XXXXX-XXXXX npm run test:e2e
 ```
 
 Le code est à usage unique : chaque exécution en demande un nouveau. La CI monte
-la pile entière — PostgreSQL, PostgREST, serveur, front construit — dans le job
-`navigateur`.
+la même pile dans le job `navigateur`.
 
 ---
 

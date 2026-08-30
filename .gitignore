@@ -85,3 +85,8 @@ schema/actuel.json
 # nom court illisible : mieux vaut ecrire dans un fichier nomme et l'ignorer.
 eslint.json
 tsc.log
+# Le harnais local : cluster PostgreSQL, binaire PostgREST, journaux et fichiers
+# deposes pendant les essais. Reconstructible en une commande
+# (`sh scripts/harnais.sh`), donc jamais versionne — et il contient une base de
+# donnees, ce qui suffirait a l'exclure.
+.harnais/
