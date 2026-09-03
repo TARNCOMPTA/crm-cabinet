@@ -170,7 +170,37 @@ async function demarrer() {
   // `npm run build` ecrit dans ../dist depuis server/.
   const front = process.env.FRONT_DIR ?? resolve(ICI, '../../dist');
   if (existsSync(front)) {
-    await app.register(statique, { root: front, prefix: '/' });
+    await app.register(statique, {
+      root: front,
+      prefix: '/',
+      /**
+       * ⚠️ DEUX POLITIQUES DE CACHE, SELON LE NOM DU FICHIER.
+       *
+       * Vite nomme tout ce qu'il ecrit dans `assets/` avec l'empreinte de son
+       * contenu (`index-DBE8c0e9.js`) : un fichier de ce dossier ne change
+       * JAMAIS sous le meme nom. Le navigateur peut donc le garder un an sans
+       * jamais redemander — c'est ce que dit `immutable`.
+       *
+       * Tout le reste — `index.html`, `sw.js`, `manifest.webmanifest`, les
+       * icones — porte un nom FIXE et change a chaque version : il doit etre
+       * revalide a chaque chargement (`max-age=0`), et l'ETag rend cette
+       * revalidation quasi gratuite (304).
+       *
+       * Avant : `max-age=0` sur tout, y compris les 155 fichiers d'`assets/`.
+       * Chaque navigation revalidait chacun d'eux — 155 allers-retours pour
+       * apprendre 155 fois « rien n'a change ». Caddy, en production, compresse
+       * mais ne touche pas a ces en-tetes : ce que le serveur dit ici est ce
+       * que le navigateur recoit. Mesure le 2026-09-03 sur le harnais local.
+       */
+      setHeaders(reply, chemin) {
+        reply.header(
+          'Cache-Control',
+          chemin.includes('/assets/')
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=0, must-revalidate'
+        );
+      },
+    });
     /**
      * Repli SPA : toute route inconnue rend index.html — sauf celles où une 404
      * doit rester une 404.

@@ -2904,3 +2904,32 @@ DROP TRIGGER IF EXISTS update_client_associes_updated_at ON public.client_associ
 CREATE TRIGGER update_client_associes_updated_at
   BEFORE UPDATE ON public.client_associes
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Repris de schema/increments/015-index-cles-etrangeres.sql, qui porte le raisonnement complet :
+-- un index sur la colonne SOURCE de chaque cle etrangere. Garde generique dans tests/schema.test.ts.
+CREATE INDEX IF NOT EXISTS "idx_bilan_checklist_attachments_uploaded_by"
+  ON "bilan_checklist_attachments" (uploaded_by);
+CREATE INDEX IF NOT EXISTS "idx_checklist_item_attachments_uploaded_by"
+  ON "checklist_item_attachments" (uploaded_by);
+CREATE INDEX IF NOT EXISTS "idx_client_ago_avancements_status"
+  ON "client_ago_avancements" (status_id);
+CREATE INDEX IF NOT EXISTS "idx_jedeclare_suivi_interne_assignee"
+  ON "jedeclare_suivi_interne" (assignee_id);
+CREATE INDEX IF NOT EXISTS "idx_jedeclare_suivi_interne_updated_by"
+  ON "jedeclare_suivi_interne" (updated_by);
+CREATE INDEX IF NOT EXISTS "idx_mailing_campagnes_cree_par"
+  ON "mailing_campagnes" (cree_par);
+CREATE INDEX IF NOT EXISTS "idx_mcp_api_keys_created_by"
+  ON "mcp_api_keys" (created_by);
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_codes_user"
+  ON "mcp_oauth_codes" (user_id);
+CREATE INDEX IF NOT EXISTS "idx_mcp_oauth_tokens_user"
+  ON "mcp_oauth_tokens" (user_id);
+CREATE INDEX IF NOT EXISTS "idx_opportunity_attachments_uploaded_by"
+  ON "opportunity_attachments" (uploaded_by);
+CREATE INDEX IF NOT EXISTS "idx_relance_history_effectuee_par"
+  ON "relance_history" (effectuee_par);
+CREATE INDEX IF NOT EXISTS "idx_task_attachments_uploaded_by"
+  ON "task_attachments" (uploaded_by);
+CREATE INDEX IF NOT EXISTS "idx_tasks_archived_by"
+  ON "tasks" (archived_by);

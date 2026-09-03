@@ -5,6 +5,37 @@ signale un changement qui demande une action de votre part.
 
 ---
 
+## À venir
+
+### Performance, mesurée avant d'être corrigée
+
+Un audit dans un vrai navigateur, sur huit écrans, avec le nombre de requêtes
+par écran, les en-têtes servis et les index de la base. Trois défauts, tous
+corrigés et remesurés ; le reste de l'audit tenait.
+
+- **Les fichiers nommés par empreinte sont désormais mis en cache un an.**
+  Vite écrit tout `assets/` sous un nom qui contient l'empreinte du contenu ;
+  le serveur répondait pourtant `max-age=0` sur chacun, et le navigateur
+  revalidait 155 fichiers à chaque navigation. Caddy compresse mais ne touche
+  pas à ces en-têtes. `index.html`, `sw.js` et le manifeste, qui portent un nom
+  fixe, restent revalidés à chaque chargement.
+- **Plus d'écriture en base à chaque démarrage.** Le contexte des préférences
+  naissait « chargé et vide » pendant l'instant qui précède sa lecture ; la
+  synchronisation du thème s'y fiait et réécrivait le thème courant — un
+  `POST user_preferences` par ouverture de l'application, pour une valeur déjà
+  enregistrée. Il ne reste qu'une lecture.
+- **Un index sur chaque clé étrangère** — treize colonnes n'en avaient pas,
+  presque toutes des `uploaded_by` / `created_by` vers `profiles` : les tables
+  que PostgreSQL relirait en entier le jour où l'on supprime un compte
+  (incrément 015). Une garde dans la suite de schéma empêche qu'il en revienne.
+
+Ce que l'audit n'a **pas** trouvé, et qui compte autant : aucun appel en
+N+1 (jamais une table interrogée dix fois pour dix lignes), et un premier écran
+qui ne charge que 280 Ko de JavaScript — l'export PDF, le tableur et la carte
+n'arrivent que quand on les ouvre.
+
+---
+
 ## 2.3.0 — 2026-08-29
 
 Cette version ouvre le CRM aux cabinets qui ne sont pas TARN COMPTA — au sens

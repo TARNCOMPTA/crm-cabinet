@@ -151,6 +151,37 @@ suite('schema appliqué à PostgreSQL', () => {
    * `user_preferences.user_id`, que l'appelant renseigne, en sont exclues a
    * dessein.
    */
+  /**
+   * Toute cle etrangere a un index sur sa colonne SOURCE.
+   *
+   * PostgreSQL n'en cree pas : il indexe la cible (la cle primaire d'en face),
+   * jamais la colonne qui pointe. Or c'est elle qui travaille — a chaque
+   * jointure, et a chaque suppression de la ligne referencee, ou la base doit
+   * verifier qu'aucune ligne ne pointe encore vers elle. Sans index, cette
+   * verification lit la table entiere.
+   *
+   * Treize colonnes etaient dans ce cas le 2026-09-03, presque toutes des
+   * `uploaded_by` / `created_by` vers `profiles` : les tables que PostgreSQL
+   * relirait une par une le jour ou l'on supprime un compte. L'increment 015
+   * les a couvertes ; cette garde empeche qu'il en revienne.
+   */
+  it('indexe la colonne source de chaque cle etrangere', async () => {
+    const { rows } = await client.query(
+      `SELECT c.conrelid::regclass || '.' || a.attname AS colonne
+         FROM pg_constraint c
+         JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+         JOIN pg_namespace n ON n.oid = c.connamespace
+        WHERE c.contype = 'f' AND n.nspname = 'public'
+          AND NOT EXISTS (
+            SELECT 1 FROM pg_index i
+             WHERE i.indrelid = c.conrelid AND i.indkey[0] = a.attnum
+          )
+        ORDER BY 1`
+    );
+    const sans = rows.map((r) => r.colonne);
+    expect(sans, `cles etrangeres sans index : ${sans.join(', ')}`).toEqual([]);
+  });
+
   it('donne une valeur par defaut a chaque cle primaire nommee id', async () => {
     const { rows } = await client.query(
       `SELECT c.relname AS table_
