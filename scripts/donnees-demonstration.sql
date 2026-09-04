@@ -177,6 +177,26 @@ JOIN profiles p ON p.email = CASE
   ELSE 'sasha.bories@cabinet-demo.invalid' END
 WHERE c.statut = 'actif';
 
+-- Un dossier est rarement tenu par une seule personne : celui qui le suit,
+-- celui qui supervise, celui qui fait la paie. Sans une deuxieme et une
+-- troisieme ligne ici, l'ecran des bilans montrerait une seule vignette par
+-- carte et la demonstration passerait a cote de ce qu'elle doit montrer.
+-- `ON CONFLICT` : la personne peut deja etre le collaborateur principal du
+-- dossier, et l'unicite porte sur (client_id, user_id).
+INSERT INTO client_collaborators (client_id, user_id, role)
+SELECT c.id, p.id, 'superviseur' FROM clients c
+JOIN profiles p ON p.email = 'sasha.bories@cabinet-demo.invalid'
+WHERE c.statut = 'actif'
+ON CONFLICT (client_id, user_id) DO NOTHING;
+
+INSERT INTO client_collaborators (client_id, user_id, role)
+SELECT c.id, p.id, 'paie' FROM clients c
+JOIN profiles p ON p.email = 'remi.pujol@cabinet-demo.invalid'
+WHERE c.statut = 'actif'
+  AND c.nom_entreprise IN ('BOULANGERIE DU PONT VIEUX','LE COMPTOIR DES SAVEURS',
+                           'MAÇONNERIE DU SÉGALA','GARAGE MARSSAC AUTOMOBILES')
+ON CONFLICT (client_id, user_id) DO NOTHING;
+
 -- ----------------------------------------------------------------- les taches
 -- ⚠️ `created_by` EST OBLIGATOIRE ICI, MEME S'IL EST NULLABLE EN BASE. Le
 -- declencheur `notify_task_assigned()` compose son message avec le nom de

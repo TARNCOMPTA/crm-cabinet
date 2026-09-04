@@ -44,8 +44,11 @@ export async function fetchCards(
 ): Promise<BilanCardWithDetails[]> {
   const selectWithAttachments = `
     *,
-    clients!inner(nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture),
-    assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom),
+    clients!inner(
+      nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture,
+      collaborators:client_collaborators(user_id, role, user:profiles(prenom, nom, display_name, avatar_color))
+    ),
+    assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom, display_name, avatar_color),
     checklist_items:bilan_checklist_items(
       id, card_id, template_id, is_checked, checked_by, checked_at, created_at,
       template:bilan_checklist_templates(name, position),
@@ -55,8 +58,11 @@ export async function fetchCards(
 
   const selectWithoutAttachments = `
     *,
-    clients!inner(nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture),
-    assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom),
+    clients!inner(
+      nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture,
+      collaborators:client_collaborators(user_id, role, user:profiles(prenom, nom, display_name, avatar_color))
+    ),
+    assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom, display_name, avatar_color),
     checklist_items:bilan_checklist_items(
       id, card_id, template_id, is_checked, checked_by, checked_at, created_at,
       template:bilan_checklist_templates(name, position)
@@ -525,6 +531,62 @@ export async function downloadChecklistAttachment(storagePath: string, fileName:
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// --- Pieces jointes diverses d'un bilan -------------------------------------
+//
+// Celles qui ne relevent d'aucun point de checklist : courrier de la banque,
+// balance du confrere precedent, PV recu en vrac. Table `bilan_card_attachments`
+// (increment 016), meme bucket que les pieces de checklist, sous le prefixe
+// `<carte>/divers/` — le chemin dit deja de quoi il s'agit.
+
+const BUCKET_BILAN = 'bilan-checklist-attachments';
+
+export async function fetchCardAttachments(cardId: string) {
+  const { data, error } = await supabase
+    .from('bilan_card_attachments')
+    .select('id, file_name, file_size, mime_type, storage_path, uploaded_by, created_at')
+    .eq('card_id', cardId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function uploadCardAttachment(cardId: string, file: File, userId: string) {
+  const extension = file.name.split('.').pop();
+  const chemin = `${cardId}/divers/${crypto.randomUUID()}.${extension}`;
+
+  const { error: erreurDepot } = await supabase.storage.from(BUCKET_BILAN).upload(chemin, file);
+  if (erreurDepot) throw erreurDepot;
+
+  const { data, error } = await supabase
+    .from('bilan_card_attachments')
+    .insert({
+      card_id: cardId,
+      file_name: file.name,
+      file_size: file.size,
+      // ⚠️ Un fichier depose par glisser-deposer depuis certains clients de
+      // messagerie arrive avec un `type` VIDE. La colonne est NOT NULL, et
+      // l'insertion echouait sur une piece pourtant valable : on retombe sur
+      // le type generique plutot que de refuser le depot.
+      mime_type: file.type || 'application/octet-stream',
+      storage_path: chemin,
+      uploaded_by: userId,
+    })
+    .select('id, file_name, file_size, mime_type, storage_path, uploaded_by, created_at')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCardAttachment(attachmentId: string, storagePath: string) {
+  const { error: erreurStockage } = await supabase.storage.from(BUCKET_BILAN).remove([storagePath]);
+  if (erreurStockage) throw erreurStockage;
+
+  const { error } = await supabase.from('bilan_card_attachments').delete().eq('id', attachmentId);
+  if (error) throw error;
 }
 
 // --- Bilan Cabinet Options (DAS2 INPI toggle) ---

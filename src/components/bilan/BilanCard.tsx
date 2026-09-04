@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { User, AlertCircle, ChevronDown, ChevronUp, Check, MessageSquare, Paperclip } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Check, MessageSquare, Paperclip } from 'lucide-react';
+import { VignettesCollaborateurs } from './VignettesCollaborateurs';
+import { vignettesDuBilan } from '../../lib/collaborateursBilan';
 import type { BilanCardWithDetails } from '../../types/database';
 
 const MOIS_LABELS_SHORT = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,6 +56,11 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
   const progress = total > 0 ? Math.round((checked / total) * 100) : 0;
   const isInactive = card.clients?.statut === 'inactif';
   const moisTraites = (card.mois_traites || []).slice().sort((a, b) => a - b);
+
+  const vignettes = vignettesDuBilan(
+    card.clients?.collaborators,
+    card.assignee_id ? { id: card.assignee_id, ...(card.assignee || {}) } : null
+  );
 
   const sortedItems = card.checklist_items?.slice().sort((a, b) => {
     const posA = a.template?.position ?? 0;
@@ -129,14 +136,22 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
           </div>
         )}
 
-        {card.assignee && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-400 flex items-center justify-center">
-              <User className="w-3 h-3" />
-            </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
-              {card.assignee.prenom} {card.assignee.nom}
-            </span>
+        {/*
+          TOUTE L'EQUIPE DU DOSSIER, PAS SEULEMENT LE RESPONSABLE DU BILAN.
+          La carte n'affichait que `assignee` — un nom en toutes lettres, une
+          personne. Or un dossier est tenu par plusieurs collaborateurs, et
+          savoir a qui s'adresser demandait d'ouvrir la fiche client. Les
+          vignettes tiennent la meme largeur pour cinq personnes que le nom
+          d'une seule, et le cercle sarcelle designe le responsable du bilan.
+        */}
+        {vignettes.length > 0 && (
+          <div className="flex items-center justify-between gap-2">
+            <VignettesCollaborateurs vignettes={vignettes} taille="sm" />
+            {vignettes.length === 1 && (
+              <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                {vignettes[0].nomComplet}
+              </span>
+            )}
           </div>
         )}
       </div>

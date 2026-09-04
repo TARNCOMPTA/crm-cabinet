@@ -189,6 +189,17 @@ describe('decodage des scans', () => {
 
   /**
    * ⚠️ LA RÉGRESSION EXACTE : zéro image, et un diagnostic muet sur la cause.
+   *
+   * ⚠️ ET UN DÉLAI EXPLICITE, PARCE QUE LES 5 SECONDES PAR DÉFAUT NE SUFFISENT
+   * PAS TOUJOURS. Ce cas décode réellement une page CCITTFax : ~300 ms de
+   * calcul quand la machine est libre, davantage quand les 758 tests de la
+   * suite et le navigateur de bout en bout se partagent les cœurs. Il a expiré
+   * le 2026-09-04 dans `npm run test:tout`, et passait seul dans la seconde —
+   * la signature exacte d'un délai trop court, pas d'une régression.
+   *
+   * Le délai par défaut de vitest n'est pas un choix, c'est une valeur qu'on
+   * subit. Ici on en fait un : large pour la contention, assez court pour
+   * qu'un vrai blocage se voie encore.
    */
   it('rend une image sur une page CCITTFax', async () => {
     const { imagesDesPages } = await import('./statuts-images.js');
@@ -197,7 +208,7 @@ describe('decodage des scans', () => {
     expect(sortie.diagnostic).toEqual([]);
     expect(sortie.images).toHaveLength(1);
     expect(sortie.images[0]).toMatchObject({ page: 1, largeur: LARGEUR, hauteur: HAUTEUR });
-  });
+  }, 30_000);
 
   /**
    * Le décodeur tourne VRAIMENT, il ne rend pas un tampon vide.

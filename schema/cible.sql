@@ -2933,3 +2933,26 @@ CREATE INDEX IF NOT EXISTS "idx_task_attachments_uploaded_by"
   ON "task_attachments" (uploaded_by);
 CREATE INDEX IF NOT EXISTS "idx_tasks_archived_by"
   ON "tasks" (archived_by);
+
+-- Repris de schema/increments/016-pieces-jointes-bilan.sql, qui porte le raisonnement complet :
+-- les pieces jointes d'un bilan qui ne relevent d'aucun point de checklist. Cascade depuis bilan_cards.
+CREATE TABLE IF NOT EXISTS "bilan_card_attachments" (
+  "id"           uuid DEFAULT gen_random_uuid() NOT NULL,
+  "card_id"      uuid NOT NULL,
+  "file_name"    text NOT NULL,
+  "file_size"    bigint NOT NULL,
+  "mime_type"    text NOT NULL,
+  "storage_path" text NOT NULL,
+  "uploaded_by"  uuid,
+  "created_at"   timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT "bilan_card_attachments_pkey" PRIMARY KEY (id),
+  CONSTRAINT "bilan_card_attachments_card_id_fkey"
+    FOREIGN KEY (card_id) REFERENCES bilan_cards(id) ON DELETE CASCADE,
+  CONSTRAINT "bilan_card_attachments_uploaded_by_fkey"
+    FOREIGN KEY (uploaded_by) REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS "idx_bilan_card_attachments_card"
+  ON "bilan_card_attachments" (card_id);
+CREATE INDEX IF NOT EXISTS "idx_bilan_card_attachments_uploaded_by"
+  ON "bilan_card_attachments" (uploaded_by);

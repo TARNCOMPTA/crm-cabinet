@@ -36,6 +36,51 @@ n'arrivent que quand on les ouvre.
 
 ---
 
+## Non publié
+
+### L'écran d'un bilan, revu
+
+- **Les notes passent en tête.** Elles étaient sous la checklist et ses pièces
+  jointes : sur un bilan bien rempli, il fallait dérouler toute la fenêtre pour
+  lire ce qu'on veut savoir *avant* de toucher au reste.
+- **Un onglet « Pièces jointes »**, pour ce qui ne relève d'aucun point de la
+  checklist — courrier de la banque, balance du confrère précédent, PV reçu en
+  vrac. Ces pièces arrivent avant qu'on sache où les ranger, et souvent ne se
+  rangent jamais. Nouvelle table `bilan_card_attachments` (incrément 016), qui
+  disparaît avec le bilan.
+- **Des pastilles sur les onglets** : `2/5` sur la checklist, le nombre de
+  pièces sur l'autre. Elles disent ce que contient l'onglet qu'on ne regarde
+  pas.
+- **Aperçu au survol.** Passer la souris sur une pièce l'affiche — image ou
+  PDF — sans la télécharger ni quitter la fenêtre. Au clavier, le focus fait la
+  même chose. Le panneau bascule au-dessus de la ligne quand la place manque en
+  dessous.
+- **Glisser-déposer.** Les fichiers se déposent sur la zone de l'onglet ou
+  directement sur une ligne de checklist. Le bouton de sélection reste : on ne
+  glisse pas au clavier.
+- **Toute l'équipe du dossier, en vignettes.** La carte n'affichait qu'un nom,
+  celui du responsable du bilan ; savoir qui d'autre suit le dossier demandait
+  d'ouvrir la fiche client. Chaque personne affectée y a maintenant sa pastille
+  d'initiales — AH, VS —, de sa couleur d'avatar, avec son nom et son rôle en
+  infobulle ; un cercle sarcelle désigne le responsable du bilan. La fenêtre de
+  détail les reprend en clair sous « Équipe du dossier », et son menu déroulant
+  s'appelle désormais **« Responsable du bilan »** : il portait « Collaborateur »
+  et laissait croire qu'il n'y en avait qu'un. Le responsable est affiché même
+  s'il n'appartient pas à l'équipe du dossier — un renfort de saison existe.
+
+### Vérification
+
+- `npm run test:tout` **ne vérifiait pas les types du front**. Il lançait
+  `tsc -p tsconfig.json`, or ce fichier porte `"files": []` : c'est un fichier
+  de références, il ne contrôle rien et rend toujours 0. Une vraie erreur de
+  type est passée au vert le 2026-09-04 ; seule la CI l'a vue. La commande
+  lance désormais `npm run typecheck`, et `tests/typecheck-front.test.ts` tient
+  ensemble les trois endroits qui doivent viser `tsconfig.app.json`.
+- Le décodage d'une page CCITTFax reçoit un délai explicite : 300 ms seul,
+  au-delà des 5 secondes par défaut quand toute la suite se partage les cœurs.
+
+---
+
 ## 2.3.0 — 2026-08-29
 
 Cette version ouvre le CRM aux cabinets qui ne sont pas TARN COMPTA — au sens

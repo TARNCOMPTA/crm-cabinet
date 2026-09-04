@@ -172,6 +172,54 @@ export interface Database {
         }
         Relationships: []
       }
+      bilan_card_attachments: {
+        Row: {
+          id: string
+          card_id: string
+          file_name: string
+          file_size: number
+          mime_type: string
+          storage_path: string
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          card_id: string
+          file_name: string
+          file_size: number
+          mime_type: string
+          storage_path: string
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          card_id?: string
+          file_name?: string
+          file_size?: number
+          mime_type?: string
+          storage_path?: string
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bilan_card_attachments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "bilan_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bilan_card_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bilan_cards: {
         Row: {
           id: string
@@ -990,10 +1038,10 @@ export interface Database {
           date_effet: string | null
           legal_act_id: string | null
           acte_source: string | null
+          source: string
           notes: string | null
           created_at: string
           updated_at: string
-          source: string
         }
         Insert: {
           id?: string
@@ -1004,10 +1052,10 @@ export interface Database {
           date_effet?: string | null
           legal_act_id?: string | null
           acte_source?: string | null
+          source?: string
           notes?: string | null
           created_at?: string
           updated_at?: string
-          source?: string
         }
         Update: {
           id?: string
@@ -1018,10 +1066,10 @@ export interface Database {
           date_effet?: string | null
           legal_act_id?: string | null
           acte_source?: string | null
+          source?: string
           notes?: string | null
           created_at?: string
           updated_at?: string
-          source?: string
         }
         Relationships: [
           {
@@ -1254,7 +1302,6 @@ export interface Database {
           nom_commercial: string | null
           date_immatriculation: string | null
           greffe: string | null
-          /** Surcharge du jour d'echeance TVA. `null` = applique la regle CA3. */
           tva_jour_echeance: number | null
           email_2: string | null
           parts_totales: number | null
@@ -4152,10 +4199,31 @@ export interface BilanCardWithDetails extends BilanCard {
     // `clients.statut` porte un DEFAULT sans NOT NULL : il est nullable.
     statut: string | null
     date_cloture: string | null
+    /**
+     * L'equipe du dossier — `client_collaborators`, jointe aux profils.
+     *
+     * OPTIONNELLE, et il faut que ca le reste : la jointure est imbriquee dans
+     * celle de `clients`, et un ancien appelant qui ne la demande pas doit
+     * rester valide. Le rendu passe par `vignettesDuBilan()`, qui traite
+     * l'absence comme « aucune affectation », jamais comme une erreur.
+     */
+    collaborators?: Array<{
+      user_id: string
+      /** `client_collaborators.role` : DEFAULT sans NOT NULL, donc nullable. */
+      role: string | null
+      user: {
+        prenom: string | null
+        nom: string | null
+        display_name: string | null
+        avatar_color: string | null
+      } | null
+    }>
   }
   assignee: {
     prenom: string | null
     nom: string | null
+    display_name?: string | null
+    avatar_color?: string | null
   } | null
   checklist_items: Array<BilanChecklistItem & {
     template: { name: string; position: number } | null

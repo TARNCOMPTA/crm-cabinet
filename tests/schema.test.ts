@@ -55,7 +55,7 @@ const suite = URL_TEST ? describe : describe.skip;
  * increment qui cree une table absente de `cible.sql`, donc une installation
  * neuve qui ne l'aurait jamais.
  */
-const TABLES_ATTENDUES = 85;
+const TABLES_ATTENDUES = 86;
 
 suite('schema appliqué à PostgreSQL', () => {
   const client = new pg.Client({ connectionString: URL_TEST });

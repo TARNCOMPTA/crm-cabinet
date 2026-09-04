@@ -129,7 +129,21 @@ try {
 
 // --- 3. Types et style ---------------------------------------------------------
 etape('Types et style');
-if (!lancer('npx', ['tsc', '--noEmit', '-p', 'tsconfig.json'])) sortir('Le typecheck du front echoue.');
+// ⚠️ `npm run typecheck`, ET SURTOUT PAS `tsc -p tsconfig.json`.
+//
+// `tsconfig.json` porte `"files": []` : c'est un fichier de REFERENCES vers
+// `tsconfig.app.json` et `tsconfig.node.json`, il ne verifie aucun fichier par
+// lui-meme. `tsc --noEmit -p tsconfig.json` controle donc ZERO fichier et rend
+// toujours 0 — un vert qui ne veut rien dire.
+//
+// C'est ce que faisait cette ligne depuis 8b00d80, et ca s'est vu le
+// 2026-09-03 : une vraie erreur de type dans `BilanCardDetailModal.tsx`
+// passait `npm run test:tout` au vert. Seule la CI l'a vue, parce qu'elle
+// lance `tsc -p tsconfig.app.json`. Une commande de verification qui ne
+// verifie rien est pire qu'aucune : elle rassure.
+//
+// `npm run typecheck` est la MEME commande que la CI et que le README.
+if (!lancer('npm', ['run', 'typecheck'])) sortir('Le typecheck du front echoue.');
 if (!lancer('npm', ['run', 'typecheck', '--prefix', 'server'])) sortir('Le typecheck du serveur echoue.');
 if (!lancer('npx', ['eslint', '.'])) sortir('eslint signale des erreurs.');
 
