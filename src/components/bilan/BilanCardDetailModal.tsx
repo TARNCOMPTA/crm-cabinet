@@ -75,7 +75,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
   const { showToast } = useToast();
   const [notes, setNotes] = useState('');
   const [selectedColumn, setSelectedColumn] = useState('');
-  const [selectedAssignee, setSelectedAssignee] = useState('');
+  const [responsableId, setResponsableId] = useState<string | null>(null);
   const [moisTraites, setMoisTraites] = useState<number[]>([]);
   const [users, setUsers] = useState<Array<{ id: string; display_name: string | null; prenom: string | null; nom: string | null; avatar_color: string | null }>>([]);
   const [checklistState, setChecklistState] = useState<Record<string, boolean>>({});
@@ -91,7 +91,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
     if (card) {
       setNotes(card.notes || '');
       setSelectedColumn(card.column_id);
-      setSelectedAssignee(card.assignee_id || '');
+      setResponsableId(card.assignee_id || null);
       setMoisTraites(card.mois_traites || []);
       const state: Record<string, boolean> = {};
       const attachState: Record<string, Attachment[]> = {};
@@ -163,15 +163,23 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
     }
   }
 
-  async function handleAssigneeChange(newAssigneeId: string) {
+  /**
+   * Designer, ou retirer. Un clic sur la pastille de qui est deja responsable
+   * le retire : sans cela, une attribution faite par erreur ne s'annulerait
+   * plus — c'est le defaut qu'avait le menu deroulant retire le 2026-09-05,
+   * ou « Non assigne » etait une ligne parmi d'autres.
+   */
+  async function designerResponsable(userId: string) {
     if (!card) return;
-    setSelectedAssignee(newAssigneeId);
+    const avant = responsableId;
+    const apres = responsableId === userId ? null : userId;
+    setResponsableId(apres);
     try {
-      await updateCardAssignee(card.id, newAssigneeId || null);
+      await updateCardAssignee(card.id, apres);
       onUpdated();
     } catch {
-      setSelectedAssignee(card.assignee_id || '');
-      showToast('Erreur', 'error');
+      setResponsableId(avant);
+      showToast('Le responsable du bilan n’a pas pu etre enregistre', 'error');
     }
   }
 
@@ -291,15 +299,16 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
     : 'text-red-600 dark:text-red-400';
 
   /*
-    Les vignettes suivent `selectedAssignee`, pas `card.assignee_id` : changer
-    de responsable met la liste a jour tout de suite, sans attendre le
-    rechargement du tableau. Le profil vient de `users`, deja charge pour le
-    menu deroulant.
+    Les vignettes suivent `responsableId`, pas `card.assignee_id` : un clic met
+    le cercle a jour tout de suite, sans attendre le rechargement du tableau.
+    Le profil est cherche dans `users` — deja charge pour dire qui a coche quoi
+    — avant de retomber sur la jointure de la carte, qui ne porte ni couleur
+    d'avatar ni `display_name`.
   */
-  const responsableChoisi = users.find((u) => u.id === selectedAssignee);
+  const responsable = users.find((u) => u.id === responsableId);
   const vignettes = vignettesDuBilan(
     card.clients?.collaborators,
-    selectedAssignee ? { id: selectedAssignee, ...(responsableChoisi ?? card.assignee ?? {}) } : null
+    responsableId ? { id: responsableId, ...(responsable ?? card.assignee ?? {}) } : null
   );
 
   const nbDiverses = piecesDiverses.length;
@@ -307,7 +316,42 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
   const ongletInitial = total > 0 ? 'checklist' : 'pieces';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={card.clients?.nom_entreprise || 'Fiche bilan'} size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={card.clients?.nom_entreprise || 'Fiche bilan'}
+      /*
+        L'IDENTIFIANT ET LE RACCOURCI MONTENT A COTE DU NOM.
+        Ils occupaient une ligne de pastilles sous le bouton d'enregistrement
+        des notes, avec la forme juridique et le regime — le regime est
+        pourtant l'onglet d'ou l'on vient, et la forme juridique se lit sur la
+        fiche. Ne restaient utiles que le numero, qu'on recopie, et le lien,
+        qu'on suit : tous deux se rapportent au nom, et c'est a cote de lui
+        qu'on les cherche.
+
+        SIRET DE PREFERENCE, SIREN A DEFAUT. Le SIRET designe l'etablissement,
+        le SIREN l'entreprise ; le premier est ce qu'on demande a un cabinet, et
+        toutes les fiches ne le portent pas. N'afficher que le SIRET laisserait
+        les autres sans aucun identifiant.
+      */
+      complementTitre={
+        <>
+          {(card.clients?.siret || card.clients?.siren) && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
+              <Building2 className="w-3 h-3 text-gray-400" />
+              {card.clients.siret ? `SIRET ${card.clients.siret}` : `SIREN ${card.clients.siren}`}
+            </span>
+          )}
+          <a
+            href={`/clients/${card.client_id}`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+          >
+            Voir la fiche <ExternalLink className="w-3 h-3" />
+          </a>
+        </>
+      }
+      size="lg"
+    >
       <div className="space-y-6">
         {/*
           LES NOTES EN PREMIER, ET C'EST UN CHOIX D'USAGE.
@@ -336,58 +380,38 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
           </div>
         </div>
 
-        {/* Identite de la carte */}
-        <div className="flex flex-wrap gap-3">
-          {card.clients?.siren && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
-              <Building2 className="w-3 h-3 text-gray-400" />
-              SIREN {card.clients.siren}
-            </span>
-          )}
-          {card.clients?.forme_juridique && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300">
-              {card.clients.forme_juridique}
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/30 text-xs font-medium text-teal-700 dark:text-teal-300">
-            {card.regime_fiscal}
-          </span>
-          <a
-            href={`/clients/${card.client_id}`}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
-          >
-            Voir la fiche <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-
         {/*
-          L'EQUIPE DU DOSSIER, A COTE DE QUI PILOTE CE BILAN.
-          Ce sont deux faits distincts, et la fenetre n'en montrait qu'un :
-          `bilan_cards.assignee_id` (le responsable du bilan) etait etiquete
-          « Collaborateur », ce qui laissait croire qu'il etait le seul affecte.
-          L'equipe vient de `client_collaborators` et se modifie sur la fiche
-          client — d'ou l'absence de commande ici, et le renvoi vers la fiche
-          juste au-dessus.
+          L'EQUIPE DU DOSSIER, EN PASTILLES SEULES.
+          Les noms en clair doublaient l'information : chaque pastille porte
+          deja le nom, le role et la mention du responsable dans son infobulle
+          et son nom accessible. Ecrits en plus, ils prenaient trois lignes en
+          plein milieu de la fenetre pour ce qu'un survol donne.
+
+          QUI EST DANS L'EQUIPE se decide sur la fiche client
+          (`client_collaborators`), d'ou l'absence de commande ici et le renvoi
+          vers la fiche, en tete de fenetre.
+
+          QUI EST RESPONSABLE DU BILAN se decide ICI, d'un clic sur sa pastille
+          — c'est la carte qui porte le champ (`bilan_cards.assignee_id`), et il
+          n'a de sens que pour ce bilan-la. Le menu deroulant qui tenait ce role
+          prenait une demi-largeur de fenetre pour une valeur qui change deux
+          fois par an ; le cercle sarcelle dit qui c'est, et le clic le change.
+
+          ⚠️ CE CLIC EST LE SEUL ENDROIT QUI ECRIT `assignee_id`, et le champ
+          est lu ailleurs — filtre « Mes bilans », notification de deplacement.
+          Le retirer une seconde fois rendrait la colonne ineditable.
         */}
         {vignettes.length > 0 && (
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Équipe du dossier
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              Équipe
             </h3>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <VignettesCollaborateurs vignettes={vignettes} taille="md" max={8} />
-              <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
-                {vignettes.map((v) => (
-                  <li key={v.userId}>
-                    {v.nomComplet}
-                    {v.role && <span className="text-gray-400 dark:text-gray-500"> · {v.role}</span>}
-                    {v.responsableBilan && (
-                      <span className="text-teal-600 dark:text-teal-400"> · responsable du bilan</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <VignettesCollaborateurs
+              vignettes={vignettes}
+              taille="md"
+              max={8}
+              onDesigner={designerResponsable}
+            />
           </div>
         )}
 
@@ -397,18 +421,6 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
             value={selectedColumn}
             onChange={(e) => handleColumnChange(e.target.value)}
             options={columns.map((c) => ({ value: c.id, label: c.name }))}
-          />
-          <Select
-            label="Responsable du bilan"
-            value={selectedAssignee}
-            onChange={(e) => handleAssigneeChange(e.target.value)}
-            options={[
-              { value: '', label: 'Non assigne' },
-              ...users.map((u) => ({
-                value: u.id,
-                label: u.display_name || `${u.prenom || ''} ${u.nom || ''}`.trim() || 'Utilisateur',
-              })),
-            ]}
           />
         </div>
 

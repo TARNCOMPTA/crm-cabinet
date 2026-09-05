@@ -45,7 +45,7 @@ export async function fetchCards(
   const selectWithAttachments = `
     *,
     clients!inner(
-      nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture,
+      nom_entreprise, numero_dossier, siren, siret, forme_juridique, statut, date_cloture,
       collaborators:client_collaborators(user_id, role, user:profiles(prenom, nom, display_name, avatar_color))
     ),
     assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom, display_name, avatar_color),
@@ -59,7 +59,7 @@ export async function fetchCards(
   const selectWithoutAttachments = `
     *,
     clients!inner(
-      nom_entreprise, numero_dossier, siren, forme_juridique, statut, date_cloture,
+      nom_entreprise, numero_dossier, siren, siret, forme_juridique, statut, date_cloture,
       collaborators:client_collaborators(user_id, role, user:profiles(prenom, nom, display_name, avatar_color))
     ),
     assignee:profiles!bilan_cards_assignee_id_fkey(prenom, nom, display_name, avatar_color),
@@ -238,6 +238,11 @@ export async function updateCardNotes(cardId: string, notes: string) {
   if (error) throw error;
 }
 
+/**
+ * Ecrit le responsable du bilan. L'appelant est le clic sur une pastille de
+ * l'equipe, dans la fenetre de detail — le menu deroulant qui tenait ce role
+ * a ete retire, puis remplace par ce geste-la le meme jour.
+ */
 export async function updateCardAssignee(
   cardId: string,
   assigneeId: string | null

@@ -63,10 +63,19 @@ n'arrivent que quand on les ouvre.
   d'ouvrir la fiche client. Chaque personne affectée y a maintenant sa pastille
   d'initiales — AH, VS —, de sa couleur d'avatar, avec son nom et son rôle en
   infobulle ; un cercle sarcelle désigne le responsable du bilan. La fenêtre de
-  détail les reprend en clair sous « Équipe du dossier », et son menu déroulant
-  s'appelle désormais **« Responsable du bilan »** : il portait « Collaborateur »
-  et laissait croire qu'il n'y en avait qu'un. Le responsable est affiché même
-  s'il n'appartient pas à l'équipe du dossier — un renfort de saison existe.
+  détail les reprend sous « Équipe ». Le responsable est affiché même s'il
+  n'appartient pas à l'équipe du dossier — un renfort de saison existe.
+- **Le responsable du bilan se désigne d'un clic sur sa pastille.** Le cercle
+  sarcelle dit qui c'est ; cliquer une autre pastille le déplace, cliquer la
+  sienne le retire. Le menu déroulant qui tenait ce rôle prenait une
+  demi-largeur de fenêtre pour une valeur qui change deux fois par an.
+- **La fenêtre d'un bilan est allégée.** Les noms en clair sous les pastilles
+  doublaient ce que chaque pastille dit déjà en infobulle et à un lecteur
+  d'écran ; ils occupaient trois lignes au milieu de la fenêtre. L'identifiant
+  et le raccourci « Voir la fiche » remontent à côté du nom de l'entreprise, et
+  la ligne qui les portait — avec la forme juridique et le régime, qui est
+  pourtant l'onglet d'où l'on vient — disparaît. Le SIRET est affiché de
+  préférence au SIREN, quand la fiche le porte.
 
 ### Vérification
 

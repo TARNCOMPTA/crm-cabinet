@@ -63,16 +63,23 @@ describe('vignettesDuBilan', () => {
     expect(v.map((x) => x.nomComplet)).toEqual(['Aymeric Hebrard', 'Elodie Emery', 'Zoe Zunino']);
   });
 
-  it('met le responsable du bilan en tete et le marque', () => {
-    const v = vignettesDuBilan(
-      [
-        { user_id: 'u-aymeric', role: 'principal', user: AYMERIC },
-        { user_id: 'u-vanessa', role: 'paie', user: VANESSA },
-      ],
-      { id: 'u-vanessa' }
-    );
-    expect(v.map((x) => x.initiales)).toEqual(['VS', 'AH']);
-    expect(v.map((x) => x.responsableBilan)).toEqual([true, false]);
+  it('marque le responsable du bilan SANS le remonter en tete', () => {
+    // L'ordre ne doit pas dependre de qui est responsable : les pastilles sont
+    // cliquables, et une liste qui se reordonne au clic fait tomber le clic
+    // suivant sur quelqu'un d'autre. Vu a l'ecran avant correction.
+    const equipe = [
+      { user_id: 'u-aymeric', role: 'principal', user: AYMERIC },
+      { user_id: 'u-vanessa', role: 'paie', user: VANESSA },
+    ];
+    const sansResponsable = vignettesDuBilan(equipe, null);
+    const avecVanessa = vignettesDuBilan(equipe, { id: 'u-vanessa' });
+    const avecAymeric = vignettesDuBilan(equipe, { id: 'u-aymeric' });
+
+    for (const v of [sansResponsable, avecVanessa, avecAymeric]) {
+      expect(v.map((x) => x.initiales)).toEqual(['AH', 'VS']);
+    }
+    expect(avecVanessa.map((x) => x.responsableBilan)).toEqual([false, true]);
+    expect(avecAymeric.map((x) => x.responsableBilan)).toEqual([true, false]);
   });
 
   it('n affiche jamais deux fois la meme personne', () => {
@@ -105,6 +112,8 @@ describe('vignettesDuBilan', () => {
       [{ user_id: 'u-vanessa', role: 'paie', user: VANESSA }],
       { id: 'u-renfort', prenom: 'Remi', nom: 'Fort' }
     );
+    // A son rang alphabetique, comme tout le monde : « Remi Fort » avant
+    // « Vanessa Sirven ».
     expect(v.map((x) => x.initiales)).toEqual(['RF', 'VS']);
     expect(v[0].role).toBeNull();
     expect(v[0].responsableBilan).toBe(true);

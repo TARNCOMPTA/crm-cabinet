@@ -4195,6 +4195,7 @@ export interface BilanCardWithDetails extends BilanCard {
     nom_entreprise: string
     numero_dossier: string | null
     siren: string | null
+    siret: string | null
     forme_juridique: string | null
     // `clients.statut` porte un DEFAULT sans NOT NULL : il est nullable.
     statut: string | null

@@ -143,17 +143,10 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
           savoir a qui s'adresser demandait d'ouvrir la fiche client. Les
           vignettes tiennent la meme largeur pour cinq personnes que le nom
           d'une seule, et le cercle sarcelle designe le responsable du bilan.
+          Aucun nom en clair : chaque pastille porte le sien dans son infobulle
+          et son nom accessible, et l'ecrire en plus alourdissait la carte.
         */}
-        {vignettes.length > 0 && (
-          <div className="flex items-center justify-between gap-2">
-            <VignettesCollaborateurs vignettes={vignettes} taille="sm" />
-            {vignettes.length === 1 && (
-              <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                {vignettes[0].nomComplet}
-              </span>
-            )}
-          </div>
-        )}
+        {vignettes.length > 0 && <VignettesCollaborateurs vignettes={vignettes} taille="sm" />}
       </div>
 
       {total > 0 && (

@@ -26,6 +26,16 @@ interface Props {
   taille?: 'sm' | 'md';
   /** Au-delà, les suivantes sont repliées derrière un « +N ». */
   max?: number;
+  /**
+   * Fourni, chaque vignette devient un bouton qui désigne — ou retire — le
+   * responsable du bilan. Absent, elles restent de simples images.
+   *
+   * ⚠️ NE PAS LE FOURNIR SUR LA CARTE DU TABLEAU : la carte entière est déjà
+   * cliquable et ouvre le bilan ; un bouton par-dessus volerait ce clic, et
+   * désigner un responsable en croyant ouvrir un dossier est exactement le
+   * genre d'écriture involontaire qu'on ne remarque pas.
+   */
+  onDesigner?: (userId: string) => void;
 }
 
 const TAILLES = {
@@ -41,10 +51,18 @@ function legende(v: Vignette): string {
   return v.responsableBilan ? `${nom} — responsable du bilan` : nom;
 }
 
+/** La même, plus ce que le clic va faire — le bouton doit annoncer son effet. */
+function legendeCliquable(v: Vignette): string {
+  return v.responsableBilan
+    ? `${legende(v)} · cliquer pour ne plus le désigner`
+    : `${legende(v)} · cliquer pour le désigner responsable du bilan`;
+}
+
 export const VignettesCollaborateurs = memo(function VignettesCollaborateurs({
   vignettes,
   taille = 'sm',
   max = 5,
+  onDesigner,
 }: Props) {
   if (vignettes.length === 0) return null;
 
@@ -53,24 +71,49 @@ export const VignettesCollaborateurs = memo(function VignettesCollaborateurs({
 
   return (
     <div className="flex items-center gap-1">
-      {visibles.map((v) => (
-        <div
-          key={v.userId}
-          role="img"
-          aria-label={legende(v)}
-          title={legende(v)}
-          className={`${TAILLES[taille]} rounded-full flex items-center justify-center font-semibold shrink-0 ${
-            // Le cercle sarcelle designe le responsable du bilan. Les vignettes
-            // ne se chevauchent PAS : superposees, la premiere perd une de ses
-            // deux lettres, et deux initiales sur trois ne nomment plus
-            // personne. Constate a l'ecran sur « RP » masque par « SB ».
-            v.responsableBilan ? 'ring-2 ring-offset-1 ring-teal-500 dark:ring-teal-400 dark:ring-offset-gray-900' : ''
-          }`}
-          style={{ backgroundColor: v.couleur, color: getContrastColor(v.couleur) }}
-        >
-          {v.initiales}
-        </div>
-      ))}
+      {visibles.map((v) => {
+        // Le cercle sarcelle designe le responsable du bilan. Les vignettes ne
+        // se chevauchent PAS : superposees, la premiere perd une de ses deux
+        // lettres, et deux initiales sur trois ne nomment plus personne.
+        // Constate a l'ecran sur « RP » masque par « SB ».
+        const pastille = `${TAILLES[taille]} rounded-full flex items-center justify-center font-semibold shrink-0 ${
+          v.responsableBilan
+            ? 'ring-2 ring-offset-1 ring-teal-500 dark:ring-teal-400 dark:ring-offset-gray-900'
+            : ''
+        }`;
+        const teinte = { backgroundColor: v.couleur, color: getContrastColor(v.couleur) };
+
+        if (!onDesigner) {
+          return (
+            <div key={v.userId} role="img" aria-label={legende(v)} title={legende(v)}
+                 className={pastille} style={teinte}>
+              {v.initiales}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={v.userId}
+            type="button"
+            onClick={() => onDesigner(v.userId)}
+            // `aria-pressed` plutot qu'un simple bouton : l'etat « c'est lui le
+            // responsable » est ce que le clic bascule, et c'est la seule facon
+            // de l'annoncer sans le repeter dans le libelle a chaque rendu.
+            aria-pressed={v.responsableBilan}
+            aria-label={legendeCliquable(v)}
+            title={legendeCliquable(v)}
+            className={`${pastille} transition-shadow cursor-pointer ${
+              v.responsableBilan
+                ? 'hover:ring-teal-400'
+                : 'hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 dark:hover:ring-gray-600 dark:hover:ring-offset-gray-900'
+            }`}
+            style={teinte}
+          >
+            {v.initiales}
+          </button>
+        );
+      })}
       {restantes.length > 0 && (
         <div
           role="img"

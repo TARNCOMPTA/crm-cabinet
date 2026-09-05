@@ -38,6 +38,14 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  /**
+   * Ce qui accompagne le titre sur la meme ligne : identifiants, raccourcis.
+   *
+   * ⚠️ JAMAIS LE NOM LUI-MEME. `aria-labelledby` ne designe que le `<h2>` :
+   * ce qui passe par ici n'entre pas dans le nom accessible de la fenetre, et
+   * un lecteur d'ecran ne l'annoncerait pas a l'ouverture.
+   */
+  complementTitre?: ReactNode;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -63,7 +71,7 @@ const FOCALISABLES = [
   '[contenteditable="true"]',
 ].join(',');
 
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, complementTitre, children, size = 'md' }: ModalProps) {
   const boite = useRef<HTMLDivElement>(null);
   const idTitre = useId();
 
@@ -172,7 +180,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         className={`relative bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl rounded-2xl shadow-elevated dark:shadow-dark-card border border-gray-200/60 dark:border-white/[0.08] w-full ${sizes[size]} mx-4 max-h-[90vh] flex flex-col animate-slide-in-up outline-none`}
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/[0.06]">
-          <h2 id={idTitre} className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className="flex items-center gap-3 min-w-0 flex-wrap">
+            <h2 id={idTitre} className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+            {complementTitre}
+          </div>
           <Button
             variant="ghost"
             size="sm"
