@@ -1,3 +1,18 @@
+/**
+ * Le suivi des déclarations de revenus.
+ * ---------------------------------------------------------------------------
+ * Un tableau ou un kanban, des filtres, et deux actions en LOT — attribuer des
+ * collaborateurs, attribuer une zone. Ce sont ces deux-là qui demandent de la
+ * rigueur : elles écrivent sur plusieurs lignes à la fois, et une erreur y est
+ * invisible parce qu'elle réussit.
+ *
+ * Ce qui a été sorti d'ici, et pourquoi : `revenueDeclarations/filtrage.ts`
+ * porte le filtrage et les règles de sélection, avec leurs tests. Deux défauts
+ * y dormaient — une sélection qui ne suivait pas les filtres, un « tout
+ * sélectionner » qui comparait des tailles — et aucun des deux ne se voyait en
+ * relisant le JSX.
+ */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Search, LayoutGrid, Table as TableIcon, FileSpreadsheet, FolderOpen, Users, X, MapPin } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -5,6 +20,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { Modal } from '../components/ui/Modal';
 import { RevenueDeclarationsTable } from '../components/revenueDeclarations/RevenueDeclarationsTable';
 import { RevenueDeclarationsKanban } from '../components/revenueDeclarations/RevenueDeclarationsKanban';
 import { RevenueDeclarationModal } from '../components/revenueDeclarations/RevenueDeclarationModal';
@@ -24,6 +40,11 @@ import {
   type RevenueDeclarationZone,
   type CabinetUserOption,
 } from '../lib/revenueDeclarationService';
+import {
+  filtrerDeclarations,
+  restreindreSelection,
+  toutesSelectionnees,
+} from './revenueDeclarations/filtrage';
 
 type ViewMode = 'table' | 'kanban';
 const VIEW_STORAGE_KEY = 'revenue_declarations_view';
@@ -41,6 +62,13 @@ export function RevenueDeclarations() {
   });
 
   const [declarations, setDeclarations] = useState<RevenueDeclaration[]>([]);
+  /**
+   * ⚠️ « AUCUNE DÉCLARATION » ET « ON N'A PAS PU LIRE » NE SONT PAS LA MÊME
+   * CHOSE. Le chargement avalait son erreur et vidait la liste : l'écran
+   * annonçait alors « Aucune déclaration enregistrée » sur un portefeuille
+   * plein, et invitait à en créer une première.
+   */
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [attachmentsCounts, setAttachmentsCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -84,6 +112,7 @@ export function RevenueDeclarations() {
       return;
     }
     setLoading(true);
+    setErreurChargement(false);
     try {
       const rows = await listDeclarations();
       setDeclarations(rows);
@@ -100,6 +129,7 @@ export function RevenueDeclarations() {
     } catch {
       setDeclarations([]);
       setAttachmentsCounts({});
+      setErreurChargement(true);
     } finally {
       setLoading(false);
     }
@@ -127,29 +157,30 @@ export function RevenueDeclarations() {
     return Array.from(set).sort((a, b) => b - a);
   }, [declarations, defaultAnnee, currentYear]);
 
-  const filtered = useMemo(() => {
-    return declarations.filter((d) => {
-      if (anneeFilter !== 'all' && d.annee !== anneeFilter) return false;
-      if (statutFilter !== 'all' && d.statut !== statutFilter) return false;
-      if (zoneFilter !== 'all' && d.zone !== zoneFilter) return false;
-      if (showMyDossiers && user) {
-        const isAssigned = (d.collaborators || []).some((c) => c.user_id === user.id);
-        if (!isAssigned) return false;
-      }
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (
-          !d.person_name.toLowerCase().includes(q) &&
-          !(d.clients?.nom_entreprise ?? '').toLowerCase().includes(q) &&
-          !(d.clients?.numero_dossier ?? '').toLowerCase().includes(q) &&
-          !d.commentaire.toLowerCase().includes(q)
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [declarations, anneeFilter, statutFilter, zoneFilter, search, showMyDossiers, user]);
+  const filtered = useMemo(
+    () =>
+      filtrerDeclarations(declarations, {
+        recherche: search,
+        annee: anneeFilter,
+        statut: statutFilter,
+        zone: zoneFilter,
+        mesDossiers: showMyDossiers,
+        utilisateurId: user?.id ?? null,
+      }),
+    [declarations, anneeFilter, statutFilter, zoneFilter, search, showMyDossiers, user]
+  );
+
+  /*
+    ⚠️ LA SÉLECTION EST RAMENÉE À CE QUI EST VISIBLE, À CHAQUE RENDU.
+    Sans cela : on coche vingt lignes, on change l'année, et « Attribuer
+    collaborateurs » s'applique aux vingt d'AVANT. L'action réussit, annonce
+    « 20 déclarations mises à jour », et rien à l'écran ne montre ce qui a
+    changé — c'est le pire de ce qu'une action en lot peut faire.
+  */
+  const selectionVisible = useMemo(
+    () => restreindreSelection(selectedIds, filtered),
+    [selectedIds, filtered]
+  );
 
   function openCreate() {
     setEditing(null);
@@ -162,11 +193,11 @@ export function RevenueDeclarations() {
   }
 
   function toggleSelectAll() {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map((d) => d.id)));
-    }
+    // `selection.size === visibles.length` etait vrai des que les deux comptes
+    // coincidaient, meme sur des ensembles differents : apres un changement de
+    // filtre, le bouton deselectionnait au lieu de selectionner.
+    if (toutesSelectionnees(selectionVisible, filtered)) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map((d) => d.id)));
   }
 
   function toggleSelect(id: string) {
@@ -180,13 +211,13 @@ export function RevenueDeclarations() {
 
   async function handleBulkAssign() {
     if (bulkAssignUserIds.length === 0) {
-      showToast('Selectionnez au moins un collaborateur', 'error');
+      showToast('Sélectionnez au moins un collaborateur', 'error');
       return;
     }
     setBulkAssigning(true);
     try {
-      await bulkAssignCollaborators(Array.from(selectedIds), bulkAssignUserIds, bulkAssignMode);
-      showToast(`${selectedIds.size} declaration(s) mise(s) a jour`, 'success');
+      await bulkAssignCollaborators(Array.from(selectionVisible), bulkAssignUserIds, bulkAssignMode);
+      showToast(`${selectionVisible.size} déclaration(s) mise(s) à jour`, 'success');
       setSelectedIds(new Set());
       setShowBulkAssign(false);
       setBulkAssignUserIds([]);
@@ -200,19 +231,19 @@ export function RevenueDeclarations() {
 
   async function handleBulkZone() {
     if (!bulkZoneValue) {
-      showToast('Selectionnez une zone', 'error');
+      showToast('Sélectionnez une zone', 'error');
       return;
     }
     setBulkZoneUpdating(true);
     try {
-      await bulkUpdateZone(Array.from(selectedIds), bulkZoneValue);
-      showToast(`${selectedIds.size} declaration(s) mise(s) a jour`, 'success');
+      await bulkUpdateZone(Array.from(selectionVisible), bulkZoneValue);
+      showToast(`${selectionVisible.size} déclaration(s) mise(s) à jour`, 'success');
       setSelectedIds(new Set());
       setShowBulkZone(false);
       setBulkZoneValue('');
       loadData();
     } catch {
-      showToast('Erreur lors de la mise a jour de la zone', 'error');
+      showToast('Erreur lors de la mise à jour de la zone', 'error');
     } finally {
       setBulkZoneUpdating(false);
     }
@@ -223,17 +254,17 @@ export function RevenueDeclarations() {
       <div>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Suivi declarations de revenus
+            Suivi des déclarations de revenus
           </h1>
         </div>
         <Card>
           <CardContent className="py-12 text-center">
             <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-900 dark:text-gray-100 font-medium mb-2">
-              Aucun cabinet assigne
+              Aucun cabinet assigné
             </p>
             <p className="text-gray-500 dark:text-gray-400">
-              Contactez un administrateur pour obtenir l acces a un cabinet.
+              Contactez un administrateur pour obtenir l’accès à un cabinet.
             </p>
           </CardContent>
         </Card>
@@ -246,11 +277,11 @@ export function RevenueDeclarations() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Suivi declarations de revenus
+            Suivi des déclarations de revenus
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {filtered.length} declaration{filtered.length !== 1 ? 's' : ''}
-            {anneeFilter !== 'all' && <> &mdash; annee {anneeFilter}</>}
+            {filtered.length} déclaration{filtered.length !== 1 ? 's' : ''}
+            {anneeFilter !== 'all' && <> &mdash; année {anneeFilter}</>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -282,7 +313,7 @@ export function RevenueDeclarations() {
           </div>
           <Button onClick={openCreate}>
             <Plus className="w-4 h-4 mr-2" />
-            Nouvelle declaration
+            Nouvelle déclaration
           </Button>
         </div>
       </div>
@@ -292,7 +323,7 @@ export function RevenueDeclarations() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher une personne..."
+            placeholder="Rechercher une personne…"
             icon={<Search className="w-4 h-4" />}
           />
         </div>
@@ -304,10 +335,10 @@ export function RevenueDeclarations() {
               setAnneeFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
             }
           >
-            <option value="all">Toutes les annees</option>
+            <option value="all">Toutes les années</option>
             {availableYears.map((y) => (
               <option key={y} value={y}>
-                Annee {y}
+                Année {y}
               </option>
             ))}
           </Select>
@@ -350,17 +381,17 @@ export function RevenueDeclarations() {
               ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-700'
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-teal-300 dark:hover:border-teal-700'
           }`}
-          title="Afficher uniquement mes declarations"
+          title="Afficher uniquement mes déclarations"
         >
           <FolderOpen className="w-4 h-4" />
           Mes dossiers
         </button>
       </div>
 
-      {selectedIds.size > 0 && (
+      {selectionVisible.size > 0 && (
         <div className="mb-4 flex items-center gap-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg px-4 py-3">
           <span className="text-sm font-medium text-teal-800 dark:text-teal-200">
-            {selectedIds.size} declaration{selectedIds.size > 1 ? 's' : ''} selectionnee{selectedIds.size > 1 ? 's' : ''}
+            {selectionVisible.size} déclaration{selectionVisible.size > 1 ? 's' : ''} sélectionnée{selectionVisible.size > 1 ? 's' : ''}
           </span>
           <Button
             variant="outline"
@@ -389,7 +420,7 @@ export function RevenueDeclarations() {
             onClick={() => setSelectedIds(new Set())}
             className="ml-auto text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            Deselectionner
+            Tout désélectionner
           </button>
         </div>
       )}
@@ -402,21 +433,38 @@ export function RevenueDeclarations() {
         <Card>
           <CardContent className="py-16 text-center">
             <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            {/*
+              TROIS CAS, ET PAS DEUX. La lecture a échoué, il n'y a rien, ou les
+              filtres ne rendent rien. Le premier était confondu avec le
+              deuxième : sur une base injoignable, l'écran annonçait « Aucune
+              déclaration enregistrée » à un cabinet qui en a des centaines, et
+              l'invitait à créer sa première.
+            */}
             <p className="text-gray-900 dark:text-gray-100 font-medium mb-2">
-              {declarations.length === 0
-                ? 'Aucune declaration enregistree'
-                : 'Aucun resultat pour ces filtres'}
+              {erreurChargement
+                ? 'Les déclarations n’ont pas pu être lues'
+                : declarations.length === 0
+                  ? 'Aucune déclaration enregistrée'
+                  : 'Aucun résultat pour ces filtres'}
             </p>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {declarations.length === 0
-                ? 'Creez votre premiere declaration de revenus pour demarrer le suivi.'
-                : 'Modifiez les filtres pour elargir la recherche.'}
+              {erreurChargement
+                ? 'Rien n’est conclu du contenu de la base : c’est la lecture qui a échoué.'
+                : declarations.length === 0
+                  ? 'Créez votre première déclaration de revenus pour démarrer le suivi.'
+                  : 'Modifiez les filtres pour élargir la recherche.'}
             </p>
-            {declarations.length === 0 && (
-              <Button onClick={openCreate}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nouvelle declaration
+            {erreurChargement ? (
+              <Button variant="outline" onClick={() => void loadData()}>
+                Réessayer
               </Button>
+            ) : (
+              declarations.length === 0 && (
+                <Button onClick={openCreate}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nouvelle déclaration
+                </Button>
+              )
             )}
           </CardContent>
         </Card>
@@ -428,7 +476,7 @@ export function RevenueDeclarations() {
           userId={user.id}
           onEdit={openEdit}
           onChanged={loadData}
-          selectedIds={selectedIds}
+          selectedIds={selectionVisible}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
         />
@@ -451,157 +499,159 @@ export function RevenueDeclarations() {
         onSaved={loadData}
       />
 
-      {showBulkAssign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBulkAssign(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Attribuer des collaborateurs
-              </h2>
-              <button onClick={() => setShowBulkAssign(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+      {/*
+        ⚠️ CES DEUX FENÊTRES ÉTAIENT BRICOLÉES À LA MAIN — un `fixed inset-0`,
+        un fond noir, et un `<div>` au milieu. Elles perdaient donc TOUT ce que
+        `Modal` porte et qui a été corrigé ailleurs : `role="dialog"`,
+        `aria-modal`, le nom accessible, le piège à focus, `Échap` pour fermer,
+        et le compteur de verrouillage du défilement. Un lecteur d'écran n'y
+        annonçait rien, et la tabulation continuait derrière le voile.
 
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {selectedIds.size} declaration{selectedIds.size > 1 ? 's' : ''} selectionnee{selectedIds.size > 1 ? 's' : ''}
+        Ce sont des actions EN LOT : celles qui écrivent sur vingt lignes d'un
+        coup sont les dernières qu'on veut laisser piloter à l'aveugle.
+      */}
+      <Modal
+        isOpen={showBulkAssign}
+        onClose={() => setShowBulkAssign(false)}
+        title="Attribuer des collaborateurs"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {selectionVisible.size} déclaration{selectionVisible.size > 1 ? 's' : ''} sélectionnée{selectionVisible.size > 1 ? 's' : ''}
+          </p>
+
+          <fieldset>
+            <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mode</legend>
+            <div className="flex gap-2">
+              {([
+                ['add', 'Ajouter'],
+                ['replace', 'Remplacer'],
+              ] as const).map(([mode, libelle]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setBulkAssignMode(mode)}
+                  aria-pressed={bulkAssignMode === mode}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                    bulkAssignMode === mode
+                      ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
+                      : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {bulkAssignMode === 'add'
+                ? 'Les collaborateurs seront ajoutés aux attributions existantes.'
+                : 'Les attributions actuelles seront remplacées.'}
             </p>
+          </fieldset>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mode</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkAssignMode('add')}
-                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                    bulkAssignMode === 'add'
-                      ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
-                      : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  Ajouter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAssignMode('replace')}
-                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                    bulkAssignMode === 'replace'
-                      ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
-                      : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  Remplacer
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {bulkAssignMode === 'add'
-                  ? 'Les collaborateurs seront ajoutes aux assignations existantes.'
-                  : 'Les assignations actuelles seront remplacees.'}
-              </p>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Collaborateurs</label>
-              {bulkAssignUserIds.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {bulkAssignUserIds.map((uid) => {
-                    const u = cabinetUsers.find((cu) => cu.id === uid);
-                    return (
-                      <span
-                        key={uid}
-                        className="inline-flex items-center gap-1 bg-teal-50 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200 text-sm px-2.5 py-1 rounded-full"
+          <div>
+            {bulkAssignUserIds.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5 mb-2">
+                {bulkAssignUserIds.map((uid) => {
+                  const u = cabinetUsers.find((cu) => cu.id === uid);
+                  const nom = u?.full_name || 'Utilisateur';
+                  return (
+                    <li
+                      key={uid}
+                      className="inline-flex items-center gap-1 bg-teal-50 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200 text-sm px-2.5 py-1 rounded-full"
+                    >
+                      {nom}
+                      <button
+                        type="button"
+                        onClick={() => setBulkAssignUserIds((prev) => prev.filter((id) => id !== uid))}
+                        aria-label={`Retirer ${nom}`}
+                        title={`Retirer ${nom}`}
+                        className="ml-0.5 hover:text-red-600 dark:hover:text-red-400"
                       >
-                        {u?.full_name || 'Utilisateur'}
-                        <button
-                          type="button"
-                          onClick={() => setBulkAssignUserIds((prev) => prev.filter((id) => id !== uid))}
-                          className="ml-0.5 hover:text-red-600 dark:hover:text-red-400"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              <select
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300"
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setBulkAssignUserIds((prev) => [...prev, e.target.value]);
-                  }
-                }}
-              >
-                <option value="">Ajouter un collaborateur...</option>
-                {cabinetUsers
-                  .filter((u) => !bulkAssignUserIds.includes(u.id))
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <Button variant="outline" onClick={() => setShowBulkAssign(false)} disabled={bulkAssigning}>
-                Annuler
-              </Button>
-              <Button onClick={handleBulkAssign} disabled={bulkAssigning || bulkAssignUserIds.length === 0}>
-                {bulkAssigning ? 'Attribution...' : 'Appliquer'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showBulkZone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBulkZone(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Attribuer une zone
-              </h2>
-              <button onClick={() => setShowBulkZone(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {selectedIds.size} declaration{selectedIds.size > 1 ? 's' : ''} selectionnee{selectedIds.size > 1 ? 's' : ''}
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zone</label>
-              <div className="flex gap-2">
-                {(Object.entries(ZONE_LABELS) as [RevenueDeclarationZone, string][]).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setBulkZoneValue(key)}
-                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                      bulkZoneValue === key
-                        ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
-                        : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-teal-200 dark:hover:border-teal-800'
-                    }`}
-                  >
-                    {label}
-                  </button>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {/*
+              `Select` et non un `<select>` nu : c'est lui qui lie le libellé au
+              champ. Sans cette liaison, un lecteur d'écran annonçait une liste
+              déroulante sans dire de quoi.
+            */}
+            <Select
+              label="Collaborateurs"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) setBulkAssignUserIds((prev) => [...prev, e.target.value]);
+              }}
+            >
+              <option value="">Ajouter un collaborateur…</option>
+              {cabinetUsers
+                .filter((u) => !bulkAssignUserIds.includes(u.id))
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name}
+                  </option>
                 ))}
-              </div>
-            </div>
+            </Select>
+          </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <Button variant="outline" onClick={() => setShowBulkZone(false)} disabled={bulkZoneUpdating}>
-                Annuler
-              </Button>
-              <Button onClick={handleBulkZone} disabled={bulkZoneUpdating || !bulkZoneValue}>
-                {bulkZoneUpdating ? 'Mise a jour...' : 'Appliquer'}
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <Button variant="outline" onClick={() => setShowBulkAssign(false)} disabled={bulkAssigning}>
+              Annuler
+            </Button>
+            <Button onClick={handleBulkAssign} disabled={bulkAssigning || bulkAssignUserIds.length === 0}>
+              {bulkAssigning ? 'Attribution…' : 'Appliquer'}
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
+
+      <Modal
+        isOpen={showBulkZone}
+        onClose={() => setShowBulkZone(false)}
+        title="Attribuer une zone"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {selectionVisible.size} déclaration{selectionVisible.size > 1 ? 's' : ''} sélectionnée{selectionVisible.size > 1 ? 's' : ''}
+          </p>
+
+          <fieldset>
+            <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zone</legend>
+            <div className="flex gap-2">
+              {(Object.entries(ZONE_LABELS) as [RevenueDeclarationZone, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setBulkZoneValue(key)}
+                  aria-pressed={bulkZoneValue === key}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                    bulkZoneValue === key
+                      ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300'
+                      : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-teal-200 dark:hover:border-teal-800'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <Button variant="outline" onClick={() => setShowBulkZone(false)} disabled={bulkZoneUpdating}>
+              Annuler
+            </Button>
+            <Button onClick={handleBulkZone} disabled={bulkZoneUpdating || !bulkZoneValue}>
+              {bulkZoneUpdating ? 'Mise à jour…' : 'Appliquer'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

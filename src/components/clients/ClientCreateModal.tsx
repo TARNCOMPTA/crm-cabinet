@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
+import { verifierTvaIntracom } from '../../lib/tvaService';
+import { payloadCreationClient } from './creationClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRegimesFiscaux } from '../../hooks/useRegimesFiscaux';
@@ -189,13 +191,17 @@ export function ClientCreateModal({ isOpen, onClose, onCreated, initialSiret, in
           ? [formData.nom, formData.prenom].filter(Boolean).join(' ')
           : formData.nom_entreprise;
 
-      const clientData = {
+      /*
+        ⚠️ NE PAS ENVOYER `{...formData}` TEL QUEL. Un `<input type="date">` vide
+        rend `''`, pas `null`, et PostgreSQL refuse : « invalid input syntax for
+        type date: "" ». La fiche n'etait alors pas creee, et le message parlait
+        de syntaxe de date a quelqu'un qui venait de saisir un nom d'entreprise.
+        La transformation est dans `creationClient.ts`, avec ses tests.
+      */
+      const clientData = payloadCreationClient({
         ...formData,
         nom_entreprise: libelle || formData.nom_entreprise,
-        type_personne: formData.type_personne || null,
-        civilite: formData.civilite || null,
-        capital_social: formData.capital_social ? parseFloat(formData.capital_social) : null,
-      };
+      });
       const { data: newClient, error } = await supabase
         .from('clients')
         .insert([clientData])
@@ -215,6 +221,40 @@ export function ClientCreateModal({ isOpen, onClose, onCreated, initialSiret, in
       showToast('Client cree avec succes', 'success');
       onCreated();
       onClose();
+
+      /*
+        VÉRIFICATION VIES OBLIGATOIRE À LA CRÉATION.
+        Un numéro intracommunautaire non vérifié est une facture à risque : on
+        ne fait pas de la vérification un geste qu'on pense à faire.
+
+        ⚠️ APRÈS `onClose()`, ET DÉLIBÉRÉMENT PAS AVANT. VIES répond en une à
+        quatre secondes, parfois vingt : attendre sa réponse pour fermer la
+        fenêtre ferait passer une création instantanée pour une application
+        bloquée, et un service européen saturé empêcherait de créer un client.
+        La fiche existe déjà, son numéro est calculé par un déclencheur en base ;
+        le verdict arrive derrière, en toast.
+
+        ⚠️ ET CE N'EST PAS LE SEUL FILET. Un import, le connecteur MCP ou un
+        accès direct à PostgREST créent des fiches sans passer par cet écran. La
+        tâche `verification-tva-vies` prend les fiches JAMAIS vérifiées en
+        premier : c'est elle qui fait de « obligatoire » une garantie, avec au
+        pire un jour de retard. Ici on ne gagne que l'immédiateté — ce qui vaut
+        tout de même le geste, puisque c'est au moment de créer la fiche qu'on
+        peut encore corriger un numéro.
+      */
+      if (newClient?.id) {
+        void verifierTvaIntracom(newClient.id)
+          .then((r) => {
+            if (r.statut === 'valide') showToast(`TVA intracom : ${r.message}`, 'success');
+            else if (r.statut === 'invalide') showToast(`TVA intracom : ${r.message}`, 'warning');
+            // « indisponible » ne dit rien du numero : la tache periodique
+            // repassera. Inutile d'inquieter sur une creation qui s'est bien
+            // passee.
+          })
+          .catch(() => {
+            /* La creation a reussi : son echec ne doit pas s'afficher comme le sien. */
+          });
+      }
     } catch (error) {
       showToast(messageErreur(error, 'Erreur lors de la creation du client'), 'error');
     }

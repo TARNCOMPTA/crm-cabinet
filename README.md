@@ -35,8 +35,9 @@ Détail complet : [installation/NOTICE-INSTALLATION.md](installation/NOTICE-INST
   l'état d'avancement du cabinet à côté de celui du destinataire
 - **Synchronisation** — INPI (fiches et actes), BODACC (dépôts de comptes),
   jedeclare (accusés de télétransmission)
-- **TVA intracommunautaire** — numéro calculé depuis le SIREN, vérifiable auprès
-  du registre européen VIES d'un clic
+- **TVA intracommunautaire** — numéro calculé depuis le SIREN, vérifié auprès du
+  registre européen VIES d'un clic, à la création d'une fiche, et une fois par
+  mois par petits lots espacés
 - **Connecteur MCP** — accès en lecture depuis un assistant IA, par clé d'API
 
 ---
@@ -46,11 +47,20 @@ Détail complet : [installation/NOTICE-INSTALLATION.md](installation/NOTICE-INST
 - **Aucune télémétrie**, aucun ping, aucun rapport d'usage
 - **Aucun accès distant** de l'auteur du logiciel à votre instance
 - **Aucun mot de passe** : la connexion se fait par passkey
-- **Aucun service tiers** imposé : le courrier part de votre SMTP, les seuls
-  appels sortants sont ceux que vous configurez (INPI, BODACC, jedeclare —
-  avec **votre** compte, jamais un compte mutualisé), plus le registre public
-  VIES quand vous cliquez sur « vérifier un numéro de TVA ». Aucun de ces
-  appels n'est périodique : rien ne part sans une action de votre part
+- **Aucun service tiers** imposé : le courrier part de votre SMTP, et les seuls
+  appels sortants sont ceux que vous activez (INPI, BODACC, jedeclare — avec
+  **votre** compte, jamais un compte mutualisé), plus le registre public VIES.
+  Chacun est déclaré ici, et vous pouvez le couper
+
+  > **Ce qui part tout seul, et il faut le savoir.** INPI, BODACC et jedeclare
+  > se synchronisent selon le rythme que vous réglez. VIES est interrogé quand
+  > vous cliquez, quand vous créez une fiche, et une fois par mois par fiche —
+  > un petit lot par jour, cinq secondes entre deux appels, arrêt automatique si
+  > le service ne répond plus. Un numéro intracommunautaire se désactive sans
+  > prévenir : c'est ce que ce contrôle mensuel existe pour attraper.
+  > `VIES_PERIODIQUE_DISABLED=1` coupe la partie périodique en gardant le
+  > bouton ; `VIES_DISABLED=1` coupe tout. Aucun de ces appels n'envoie de
+  > données de vos clients au-delà du numéro ou de l'identifiant interrogé
 
 Conséquence : **votre cabinet est seul responsable de traitement** au sens du
 RGPD. Pas de sous-traitant à déclarer, pas de contrat à signer, pas de transfert

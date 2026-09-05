@@ -26,6 +26,7 @@ import { viderFile } from './file-emails.js';
 import { reglagesSynchro, synchroniserTousLesClients } from './routes/inpi.js';
 import { synchroniserTous as synchroniserBodacc } from './bodacc.js';
 import { analyserPeriode } from './jedeclare/suivi.js';
+import { verifierLot } from './tva-verification.js';
 import { config } from './config.js';
 
 /** Une ligne de `taches_planifiees`, telle que la requête la demande. */
@@ -214,6 +215,60 @@ const TACHES: Tache[] = [
       return `${b.analysees} accuse(s), ${b.declarationsEnregistrees} declaration(s)` +
         (b.ecarteesPrudence > 0 ? `, ${b.ecarteesPrudence} ecarte(s) par prudence` : '') +
         (b.illisibles > 0 ? `, ${b.illisibles} illisible(s)` : '');
+    },
+  },
+  {
+    /**
+     * Vérification périodique des numéros de TVA intracommunautaire.
+     *
+     * ⚠️ CETTE TÂCHE A ÉTÉ REFUSÉE PAR ÉCRIT AVANT D'ÊTRE ÉCRITE, et il faut
+     * savoir pourquoi elle existe. `routes/tva.ts` portait : « ne pas ajouter de
+     * tâche pour tenir les statuts à jour — un statut périmé est visible et sans
+     * conséquence, un appel sortant que personne n'a demandé ne l'est pas ».
+     *
+     * CE QUI A CHANGÉ : l'argument du cabinet, qui est meilleur. Un numéro
+     * intracommunautaire se DÉSACTIVE sans prévenir personne — radiation,
+     * changement de régime, passage en franchise. Facturer sans TVA sur un
+     * numéro devenu inactif se paie au contrôle, et le statut périmé n'est
+     * « visible » que si quelqu'un ouvre la fiche : donc jamais, sur les dossiers
+     * qu'on ne touche pas. C'est exactement là que le risque se loge.
+     *
+     * TROIS PRUDENCES, dont deux gouvernées par `tva-lot.ts` :
+     *
+     *   · UN LOT PAR JOUR, dimensionné pour couvrir tout le portefeuille en
+     *     trente jours — et plafonné, quitte à ne pas tenir le mois sur un
+     *     très gros cabinet. La tâche le dit alors dans son compte rendu.
+     *   · CINQ SECONDES ENTRE DEUX APPELS. On n'est jamais le client bruyant
+     *     d'un service que la Commission offre gratuitement.
+     *   · ARRÊT AUTOMATIQUE après cinq indisponibilités d'affilée : le service
+     *     est en panne, ou c'est nous qu'il refuse. Dérouler le lot dans ce cas
+     *     est précisément ce qui fait passer d'une saturation à un blocage.
+     *
+     * 3H DU MATIN, après `suivi-echeances-jedeclare` (2h) : les deux sont
+     * longues, et les enchaîner vaut mieux que les croiser. L'heure est LOCALE
+     * (`TZ=Europe/Paris` dans le Dockerfile).
+     */
+    nom: 'verification-tva-vies',
+    quand: 'tous les jours a 3h, un lot espace, sauf si VIES_PERIODIQUE_DISABLED',
+    estDue: chaqueJourA(3),
+    executer: async (journal) => {
+      if (config.vies.desactivee) return 'VIES desactive sur cette instance';
+      if (config.vies.periodiqueDesactivee) return 'verification periodique desactivee';
+
+      const b = await verifierLot(journal);
+      if (b.examines === 0) return 'aucune fiche a verifier';
+
+      if (!b.cycleTenu) {
+        // Le plafond mord : le portefeuille ne sera pas couvert en trente jours.
+        // Un retard qui s'installe doit se voir, pas se deviner.
+        journal.warn(
+          `[tva] ${b.eligibles} fiches eligibles : le plafond de lot ne permet pas ` +
+            'de toutes les verifier en trente jours.'
+        );
+      }
+
+      return `${b.examines} numero(s) : ${b.valides} valide(s), ${b.invalides} non actif(s), ` +
+        `${b.indisponibles} indisponible(s)` + (b.interrompu ? ', lot interrompu' : '');
     },
   },
   {

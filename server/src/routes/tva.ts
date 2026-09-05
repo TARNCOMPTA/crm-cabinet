@@ -13,19 +13,27 @@
  * portefeuille. Ici on interroge un service public sur un numéro, sans rien lui
  * révéler d'autre.
  *
- * AUCUNE TÂCHE PLANIFIÉE, et c'est ce qui rend tenable la promesse du README.
- * `planificateur.ts` n'est pas touché : pas de vérification nocturne, pas de
- * balayage du portefeuille. Un numéro n'est envoyé à Bruxelles que parce que
- * quelqu'un a cliqué. Ne pas ajouter de tâche « pour tenir les statuts à jour » :
- * un statut périmé est visible et sans conséquence, un appel sortant que personne
- * n'a demandé ne l'est pas.
+ * ⚠️ IL Y A DÉSORMAIS UNE TÂCHE PLANIFIÉE, ET CE COMMENTAIRE DISAIT LE
+ * CONTRAIRE. Jusqu'au 2026-09-05 on lisait ici : « un numéro n'est envoyé à
+ * Bruxelles que parce que quelqu'un a cliqué ; ne pas ajouter de tâche pour
+ * tenir les statuts à jour — un statut périmé est visible et sans conséquence ».
+ * Le cabinet a tranché l'inverse, et son argument est meilleur : un numéro
+ * intracommunautaire se DÉSACTIVE sans prévenir personne, et facturer sans TVA
+ * sur un numéro devenu inactif se paie au contrôle. Un statut périmé n'est
+ * visible que si quelqu'un ouvre la fiche — c'est-à-dire jamais, sur les fiches
+ * qu'on ne touche pas.
+ *
+ * La tâche vit dans `planificateur.ts` (`verification-tva-vies`), son rythme
+ * dans `tva-lot.ts`, et `VIES_PERIODIQUE_DISABLED=1` la coupe sans couper le
+ * bouton. Cette route, elle, ne change pas : elle reste le chemin du clic.
  */
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../config.js';
-import { requete, requeteUne } from '../db.js';
+import { requeteUne } from '../db.js';
 import { exigerSession } from '../gardes.js';
-import { etatService, verifier, type Verdict } from '../vies.js';
+import { etatService } from '../vies.js';
+import { verifierEtRetenir } from '../tva-verification.js';
 
 function desactivee(reply: FastifyReply): FastifyReply {
   return reply.code(503).send({
@@ -68,33 +76,13 @@ export function enregistrerRoutesTva(app: FastifyInstance): void {
         });
       }
 
-      const verdict: Verdict = await verifier(numero);
-
-      /**
-       * ⚠️ ON N'ÉCRIT QUE SUR UN VERDICT.
-       *
-       * `indisponible` signifie que VIES n'a rien vérifié — le persister
-       * écraserait un « valide » obtenu hier par une non-information. C'est le
-       * corollaire de la colonne `tva_verif_statut`, qui n'a que trois valeurs :
-       * l'indisponibilité est un état de l'APPEL, pas du numéro.
-       */
-      let verifieLe: string | null = null;
-      if (verdict.statut === 'valide' || verdict.statut === 'invalide') {
-        if (clientId) {
-          const lignes = await requete<{ tva_verif_le: string }>(
-            `UPDATE clients
-                SET tva_verif_statut  = $2,
-                    tva_verif_le      = now(),
-                    tva_verif_code    = $3,
-                    tva_verif_nom     = $4,
-                    tva_verif_adresse = $5
-              WHERE id = $1
-              RETURNING tva_verif_le`,
-            [clientId, verdict.statut, verdict.code, verdict.nom, verdict.adresse]
-          );
-          verifieLe = lignes[0]?.tva_verif_le ?? null;
-        }
-      }
+      /*
+        L'appel ET la règle d'écriture vivent dans `tva-verification.ts` : la
+        tâche périodique doit écrire exactement comme ce bouton, et deux copies
+        de cette règle divergeraient — celle qui tourne la nuit étant celle que
+        personne ne relit.
+      */
+      const { verdict, verifieLe } = await verifierEtRetenir(clientId ?? null, numero);
 
       /**
        * `success: true` MÊME SUR « indisponible » : l'appel a réussi, c'est le

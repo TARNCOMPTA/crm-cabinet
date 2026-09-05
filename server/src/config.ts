@@ -291,14 +291,26 @@ export const config = {
    * refuserait de vérifier un numéro de TVA faute de configuration serait cassé
    * par défaut.
    *
-   * Ce que cela ajoute à la promesse du README — « les seuls appels sortants sont
-   * ceux que vous configurez » — est un appel de plus, et il est listé là comme
-   * les autres. Ce qui rend la promesse tenable : RIEN NE PART SANS UN CLIC.
-   * Aucune tâche dans `planificateur.ts`, aucune vérification périodique, aucun
-   * traitement par lot. `VIES_DISABLED=1` coupe même cette possibilité.
+   * ⚠️ CE COMMENTAIRE PROMETTAIT QU'AUCUN APPEL À VIES NE PARTAIT SANS UN
+   * GESTE HUMAIN, ET CE N'EST PLUS VRAI depuis le 2026-09-05. Une tâche vérifie désormais tout le portefeuille
+   * au moins une fois par mois, par petits lots espacés. La raison : un numéro
+   * intracommunautaire se désactive sans prévenir, et un statut périmé n'est
+   * « visible » que sur les fiches qu'on ouvre — c'est-à-dire pas celles qui
+   * dorment. Le README dit la même chose, en toutes lettres, plutôt que de
+   * laisser croire à une promesse qui ne tient plus.
+   *
+   * DEUX INTERRUPTEURS, ET ILS NE FONT PAS LA MÊME CHOSE :
+   *
+   *   `VIES_DISABLED=1`            coupe TOUT, bouton compris. Le numéro reste
+   *                                calculé depuis le SIREN, jamais vérifié.
+   *   `VIES_PERIODIQUE_DISABLED=1` coupe la seule tâche périodique. Le bouton
+   *                                continue de marcher : c'est le réglage du
+   *                                cabinet qui veut garder la main sur ce qui
+   *                                sort de chez lui.
    */
   vies: {
     desactivee: booleen('VIES_DISABLED', false),
+    periodiqueDesactivee: booleen('VIES_PERIODIQUE_DISABLED', false),
   },
 
   /**

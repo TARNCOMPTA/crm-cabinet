@@ -38,6 +38,67 @@ n'arrivent que quand on les ouvre.
 
 ## Non publié
 
+### Le suivi des déclarations de revenus, repris
+
+L'écran le plus ancien du produit — jamais retouché, 607 lignes, aucun
+commentaire. Quatre défauts y dormaient, dont deux qui écrivaient en base :
+
+- **Une action en lot pouvait porter sur des lignes invisibles.** On cochait
+  vingt déclarations, on changeait de filtre, et « Attribuer collaborateurs »
+  s'appliquait aux vingt d'avant. L'action réussissait, annonçait « 20
+  déclarations mises à jour », et rien à l'écran ne montrait ce qui avait changé.
+  La sélection est désormais ramenée à ce qui est visible.
+- **« Tout sélectionner » désélectionnait**, parce qu'il comparait des tailles
+  et non des ensembles : après un changement de filtre, deux ensembles
+  différents de même taille se lisaient comme identiques.
+- **Les deux fenêtres d'action en lot étaient bricolées à la main** et perdaient
+  tout ce que les fenêtres du produit portent : rôle de dialogue, nom
+  accessible, piège à focus, `Échap` pour fermer, verrouillage du défilement.
+  Ce sont pourtant les commandes qui écrivent sur vingt lignes d'un coup.
+- **Une lecture qui échouait s'affichait « Aucune déclaration enregistrée »**, et
+  invitait un cabinet qui en a des centaines à créer sa première. Les trois cas
+  — échec, vide, filtres trop étroits — sont maintenant distingués.
+
+Le filtrage et les règles de sélection sont sortis de l'écran, avec leurs tests.
+Les libellés sont accentués.
+
+### La TVA intracommunautaire se vérifie toute seule
+
+Un numéro intracommunautaire se désactive sans prévenir — radiation, changement
+de régime, passage en franchise — et un statut périmé n'est « visible » que si
+quelqu'un ouvre la fiche : donc jamais, sur les dossiers qu'on ne touche pas.
+Facturer sans TVA sur un numéro devenu inactif se paie au contrôle.
+
+- **À la création d'une fiche**, la vérification part toute seule, juste après
+  la fermeture de la fenêtre — pas avant, pour qu'un service européen saturé
+  n'empêche jamais de créer un client.
+- **Une fois par mois par fiche**, un lot par jour à 3 h. Le lot est dimensionné
+  pour couvrir tout le portefeuille en trente jours, cinq secondes séparent deux
+  appels, et le passage s'arrête de lui-même après cinq indisponibilités
+  d'affilée — le service est alors en panne, et insister est ce qui fait passer
+  d'une saturation à un blocage.
+- Les fiches **jamais vérifiées** passent en premier : c'est ce qui rattrape les
+  clients créés par import, par le connecteur MCP ou par un accès direct, qui ne
+  passent pas par l'écran de création.
+- Un verdict n'est **jamais écrasé par une indisponibilité** : la règle est la
+  même que pour le bouton, et elle n'existe qu'à un seul endroit du code.
+
+⚠️ Le produit promettait le contraire — « rien ne part sans une action de votre
+part ». Le README, la configuration et le code le disaient chacun de leur côté,
+et c'est devenu faux : les trois sont corrigés, et un test empêche désormais que
+la promesse et le comportement se contredisent à nouveau.
+`VIES_PERIODIQUE_DISABLED=1` coupe la partie périodique en gardant le bouton ;
+`VIES_DISABLED=1` coupe tout.
+
+### La création d'un client échouait sur une date vide
+
+Trouvé en vérifiant ce qui précède, et sans rapport avec lui : un
+`<input type="date">` vide rend `''`, pas `null`. La fenêtre de création envoyait
+la saisie telle quelle, et PostgreSQL refusait — « invalid input syntax for type
+date: "" ». La fiche n'était pas créée, et ce message s'affichait à quelqu'un qui
+venait de saisir un nom d'entreprise. Corrigé, avec les tests qui l'auraient
+attrapé.
+
 ### La vérification VIES échouait au premier clic, réussissait au troisième
 
 Le service européen répond `MS_MAX_CONCURRENT_REQ` quand il est saturé — HTTP
