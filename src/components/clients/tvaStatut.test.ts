@@ -1,4 +1,12 @@
 import { describe, it, expect } from 'vitest';
+
+/*
+  ⚠️ LES MOTIFS DE CE FICHIER SONT ACCENTUÉS, ET DOIVENT LE RESTER. `/i` est
+  insensible à la CASSE, jamais aux ACCENTS : `/verification/i` ne trouve pas
+  « Vérification ». Quatre assertions d'ici sont tombées le 2026-09-05 quand les
+  libellés ont été accentués — et la même confusion avait déjà coûté une CI
+  rouge le 2026-09-04, sur `tests/e2e.test.ts`.
+*/
 import { etatTva } from './tvaStatut';
 
 /**
@@ -21,14 +29,14 @@ describe('etatTva', () => {
 
   it('annonce une verification en cours, meme sans numero', () => {
     const e = etatTva({ numero: null, statut: null, enCours: true });
-    expect(e?.texte).toMatch(/Verification/i);
+    expect(e?.texte).toMatch(/Vérification/i);
     expect(e?.anime, "l'icone doit tourner pendant l'appel").toBe(true);
   });
 
-  it('rend « Non verifie » par defaut, en gris', () => {
+  it('rend « Non vérifié » par defaut, en gris', () => {
     const e = etatTva({ numero: 'FR40303265045', statut: 'non_verifie' });
     expect(e?.variant).toBe('gray');
-    expect(e?.texte).toBe('Non verifie');
+    expect(e?.texte).toBe('Non vérifié');
     // Le message doit dire que rien n'a encore ete envoye : c'est la promesse du
     // produit, et c'est ce qui rassure sur l'appel sortant.
     expect(e?.infobulle).toMatch(/sans un clic/i);
@@ -72,7 +80,7 @@ describe('etatTva', () => {
       nomEnBase: 'BOULANGERIE MARTEL',
     });
     expect(e?.variant).toBe('orange');
-    expect(e?.texte).toMatch(/raison sociale differente/i);
+    expect(e?.texte).toMatch(/raison sociale différente/i);
     // Les DEUX noms doivent figurer : c'est a l'humain de trancher.
     expect(e?.infobulle).toContain('SA SODIMAS');
     expect(e?.infobulle).toContain('BOULANGERIE MARTEL');
@@ -88,7 +96,7 @@ describe('etatTva', () => {
     const e = etatTva({ numero: 'FR44732829320', statut: 'invalide' });
     expect(e?.variant, 'le rouge accuserait la saisie a tort').toBe('orange');
     expect(e?.variant).not.toBe('danger');
-    expect(e?.texte).toBe('Non confirme par VIES');
+    expect(e?.texte).toBe('Non confirmé par VIES');
   });
 
   /** Le vocabulaire, fige : jamais d'accusation de faute de frappe. */
@@ -118,9 +126,9 @@ describe('etatTva', () => {
     });
     expect(e?.texte).toBe('VIES indisponible');
     expect(e?.variant).toBe('orange');
-    expect(e?.infobulle).toMatch(/statut precedent est conserve/i);
+    expect(e?.infobulle).toMatch(/statut précédent est conservé/i);
     expect(e?.infobulle, "il faut dire que le numero n'est pas en cause").toMatch(
-      /aucune conclusion n'est tiree du numero/i
+      /aucune conclusion n’est tirée du numéro/i
     );
   });
 
@@ -141,7 +149,7 @@ describe('etatTva', () => {
       indisponibleTransitoire: true,
       enCours: true,
     });
-    expect(e?.texte).toMatch(/Verification/i);
+    expect(e?.texte).toMatch(/Vérification/i);
   });
 
   /**

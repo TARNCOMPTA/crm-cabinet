@@ -38,6 +38,53 @@ n'arrivent que quand on les ouvre.
 
 ## Non publié
 
+### Le bouton « Vérifier » de la TVA intracommunautaire était introuvable
+
+Le connecteur VIES fonctionnait ; il n'y avait rien à cliquer. Le bouton
+n'existait que dans le mode **édition** de la fiche client : depuis la fiche
+ouverte — le seul endroit où l'on pense à vérifier un numéro — le badge restait
+« Non vérifié » sans que rien ne dise comment en sortir. Il est désormais à côté
+du badge, en lecture comme en édition.
+
+Un second défaut est apparu en le corrigeant : la route relit `tva_intracom`
+**depuis la base**. Taper un nouveau numéro puis cliquer « Vérifier » avant
+d'enregistrer vérifiait donc l'ANCIEN, et affichait son verdict sous le nouveau
+— un « valide » rassurant sur un numéro que personne n'avait contrôlé. Quand le
+champ porte autre chose que ce qui est en base, le bouton bascule sur le
+contrôle ponctuel : VIES est interrogé sur le numéro tapé, rien n'est écrit, et
+le message le dit. La règle vit dans `src/lib/tva.ts`, avec ses tests.
+
+Les libellés de la fonctionnalité sont accentués, badge et messages du serveur
+compris — la passe de septembre ne les avait pas atteints.
+
+### L'aperçu d'une pièce jointe restait blanc
+
+Le rectangle s'ouvrait, vide, sans un mot d'explication. Ce n'était pas le
+fichier : Caddy posait `X-Frame-Options: DENY` et `frame-ancestors 'none'` sur
+**toutes** les réponses, `/api/storage/` comprise. Ces deux en-têtes interdisent
+tout encadrement — la même origine n'y change rien, c'est la définition de
+`DENY` et de `'none'` — et le navigateur refuse d'afficher le cadre.
+
+Invisible en développement, où l'on attaque le serveur directement, sans Caddy
+devant. Reproduit ici derrière un mandataire qui rejoue les deux en-têtes : sans
+eux le fichier s'affiche, avec eux le cadre reste vide et le navigateur annonce
+« Refused to frame ».
+
+Les deux Caddyfile livrés séparent désormais le chemin des fichiers déposés du
+reste du site — `SAMEORIGIN` et `frame-ancestors 'self'` pour eux, `DENY` et
+`'none'` pour l'application. Deux sélecteurs disjoints, pour qu'aucun ordre de
+directives n'entre en jeu. `nosniff` et les autres en-têtes restent globaux.
+`tests/encadrement.test.ts` empêche qu'on les remette dans un bloc qui
+s'applique à tout, et empêche aussi l'inverse — un `SAMEORIGIN` global.
+
+⚠️ **Si votre instance est derrière un Caddy déjà en place**, la mise à jour ne
+touche pas sa configuration : reportez-y le bloc de
+`installation/Caddyfile.extrait`, puis `caddy validate` et `caddy reload`.
+
+Au passage : une image qui ne se charge pas affiche « Aperçu indisponible »
+plutôt qu'un rectangle vide, qui se lisait comme un fichier illisible.
+
+
 ### L'écran d'un bilan, revu
 
 - **Les notes passent en tête.** Elles étaient sous la checklist et ses pièces

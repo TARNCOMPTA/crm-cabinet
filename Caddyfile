@@ -17,30 +17,57 @@
 	# donc déjà plus.
 	header {
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-		X-Frame-Options "DENY"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), publickey-credentials-get=(self), publickey-credentials-create=(self)"
 
-		# La MÊME politique que celle du <meta> d'index.html, servie en en-tête.
-		#
-		# Le doublon est voulu, et ce n'est pas une redite inutile : trois
-		# directives — `frame-ancestors`, `sandbox` et `report-uri` — sont
-		# IGNORÉES par les navigateurs quand la politique arrive par un `<meta>`.
-		# Le `frame-ancestors 'none'` d'index.html ne protégeait donc rien ; seul
-		# `X-Frame-Options` tenait, et lui ne connaît pas les origines multiples.
-		#
-		# Le `<meta>` reste en place : il couvre le développement, où l'on attaque
-		# le serveur Node directement, sans Caddy devant. Deux politiques
-		# identiques s'appliquent par intersection — donc sans changement d'effet.
-		#
-		# Elle couvre aussi, au passage, tout ce que sert l'application, pièces
-		# jointes comprises : `object-src 'none'` et `script-src 'self'` valent
-		# alors filet supplémentaire sur un fichier déposé.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-
 		# Le serveur n'a pas à annoncer ce qu'il est.
 		-Server
+	}
+
+	# L'ENCADREMENT : REFUSÉ PARTOUT, SAUF SUR LES FICHIERS DÉPOSÉS.
+	# ------------------------------------------------------------------------
+	# La fenêtre d'un bilan affiche la pièce survolée dans un `<iframe>` pointant
+	# sur `/api/storage/...`, de MÊME ORIGINE. `X-Frame-Options: DENY` et
+	# `frame-ancestors 'none'` interdisent pourtant TOUT encadrement — l'origine
+	# identique n'y change rien, c'est la définition de `DENY` et de `'none'`. Le
+	# navigateur affiche alors un rectangle blanc, sans message visible : l'aperçu
+	# paraît cassé, et rien à l'écran ne dit pourquoi.
+	#
+	# Signalé en production le 2026-09-05, puis reproduit derrière un mandataire
+	# qui rejoue ces deux en-têtes sur une instance locale :
+	#
+	#     sans eux    le fichier s'affiche dans le cadre
+	#     avec eux    « Refused to frame ... because an ancestor violates the
+	#                 following Content Security Policy directive », cadre vide
+	#
+	# ⚠️ POURQUOI DEUX SÉLECTEURS DISJOINTS, ET NON UNE SURCHARGE. Poser un second
+	# `header` après le bloc global marcherait sans doute — la valeur écrite en
+	# dernier gagne. « Sans doute » ne suffit pas pour une politique de sécurité
+	# qu'on ne peut pas exercer ici : Caddy ne tourne pas dans le conteneur de
+	# développement, et la CI n'en valide que la syntaxe. `not path` d'un côté,
+	# `path` de l'autre : aucune réponse ne traverse les deux, et l'ordre des
+	# directives ne décide de rien.
+	#
+	# ⚠️ SEULES CES DEUX-LÀ SONT SÉPARÉES. `nosniff`, HSTS, `Referrer-Policy` et
+	# `Permissions-Policy` restent dans le bloc global, donc s'appliquent AUSSI
+	# aux fichiers déposés — `nosniff` plus que tout autre, puisqu'il porte
+	# précisément sur un contenu envoyé par un tiers.
+	#
+	# Ce qui reste protégé : l'application garde `DENY` et `'none'`. Les fichiers
+	# déposés passent à `SAMEORIGIN` / `'self'` — encadrables par ce site, par
+	# personne d'autre. Le reste de la politique est identique, `object-src 'none'`
+	# et `script-src 'self'` compris.
+	@fichiers path /api/storage/*
+	@horsFichiers not path /api/storage/*
+
+	header @horsFichiers {
+		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	}
+	header @fichiers {
+		X-Frame-Options "SAMEORIGIN"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 	}
 
 	# Les fichiers déposés peuvent atteindre 10 Mo ; la limite par défaut les

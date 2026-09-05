@@ -26,6 +26,51 @@ export function normaliserNumeroTva(valeur: string | null | undefined): string {
 }
 
 /**
+ * Ce que le bouton « Vérifier » doit faire, selon ce qui est en base et ce qui
+ * est tapé.
+ * ---------------------------------------------------------------------------
+ * La route de vérification relit `tva_intracom` DEPUIS LA BASE quand on lui
+ * passe un `clientId`. En lecture, base et écran disent la même chose et il n'y
+ * a rien à décider. En édition, non : taper un nouveau numéro puis cliquer
+ * « Vérifier » avant d'enregistrer faisait vérifier l'ANCIEN, et affichait son
+ * verdict sous le nouveau — un « valide » rassurant sur un numéro que personne
+ * n'avait contrôlé.
+ *
+ * D'où deux chemins, et un seul endroit pour choisir entre eux :
+ *
+ *   `enregistrable: true`   le numéro tapé est celui de la base (ou rien n'est
+ *                           en cours de saisie) : on vérifie par `clientId`, et
+ *                           le verdict est retenu en base.
+ *   `enregistrable: false`  le champ porte autre chose : contrôle ponctuel du
+ *                           numéro tapé, aucune écriture. Le verdict ne vaut
+ *                           qu'à l'écran, et le message doit le dire.
+ *
+ * La comparaison porte sur les numéros NORMALISÉS : « FR 40 303 265 045 » et
+ * « fr40303265045 » sont le même numéro, et repartir en contrôle ponctuel pour
+ * une différence d'espaces priverait l'utilisateur de l'enregistrement.
+ */
+export interface VerificationADemander {
+  /** Le numéro à soumettre, normalisé. Vide : il n'y a rien à vérifier. */
+  numero: string;
+  /** Le verdict sera-t-il retenu en base ? */
+  enregistrable: boolean;
+}
+
+export function verificationADemander(
+  numeroEnregistre: string | null | undefined,
+  /** `undefined` hors édition : il n'y a pas de saisie en cours. */
+  numeroSaisi?: string | null
+): VerificationADemander {
+  const enregistre = normaliserNumeroTva(numeroEnregistre);
+  if (numeroSaisi === undefined) return { numero: enregistre, enregistrable: true };
+
+  const saisi = normaliserNumeroTva(numeroSaisi);
+  return saisi === enregistre
+    ? { numero: enregistre, enregistrable: true }
+    : { numero: saisi, enregistrable: false };
+}
+
+/**
  * Numéro français depuis un SIREN : `FR` + clé + SIREN.
  * clé = (12 + 3 × (SIREN mod 97)) mod 97
  *

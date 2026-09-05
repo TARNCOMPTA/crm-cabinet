@@ -540,6 +540,22 @@ export function ClientDetail() {
           {client.tva_intracom_source === 'manuel' && (
             <span className="text-xs text-gray-500 dark:text-gray-400">saisi a la main</span>
           )}
+          {/*
+            ⚠️ LE BOUTON EST ICI, EN LECTURE, ET C'EST TOUT LE SUJET.
+            Il n'existait que dans `customEditDisplay` : pour vérifier un numéro
+            il fallait passer la fiche en édition, deviner que la commande s'y
+            trouvait, puis en ressortir. Depuis la fiche ouverte — le seul
+            endroit où l'on pense à le faire — rien n'était cliquable, et le
+            badge restait « non vérifié » sans que rien ne dise comment en
+            sortir. Signalé le 2026-09-05 : « le connecteur VIES ne marche pas ».
+            Il marchait ; il était introuvable.
+          */}
+          <TvaVerifyButton
+            clientId={client.id}
+            numero={client.tva_intracom}
+            onVerified={() => void loadClient()}
+            onIndisponible={setViesIndisponible}
+          />
         </span>
       ) : (
         <span className="text-gray-400 dark:text-gray-500">
@@ -558,6 +574,7 @@ export function ClientDetail() {
             <TvaVerifyButton
               clientId={client.id}
               numero={client.tva_intracom}
+              numeroSaisi={formData.tva_intracom ?? ''}
               onVerified={() => void loadClient()}
               onIndisponible={setViesIndisponible}
             />

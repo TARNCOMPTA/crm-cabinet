@@ -80,24 +80,24 @@ interface ReponseVies {
 const FORMAT = /^([A-Z]{2})([0-9A-Z]{2,13})$/;
 
 const MESSAGES = {
-  valide: 'Numero valide et actif au registre des operations intracommunautaires.',
+  valide: 'Numéro valide et actif au registre des opérations intracommunautaires.',
   /**
    * Le libellé le plus important du module. Il ne dit pas « invalide » tout
    * court, parce que le cas le plus fréquent est une entreprise en règle qui
    * n'a jamais demandé son numéro intracommunautaire.
    */
   invalide:
-    "Ce numero n'est pas actif au registre des operations intracommunautaires. " +
-    "Cela ne veut pas dire qu'il est mal saisi : une entreprise en franchise en " +
-    "base de TVA, ou qui n'a jamais demande son numero intracommunautaire, " +
-    'repond « non » avec un numero pourtant correct.',
-  format: 'Format attendu : deux lettres de pays puis 2 a 13 caracteres, par exemple FR40303265045.',
+    "Ce numéro n’est pas actif au registre des opérations intracommunautaires. " +
+    "Cela ne veut pas dire qu’il est mal saisi : une entreprise en franchise en " +
+    "base de TVA, ou qui n’a jamais demandé son numéro intracommunautaire, " +
+    'répond « non » avec un numéro pourtant correct.',
+  format: 'Format attendu : deux lettres de pays puis 2 à 13 caractères, par exemple FR40303265045.',
   appel:
-    "VIES a refuse la requete : le code pays n'est pas celui d'un Etat membre. " +
-    'Rien ne peut etre conclu du numero.',
+    "VIES a refusé la requête : le code pays n’est pas celui d’un État membre. " +
+    'Rien ne peut être conclu du numéro.',
   indisponible:
-    "VIES n'a pas pu verifier ce numero pour le moment. Le statut precedent est " +
-    "conserve : aucune conclusion n'est tiree du numero lui-meme.",
+    "VIES n’a pas pu vérifier ce numéro pour le moment. Le statut précédent est " +
+    "conservé : aucune conclusion n’est tirée du numéro lui-même.",
 } as const;
 
 /** Nettoie un numéro saisi : majuscules, ni espaces ni ponctuation. */

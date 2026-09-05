@@ -4,6 +4,7 @@ import {
   calculerTvaFr,
   formaterNumeroTva,
   normaliserNumeroTva,
+  verificationADemander,
   verifierCleTvaFr,
 } from './tva';
 
@@ -127,5 +128,53 @@ describe('TVA_INTRACOM_RE', () => {
     for (const mauvais of ['fr40303265045', 'FR 40303265045', 'FR4', 'F40303265045', 'FR40303265045678']) {
       expect(TVA_INTRACOM_RE.test(mauvais), `« ${mauvais} » accepte`).toBe(false);
     }
+  });
+});
+
+describe('verificationADemander', () => {
+  it('vérifie et enregistre quand rien n est en cours de saisie', () => {
+    expect(verificationADemander('FR40303265045')).toEqual({
+      numero: 'FR40303265045',
+      enregistrable: true,
+    });
+  });
+
+  it('vérifie et enregistre quand la saisie est identique au fond', () => {
+    // « FR 40 303 265 045 » et « fr40303265045 » sont le MÊME numéro : repartir
+    // en contrôle ponctuel pour des espaces priverait de l'enregistrement.
+    expect(verificationADemander('FR40303265045', 'fr 40 303 265 045')).toEqual({
+      numero: 'FR40303265045',
+      enregistrable: true,
+    });
+  });
+
+  it('contrôle sans enregistrer le numéro tapé mais pas encore sauvegardé', () => {
+    // Sans cette bascule, la route relirait l'ANCIEN numéro en base et
+    // afficherait son verdict sous le nouveau.
+    expect(verificationADemander('FR40303265045', 'FR23334175221')).toEqual({
+      numero: 'FR23334175221',
+      enregistrable: false,
+    });
+  });
+
+  it('bascule aussi quand la fiche n avait aucun numéro', () => {
+    expect(verificationADemander(null, 'FR40303265045')).toEqual({
+      numero: 'FR40303265045',
+      enregistrable: false,
+    });
+  });
+
+  it('rend un numéro vide quand il n y a rien à vérifier', () => {
+    expect(verificationADemander(null)).toEqual({ numero: '', enregistrable: true });
+    expect(verificationADemander('', '')).toEqual({ numero: '', enregistrable: true });
+  });
+
+  it('efface la saisie ramenée à rien plutôt que de vérifier l ancien', () => {
+    // Vider le champ puis cliquer ne doit PAS relancer l'ancien numéro : le
+    // bouton se désactive, faute de numéro à soumettre.
+    expect(verificationADemander('FR40303265045', '   ')).toEqual({
+      numero: '',
+      enregistrable: false,
+    });
   });
 });

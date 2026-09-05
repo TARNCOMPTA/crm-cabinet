@@ -26,7 +26,6 @@
 crm.moncabinet.fr {
 	header {
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-		X-Frame-Options "DENY"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		# publickey-credentials-* est indispensable : sans ces directives,
@@ -34,6 +33,36 @@ crm.moncabinet.fr {
 		Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), publickey-credentials-get=(self), publickey-credentials-create=(self)"
 		-Server
 	}
+
+	# L'ENCADREMENT : REFUSÉ PARTOUT, SAUF SUR LES FICHIERS DÉPOSÉS.
+	# ------------------------------------------------------------------------
+	# La fenêtre d'un bilan affiche la pièce survolée dans un `<iframe>` pointant
+	# sur `/api/storage/...`, de MÊME ORIGINE. `X-Frame-Options: DENY` interdit
+	# pourtant TOUT encadrement — l'origine identique n'y change rien, c'est la
+	# définition de `DENY`. Le navigateur affiche alors un rectangle blanc, sans
+	# message visible : l'aperçu paraît cassé, et rien à l'écran ne dit pourquoi.
+	#
+	# Signalé en production le 2026-09-05, puis reproduit derrière un mandataire
+	# qui rejoue cet en-tête sur une instance locale : sans lui le fichier
+	# s'affiche dans le cadre, avec lui le cadre reste vide et le navigateur
+	# annonce « Refused to frame ».
+	#
+	# ⚠️ DEUX SÉLECTEURS DISJOINTS, ET NON UNE SURCHARGE. Poser un second
+	# `header` après le bloc global marcherait sans doute — la valeur écrite en
+	# dernier gagne. « Sans doute » ne suffit pas pour une politique de sécurité
+	# qu'on ne peut pas exercer : ce fichier est recopié dans le Caddy d'un autre,
+	# et personne ne relira la sortie. `not path` d'un côté, `path` de l'autre :
+	# aucune réponse ne traverse les deux.
+	#
+	# ⚠️ SEUL `X-Frame-Options` EST SÉPARÉ. `nosniff`, HSTS, `Referrer-Policy` et
+	# `Permissions-Policy` restent globaux, donc s'appliquent AUSSI aux fichiers
+	# déposés — `nosniff` plus que tout autre, puisqu'il porte précisément sur un
+	# contenu envoyé par un tiers.
+	@fichiers path /api/storage/*
+	@horsFichiers not path /api/storage/*
+
+	header @horsFichiers X-Frame-Options "DENY"
+	header @fichiers X-Frame-Options "SAMEORIGIN"
 
 	# Les fichiers déposés vont jusqu'à 10 Mo.
 	request_body {

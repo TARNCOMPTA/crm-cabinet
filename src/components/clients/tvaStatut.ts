@@ -74,8 +74,8 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
     return {
       variant: 'gray',
       icone: 'chargement',
-      texte: 'Verification...',
-      infobulle: 'Interrogation du registre europeen VIES. Le service repond en une a quatre secondes.',
+      texte: 'Vérification…',
+      infobulle: 'Interrogation du registre européen VIES. Le service répond en une à quatre secondes.',
       anime: true,
     };
   }
@@ -91,8 +91,8 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
       icone: 'reseau',
       texte: 'VIES indisponible',
       infobulle:
-        "Le registre europeen n'a pas pu verifier ce numero. Le statut precedent est " +
-        "conserve : aucune conclusion n'est tiree du numero lui-meme. Reessayez dans " +
+        "Le registre européen n’a pas pu vérifier ce numéro. Le statut précédent est " +
+        "conservé : aucune conclusion n’est tirée du numéro lui-même. Réessayez dans " +
         'quelques instants.',
       anime: false,
     };
@@ -118,10 +118,10 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
         ? {
             variant: 'orange',
             icone: 'alerte',
-            texte: 'Valide, raison sociale differente',
+            texte: 'Valide, raison sociale différente',
             infobulle:
-              `VIES confirme ce numero${quand ? ` (verifie le ${quand})` : ''}, mais la raison ` +
-              `sociale qu'il renvoie — « ${nomVies} » — differe de celle en base — « ${nomBase} ». ` +
+              `VIES confirme ce numéro${quand ? ` (vérifié le ${quand})` : ''}, mais la raison ` +
+              `sociale qu’il renvoie — « ${nomVies} » — diffère de celle en base — « ${nomBase} ». ` +
               "C'est souvent une difference de forme, pas une erreur.",
             anime: false,
           }
@@ -130,8 +130,8 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
             icone: 'coche',
             texte: 'Valide',
             infobulle:
-              `Numero actif au registre des operations intracommunautaires` +
-              `${quand ? `, verifie le ${quand}` : ''}${nomVies ? ` — ${nomVies}` : ''}.`,
+              `Numéro actif au registre des opérations intracommunautaires` +
+              `${quand ? `, vérifié le ${quand}` : ''}${nomVies ? ` — ${nomVies}` : ''}.`,
             anime: false,
           };
     }
@@ -141,12 +141,12 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
         // ⚠️ ORANGE, PAS `danger`. Voir l'avertissement en tête de fichier.
         variant: 'orange',
         icone: 'alerte',
-        texte: 'Non confirme par VIES',
+        texte: 'Non confirmé par VIES',
         infobulle:
-          `Ce numero n'est pas actif au registre des operations intracommunautaires` +
-          `${quand ? ` (verifie le ${quand})` : ''}. Cela ne veut pas dire qu'il est mal ` +
+          `Ce numéro n’est pas actif au registre des opérations intracommunautaires` +
+          `${quand ? ` (vérifié le ${quand})` : ''}. Cela ne veut pas dire qu’il est mal ` +
           'saisi : une entreprise en franchise en base de TVA, ou qui n\'a jamais demande ' +
-          'son numero intracommunautaire, repond « non » avec un numero pourtant correct.',
+          'son numéro intracommunautaire, répond « non » avec un numéro pourtant correct.',
         anime: false,
       };
 
@@ -157,7 +157,7 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
         variant: 'orange',
         icone: 'reseau',
         texte: 'VIES indisponible',
-        infobulle: "Le registre europeen n'a pas pu verifier ce numero.",
+        infobulle: "Le registre européen n’a pas pu vérifier ce numéro.",
         anime: false,
       };
 
@@ -165,10 +165,10 @@ export function etatTva(entree: EntreeEtatTva): EtatTva | null {
       return {
         variant: 'gray',
         icone: 'horloge',
-        texte: 'Non verifie',
+        texte: 'Non vérifié',
         infobulle:
-          'Ce numero est calcule depuis le SIREN et syntaxiquement correct, mais il ' +
-          "n'a pas encore ete confronte au registre europeen. Rien n'est envoye a " +
+          'Ce numéro est calculé depuis le SIREN et syntaxiquement correct, mais il ' +
+          "n'a pas encore été confronté au registre européen. Rien n'est envoye a " +
           'Bruxelles sans un clic.',
         anime: false,
       };

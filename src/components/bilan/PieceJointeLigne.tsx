@@ -82,6 +82,12 @@ function estApercevable(mime: string | null): boolean {
 
 export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  /*
+    Une image qui ne se charge pas laissait un rectangle vide, indistinguable
+    d'un aperçu blanc. Vide, un panneau d'aperçu se lit comme « le fichier est
+    illisible » ; il faut au moins dire qu'on n'a pas pu l'afficher.
+  */
+  const [echecImage, setEchecImage] = useState(false);
   const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ligne = useRef<HTMLDivElement>(null);
   const ouvert = position !== null;
@@ -93,6 +99,7 @@ export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
   function ouvrir() {
     if (!apercevable) return;
     if (minuterie.current) clearTimeout(minuterie.current);
+    setEchecImage(false);
     minuterie.current = setTimeout(() => {
       const cadre = ligne.current?.getBoundingClientRect();
       if (!cadre) return;
@@ -178,11 +185,18 @@ export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
         >
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
             {estImage ? (
-              <img
-                src={url}
-                alt={`Aperçu de ${piece.file_name}`}
-                className="w-full max-h-80 object-contain bg-gray-50 dark:bg-gray-800"
-              />
+              echecImage ? (
+                <p className="px-3 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                  Aperçu indisponible. Le fichier reste téléchargeable.
+                </p>
+              ) : (
+                <img
+                  src={url}
+                  alt={`Aperçu de ${piece.file_name}`}
+                  onError={() => setEchecImage(true)}
+                  className="w-full max-h-80 object-contain bg-gray-50 dark:bg-gray-800"
+                />
+              )
             ) : (
               <iframe
                 src={url}

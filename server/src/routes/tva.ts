@@ -30,8 +30,8 @@ import { etatService, verifier, type Verdict } from '../vies.js';
 function desactivee(reply: FastifyReply): FastifyReply {
   return reply.code(503).send({
     message:
-      'La verification VIES est desactivee sur cette instance (VIES_DISABLED=1). ' +
-      'Le numero de TVA reste calcule depuis le SIREN.',
+      'La vérification VIES est désactivée sur cette instance (VIES_DISABLED=1). ' +
+      'Le numéro de TVA reste calculé depuis le SIREN.',
   });
 }
 
@@ -64,7 +64,7 @@ export function enregistrerRoutesTva(app: FastifyInstance): void {
 
       if (!numero) {
         return reply.code(400).send({
-          message: 'Aucun numero de TVA a verifier. Renseignez-le, ou saisissez un SIREN.',
+          message: 'Aucun numéro de TVA à vérifier. Renseignez-le, ou saisissez un SIREN.',
         });
       }
 

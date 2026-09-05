@@ -1,4 +1,11 @@
 import { describe, it, expect } from 'vitest';
+
+/*
+  ⚠️ LES MOTIFS DE CE FICHIER SONT ACCENTUÉS, ET DOIVENT LE RESTER. `/i` est
+  insensible à la CASSE, jamais aux ACCENTS : `/Etat membre/i` ne trouve pas
+  « État membre ». Deux assertions d'ici sont tombées le 2026-09-05 quand les
+  messages ont été accentués.
+*/
 import { etatService, interpreter, normaliser, verifier } from './vies.js';
 
 /**
@@ -135,7 +142,7 @@ describe('interpreter', () => {
   it('distingue un appel fautif de notre part', () => {
     const v = interpreter(200, PAYS_INCONNU);
     expect(v.code).toBe('INVALID_INPUT');
-    expect(v.message).toMatch(/Etat membre/i);
+    expect(v.message).toMatch(/État membre/i);
   });
 
   /** ⭐ Le test qui protege un verdict correct d'une panne du service. */
@@ -143,7 +150,7 @@ describe('interpreter', () => {
     const v = interpreter(200, SATURATION);
     expect(v.statut).toBe('indisponible');
     expect(v.code).toBe('MS_MAX_CONCURRENT_REQ');
-    expect(v.message).toMatch(/statut precedent est conserve/i);
+    expect(v.message).toMatch(/statut précédent est conservé/i);
   });
 
   /**
