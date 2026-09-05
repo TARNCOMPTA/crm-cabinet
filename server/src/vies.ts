@@ -57,6 +57,21 @@ const BASE = 'https://ec.europa.eu/taxation_customs/vies/rest-api';
 /** VIES est lent : d'une à plusieurs secondes en temps normal. */
 const DELAI_MS = 20_000;
 
+/** L'attente avant la seconde tentative. Voir `verifier()` pour le pourquoi. */
+const PAUSE_RETENTE_MS = 2_500;
+
+/**
+ * Au-delà, on ne retente pas : la première tentative a déjà consommé la
+ * patience de l'utilisateur, et en enchaîner une seconde le ferait attendre
+ * quarante secondes devant un bouton qui tourne.
+ *
+ * Une saturation (`MS_MAX_CONCURRENT_REQ`) revient IMMÉDIATEMENT, en HTTP 200 :
+ * c'est précisément le cas que la seconde tentative existe pour rattraper, et
+ * il passe donc toujours sous ce seuil. Ce qui est écarté, c'est le doublement
+ * d'un vrai délai d'attente.
+ */
+const SEUIL_RETENTE_MS = 10_000;
+
 export type StatutTva = 'non_verifie' | 'valide' | 'invalide' | 'indisponible';
 
 export interface Verdict {
@@ -170,20 +185,56 @@ export function interpreter(httpStatus: number, corps: unknown): Verdict {
 }
 
 /**
- * Interroge VIES.
+ * Interroge VIES, avec UNE seconde tentative quand la première n'a rien
+ * vérifié.
  *
  * `fetchImpl` est injectable pour les tests, sur le modèle du reste du serveur.
  *
- * PAS DE NOUVELLE TENTATIVE, et c'est une divergence assumée avec `bodacc.ts`
- * qui réessaie après cinq secondes. Ici l'appel est déclenché par un clic et
- * l'utilisateur attend ; or `MS_MAX_CONCURRENT_REQ` signifie que le service est
- * saturé — réessayer aggrave la saturation. Un « indisponible » rendu tout de
- * suite, avec un bouton « Réessayer », est plus honnête que quarante secondes
- * d'attente.
+ * ⚠️ CETTE DÉCISION A ÉTÉ PRISE À L'ENVERS, PUIS CORRIGÉE PAR L'USAGE. La
+ * première version ne réessayait pas, et l'argument tenait debout sur le
+ * papier : `MS_MAX_CONCURRENT_REQ` signifie que le service est saturé, donc
+ * réessayer aggrave la saturation ; mieux vaut rendre « indisponible » tout de
+ * suite et laisser l'utilisateur décider.
+ *
+ * Ce que fait l'utilisateur, en vrai : il reclique. Signalé le 2026-09-05 —
+ * « ça ne marche pas du premier coup mais souvent du deuxième ou troisième ».
+ * Trois clics, c'est TROIS appels à un service saturé, là où une seule reprise
+ * en fait deux. L'argument se retournait donc contre lui-même : l'absence de
+ * reprise ne protégeait pas VIES, elle déplaçait seulement le travail sur la
+ * personne, qui le faisait moins bien.
+ *
+ * Une reprise, une seule, et jamais sur un verdict : `INVALID`, `INVALID_INPUT`
+ * et `FORMAT` sont des réponses, pas des pannes — les rejouer ne changerait que
+ * la charge.
  */
 export async function verifier(
   numero: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  /**
+   * `pauseMs` et `seuilMs` n'existent que pour les tests : l'un pour ne pas
+   * attendre, l'autre pour exercer le seuil sans simuler vingt secondes.
+   */
+  options: { pauseMs?: number; seuilMs?: number } = {}
+): Promise<Verdict> {
+  const debut = Date.now();
+  const premier = await tenter(numero, fetchImpl);
+
+  // Un verdict est un verdict : on ne rejoue que l'ignorance.
+  if (premier.statut !== 'indisponible') return premier;
+  if (Date.now() - debut >= (options.seuilMs ?? SEUIL_RETENTE_MS)) return premier;
+
+  await new Promise((r) => setTimeout(r, options.pauseMs ?? PAUSE_RETENTE_MS));
+  const second = await tenter(numero, fetchImpl);
+
+  // La seconde tentative fait foi, quelle qu'elle soit : si elle échoue aussi,
+  // son code est le plus récent, et c'est lui qui décrira la panne en cours.
+  return second;
+}
+
+/** Un aller-retour, sans reprise : toute la mécanique réseau tient ici. */
+async function tenter(
+  numero: string,
+  fetchImpl: typeof fetch
 ): Promise<Verdict> {
   const propre = normaliser(numero);
   const m = FORMAT.exec(propre);

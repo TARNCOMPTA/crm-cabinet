@@ -38,6 +38,22 @@ n'arrivent que quand on les ouvre.
 
 ## Non publié
 
+### La vérification VIES échouait au premier clic, réussissait au troisième
+
+Le service européen répond `MS_MAX_CONCURRENT_REQ` quand il est saturé — HTTP
+200, mais il n'a rien vérifié. Le module ne reprenait pas, et l'argument tenait
+sur le papier : réessayer aggrave la saturation, mieux vaut rendre la main tout
+de suite. L'usage a donné tort à ce raisonnement — l'utilisateur reclique, deux
+ou trois fois. Trois clics, c'est trois appels à un service saturé, là où une
+reprise en fait deux : l'absence de reprise ne protégeait pas VIES, elle
+déplaçait le travail sur la personne, qui le faisait moins bien.
+
+Une reprise, une seule, après une courte pause, et jamais sur un verdict :
+« non immatriculé » et « code pays inconnu » sont des réponses, pas des pannes.
+Pas de reprise non plus quand la première tentative a déjà été longue — sinon un
+vrai délai d'attente serait doublé et le bouton tournerait quarante secondes,
+alors qu'une saturation, elle, revient immédiatement.
+
 ### Le bouton « Vérifier » de la TVA intracommunautaire était introuvable
 
 Le connecteur VIES fonctionnait ; il n'y avait rien à cliquer. Le bouton

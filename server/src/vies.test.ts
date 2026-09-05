@@ -241,16 +241,72 @@ describe('verifier', () => {
     expect(v.code).toBe('RESEAU');
   });
 
-  it('n emet pas de nouvelle tentative', async () => {
+  /*
+    LA REPRISE — une seule, et jamais sur un verdict.
+
+    La premiere version ne reprenait pas : reessayer sur une saturation aggrave
+    la saturation, et l'utilisateur attend derriere son clic. L'usage a donne
+    tort a ce raisonnement, et c'est le genre de chose qu'aucun test ne pouvait
+    dire — signale le 2026-09-05 : « ca ne marche pas du premier coup mais
+    souvent du deuxieme ou troisieme ». Trois clics, c'est trois appels a un
+    service sature, la ou une reprise en fait deux.
+  */
+  it('reprend une fois quand la premiere tentative n a rien verifie', async () => {
+    let appels = 0;
+    const faux = (async () => {
+      appels += 1;
+      return {
+        status: 200,
+        json: async () => (appels === 1 ? SATURATION : VALIDE),
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    const v = await verifier('FR40303265045', faux, { pauseMs: 0 });
+    expect(appels).toBe(2);
+    expect(v.statut).toBe('valide');
+  });
+
+  it('ne reprend JAMAIS sur un verdict', async () => {
+    // `INVALID` est une reponse, pas une panne : la rejouer ne changerait que
+    // la charge. C'est le cas d'une entreprise en franchise en base de TVA,
+    // donc le plus frequent des « non ».
+    for (const charge of [NON_IMMATRICULE, MALFORME, PAYS_INCONNU]) {
+      let appels = 0;
+      const faux = (async () => {
+        appels += 1;
+        return { status: 200, json: async () => charge } as unknown as Response;
+      }) as unknown as typeof fetch;
+
+      await verifier('FR40303265045', faux, { pauseMs: 0 });
+      expect(appels).toBe(1);
+    }
+  });
+
+  it('rend le code de la SECONDE tentative quand les deux echouent', async () => {
+    // Le plus recent decrit la panne en cours ; celui d'il y a trois secondes
+    // decrit celle d'avant.
+    let appels = 0;
+    const faux = (async () => {
+      appels += 1;
+      if (appels === 1) return { status: 200, json: async () => SATURATION } as unknown as Response;
+      return { status: 503, json: async () => ({}) } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    const v = await verifier('FR40303265045', faux, { pauseMs: 0 });
+    expect(appels).toBe(2);
+    expect(v.code).toBe('HTTP_503');
+  });
+
+  it('ne reprend pas quand la premiere tentative a deja pris trop de temps', async () => {
+    // Sinon un vrai delai d'attente serait DOUBLE, et le bouton tournerait
+    // quarante secondes. Une saturation, elle, revient immediatement.
     let appels = 0;
     const faux = (async () => {
       appels += 1;
       return { status: 200, json: async () => SATURATION } as unknown as Response;
     }) as unknown as typeof fetch;
 
-    await verifier('FR40303265045', faux);
-    // Reessayer sur une saturation aggrave la saturation, et l'utilisateur
-    // attend derriere son clic.
+    await verifier('FR40303265045', faux, { pauseMs: 0, seuilMs: 0 });
     expect(appels).toBe(1);
   });
 });
