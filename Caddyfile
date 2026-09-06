@@ -108,6 +108,19 @@
 		# celui de l'application. Il reste ici la méthode, le code de réponse,
 		# la taille et la durée : de quoi voir une panne ou un flot anormal,
 		# sans savoir de qui on parle.
+		#
+		# ⚠️ `resp_headers` PART AUSSI, ET C'EST LA TROISIÈME FUITE — celle qu'on
+		# ne voit qu'en lisant une vraie ligne de journal. Supprimer les en-têtes
+		# de REQUÊTE laissait passer ceux de RÉPONSE, et l'application y écrit :
+		#
+		#     routes/storage.ts   content-disposition: filename="<pièce du client>"
+		#     routes/pdf.ts       Content-Disposition: filename="<nom du client>.pdf"
+		#     routes/inpi.ts      Content-Disposition: filename="statuts_<SIREN>.pdf"
+		#
+		# Donc, à chaque téléchargement, le nom du document et celui du client
+		# repartaient en clair — par l'autre porte. Constaté le 2026-09-06 en
+		# relisant le journal d'une instance après avoir posé ce filtre : il ne
+		# suffit pas d'écrire un filtre, il faut lire ce qu'il laisse passer.
 		format filter {
 			wrap console
 			fields {
@@ -115,6 +128,7 @@
 				request>client_ip delete
 				request>headers delete
 				request>uri delete
+				resp_headers delete
 			}
 		}
 	}

@@ -98,6 +98,7 @@ crm.moncabinet.fr {
 	# 			request>client_ip delete
 	# 			request>headers delete
 	# 			request>uri delete
+	# 			resp_headers delete
 	# 		}
 	# 	}
 	# }

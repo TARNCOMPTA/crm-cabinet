@@ -114,3 +114,47 @@ describe('Caddyfile — la politique de sécurité de contenu', () => {
     expect(blocGlobal).toContain('X-Content-Type-Options "nosniff"');
   });
 });
+
+/**
+ * Le journal d'accès ne doit rien savoir de vos clients.
+ * ---------------------------------------------------------------------------
+ * Le front interroge PostgREST PAR L'URL : `?email=eq.…`, `?nom=eq.…`, le nom
+ * des pièces déposées et la signature des URL de téléchargement — qui est un
+ * secret d'accès. Un journal d'accès ordinaire enregistre tout cela en clair,
+ * ligne après ligne, sur le disque d'une machine qui porte la comptabilité de
+ * vrais cabinets.
+ *
+ * ⚠️ ET LES EN-TÊTES DE RÉPONSE AVEC. C'est la fuite qu'on ne voit qu'en lisant
+ * une vraie ligne de journal, APRÈS avoir posé le filtre : supprimer
+ * `request>headers` ne touche pas `resp_headers`, où l'application écrit
+ * `content-disposition: filename="<nom du document du client>"`
+ * (`server/src/routes/storage.ts`, `pdf.ts`, `inpi.ts`). Constaté le
+ * 2026-09-06 sur une instance, une heure après avoir cru la fuite fermée.
+ *
+ * Ce test fige les CINQ champs. Il ne prouve pas que Caddy les supprime — il
+ * empêche qu'on en retire un en remaniant le fichier, ce qui rouvrirait la
+ * fuite sans un mot.
+ */
+describe('Caddyfile — le journal ne porte aucune donnée de client', () => {
+  const CHAMPS = [
+    'request>remote_ip delete',
+    'request>client_ip delete',
+    'request>headers delete',
+    'request>uri delete',
+    'resp_headers delete',
+  ] as const;
+
+  for (const fichier of FICHIERS) {
+    it(`${fichier} supprime les cinq champs`, () => {
+      // L'extrait porte son bloc `log` EN COMMENTAIRE — il change la
+      // destination des journaux d'un Caddy qui sert d'autres sites, et ce
+      // choix appartient à qui l'installe. On lit donc le texte brut, pas les
+      // lignes décommentées : ce qui compte est que le modèle proposé soit
+      // complet, pas qu'il soit actif.
+      const brut = readFileSync(resolve(RACINE, fichier), 'utf8');
+      for (const champ of CHAMPS) {
+        expect(brut, `${fichier} ne supprime pas « ${champ} »`).toContain(champ);
+      }
+    });
+  }
+});
