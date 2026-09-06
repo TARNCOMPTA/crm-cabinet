@@ -578,14 +578,27 @@ export function Clients() {
         </>
       )}
 
-      {/* Modals */}
-      <ClientCreateModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onCreated={rechargerListe}
-        initialSiret={createInitialSiret}
-        initialName={createInitialName}
-      />
+      {/*
+        ⚠️ MONTÉE SEULEMENT QUAND ELLE S'OUVRE, ET CE N'EST PAS COSMÉTIQUE.
+        `ClientCreateModal` appelle `useRegimesFiscaux()`, qui lit la table à
+        chaque montage. Rendue en permanence, elle chargeait donc les régimes
+        UNE SECONDE FOIS à l'ouverture de l'écran des clients — la page elle-même
+        les ayant déjà lus — pour une fenêtre que personne n'avait demandée.
+        Mesuré le 2026-09-05 : deux requêtes identiques à 140 ms d'intervalle.
+
+        Les hooks ne peuvent pas être conditionnels À L'INTÉRIEUR d'un composant ;
+        c'est donc le parent qui décide de le monter ou non. Le composant garde
+        son `isOpen` : il sert encore à l'animation et au reste de sa logique.
+      */}
+      {showModal && (
+        <ClientCreateModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onCreated={rechargerListe}
+          initialSiret={createInitialSiret}
+          initialName={createInitialName}
+        />
+      )}
 
       <ClientImportModal
         isOpen={showImportModal}

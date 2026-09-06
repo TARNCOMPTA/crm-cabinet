@@ -4142,6 +4142,10 @@ export interface Database {
         }
         Returns: string
       }
+      get_bilan_progression: {
+        Args: Record<PropertyKey, never>
+        Returns: { regime_fiscal: string; column_id: string; cartes: number }[]
+      }
       get_dashboard_stats: {
         Args: {
           p_user_id: string

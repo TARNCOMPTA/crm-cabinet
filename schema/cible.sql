@@ -2956,3 +2956,20 @@ CREATE INDEX IF NOT EXISTS "idx_bilan_card_attachments_card"
   ON "bilan_card_attachments" (card_id);
 CREATE INDEX IF NOT EXISTS "idx_bilan_card_attachments_uploaded_by"
   ON "bilan_card_attachments" (uploaded_by);
+
+-- Repris de schema/increments/017-progression-bilans.sql, qui porte le raisonnement complet :
+-- le tableau de bord telechargeait TOUTES les cartes de bilan pour n'en faire
+-- qu'un comptage par colonne, et cette lecture grossissait d'un exercice par an.
+-- La fonction rend les memes nombres, et son resultat est borne par le nombre de
+-- colonnes, pas par celui des cartes. Une fonction et non une vue : le
+-- generateur de types ne connait que les tables et les fonctions.
+CREATE OR REPLACE FUNCTION public.get_bilan_progression()
+ RETURNS TABLE (regime_fiscal text, column_id uuid, cartes integer)
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public'
+AS $function$
+  SELECT bc.regime_fiscal, bc.column_id, count(*)::int
+    FROM bilan_cards bc
+   GROUP BY bc.regime_fiscal, bc.column_id;
+$function$;

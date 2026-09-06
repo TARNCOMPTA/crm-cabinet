@@ -524,6 +524,73 @@ suite('parcours de bout en bout', () => {
   }, 120_000);
 
   /**
+   * Une fiche qu'on n'a PAS PU LIRE n'est pas une fiche ABSENTE.
+   *
+   * ⚠️ CE CAS EXISTE PARCE QUE L'ECRAN MENTAIT, ET DE LA PIRE FACON. Les deux
+   * situations tombaient dans le meme `catch`, et l'ecran affichait ensuite
+   * « Client non trouve » dans les deux — donc, sur une simple coupure reseau,
+   * un message qui se lit comme une SUPPRESSION. Constate le 2026-09-05 en
+   * coupant `/rest/v1/clients` : l'ecran annoncait « Client non trouve » avec
+   * pour seule issue « Retour aux clients », et rien pour reessayer.
+   *
+   * Quelqu'un qui ouvre la fiche d'un dossier qu'il connait en conclut que le
+   * dossier a disparu. C'est un faux fait, affiche avec l'aplomb d'un vrai.
+   *
+   * Le cas coupe donc la lecture et exige les trois marques de l'ecran
+   * d'echec : le titre qui dit ce qui s'est passe, l'ABSENCE de « non trouve »,
+   * et le bouton qui permet de reessayer sans quitter la page.
+   */
+  it('dit « impossible de charger » quand la lecture echoue — pas « non trouve »', async () => {
+    // On part d'une fiche qui EXISTE : c'est ce qui rend le mensonge visible.
+    await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+    const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+    await mesDossiers.waitFor({ timeout: 30_000 });
+    if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+    const ligne = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
+    await ligne.waitFor({ timeout: 30_000 });
+    await ligne.getByRole('link').first().click();
+    await page.waitForURL(/\/clients\/[0-9a-f-]{36}/, { timeout: 30_000 });
+    const adresse = page.url();
+
+    let coupe = true;
+    // Ce cas FABRIQUE des echecs reseau : il doit donc rendre le journal de
+    // console tel qu'il l'a trouve, sinon le dernier cas de la suite — celui
+    // qui exige zero erreur JavaScript — accuserait cette coupure volontaire.
+    // On ne retire QUE les `net::ERR_FAILED` apparus pendant la coupure : une
+    // vraie erreur survenue au meme moment reste dans le journal.
+    const avantCoupure = erreursConsole.length;
+    await page.route('**/rest/v1/clients?*', (r) => (coupe ? r.abort('failed') : r.continue()));
+    try {
+      await page.goto(adresse);
+
+      await expect
+        .poll(
+          () => page.getByText(/Impossible de charger cette fiche/i).first().isVisible().catch(() => false),
+          { timeout: 30_000 }
+        )
+        .toBe(true);
+
+      // LE COEUR DU CAS : surtout pas « non trouve ».
+      expect(await page.getByText(/Client non trouve/i).count()).toBe(0);
+
+      // Et une issue sur place, plutot que le renvoi vers la liste.
+      const reessayer = page.getByRole('button', { name: /Reessayer/i });
+      await reessayer.waitFor({ timeout: 10_000 });
+
+      // Le reseau revient : le bouton ouvre bien la fiche, sans changer de page.
+      coupe = false;
+      await reessayer.click();
+      await expect
+        .poll(() => page.getByText('SANS EMAIL SARL').first().isVisible().catch(() => false), { timeout: 30_000 })
+        .toBe(true);
+    } finally {
+      await page.unroute('**/rest/v1/clients?*');
+      const pendant = erreursConsole.splice(avantCoupure);
+      erreursConsole.push(...pendant.filter((e) => !/net::ERR_FAILED/.test(e)));
+    }
+  }, 120_000);
+
+  /**
    * La liste clients est servie par LA BASE, page par page.
    *
    * ⚠️ CE CAS EXISTE PARCE QUE LA PANNE SERAIT SILENCIEUSE. Si

@@ -263,6 +263,66 @@ suite('schema appliqué à PostgreSQL', () => {
     expect(fautives, `fonctions referencant un schema absent : ${fautives.join(', ')}`).toEqual([]);
   });
 
+  it('porte le contrat de l increment 017 : compter sans tout lire', async () => {
+    /*
+      `get_bilan_progression()` remplace une lecture integrale de `bilan_cards`
+      que le tableau de bord faisait pour n'en tirer qu'un comptage. Ce qui doit
+      tenir dans le temps n'est pas le detail du SQL, c'est la PROPRIETE : le
+      resultat est borne par le nombre de colonnes de bilan, jamais par le
+      nombre de cartes. Une carte nait par client et par exercice ; si quelqu'un
+      revenait un jour a un `SELECT *`, la charge se remettrait a grandir toute
+      seule et rien ne le dirait.
+    */
+    const { rows: def } = await client.query(
+      `SELECT pg_get_functiondef(p.oid) AS corps
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'get_bilan_progression'`
+    );
+    expect(def, 'get_bilan_progression est absente').toHaveLength(1);
+    expect(def[0].corps).toMatch(/count\(\*\)/i);
+    expect(def[0].corps).toMatch(/group\s+by/i);
+
+    // Prouve sur des donnees, pas sur le texte : deux cartes dans la meme
+    // colonne ne rendent qu'UNE ligne.
+    await client.query(
+      `INSERT INTO clients (id, nom_entreprise) VALUES
+         ('00000000-0000-4000-8000-00000000f101', 'ZZ PROGRESSION 1'),
+         ('00000000-0000-4000-8000-00000000f102', 'ZZ PROGRESSION 2')`
+    );
+    await client.query(
+      `INSERT INTO bilan_columns (id, regime_fiscal, name, position) VALUES
+         ('00000000-0000-4000-8000-00000000f201', 'ZZ_REGIME', 'ZZ Colonne', 1)`
+    );
+    await client.query(
+      `INSERT INTO bilan_cards (client_id, regime_fiscal, year, column_id, position) VALUES
+         ('00000000-0000-4000-8000-00000000f101', 'ZZ_REGIME', 2026, '00000000-0000-4000-8000-00000000f201', 1),
+         ('00000000-0000-4000-8000-00000000f102', 'ZZ_REGIME', 2025, '00000000-0000-4000-8000-00000000f201', 2)`
+    );
+
+    const { rows } = await client.query(
+      `SELECT * FROM get_bilan_progression() WHERE regime_fiscal = 'ZZ_REGIME'`
+    );
+    expect(rows, 'deux cartes doivent rendre UNE ligne agregee').toHaveLength(1);
+    expect(rows[0].cartes).toBe(2);
+
+    // Une carte de plus n'ajoute pas de ligne : c'est toute la propriete.
+    await client.query(
+      `INSERT INTO bilan_cards (client_id, regime_fiscal, year, column_id, position) VALUES
+         ('00000000-0000-4000-8000-00000000f101', 'ZZ_REGIME', 2024, '00000000-0000-4000-8000-00000000f201', 3)`
+    );
+    const { rows: apres } = await client.query(
+      `SELECT * FROM get_bilan_progression() WHERE regime_fiscal = 'ZZ_REGIME'`
+    );
+    expect(apres).toHaveLength(1);
+    expect(apres[0].cartes).toBe(3);
+
+    await client.query(
+      `DELETE FROM clients WHERE id IN ('00000000-0000-4000-8000-00000000f101',
+                                        '00000000-0000-4000-8000-00000000f102')`
+    );
+    await client.query(`DELETE FROM bilan_columns WHERE regime_fiscal = 'ZZ_REGIME'`);
+  });
+
   it('declare full_name comme colonne generee, et non comme defaut', async () => {
     const { rows } = await client.query(
       `SELECT a.attgenerated::text AS genere

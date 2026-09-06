@@ -38,6 +38,33 @@ n'arrivent que quand on les ouvre.
 
 ## Non publié
 
+### Second audit de performance : une lecture qui grossissait toute seule
+
+Mesuré dans un vrai navigateur, sur un portefeuille de **940 fiches** chargé pour
+l'occasion — treize clients ne révèlent rien.
+
+- **Le tableau de bord lisait TOUTES les cartes de bilan** — toutes années, tous
+  régimes, sans filtre — pour n'en faire qu'un comptage par colonne. 537 lignes
+  et 93 Ko aujourd'hui ; mais une carte naît par client et par exercice, et
+  aucune ne disparaît : 4 400 lignes à cinq ans, 8 800 à dix. C'est la seule
+  chose trouvée qui empire d'elle-même chaque année. `get_bilan_progression()`
+  (incrément 017) rend les mêmes nombres en **neuf lignes et 0,8 Ko**, et ce
+  total ne dépend que du nombre de colonnes de bilan. L'écran passe de 99 Ko à
+  **7 Ko**.
+- **La fenêtre « Nouveau client » chargeait les régimes fiscaux pour rien.**
+  Rendue en permanence sur l'écran des clients, elle les lisait une seconde fois
+  — la page les ayant déjà lus — pour une fenêtre que personne n'avait ouverte.
+  Elle n'est montée qu'à l'ouverture. Deux appels deviennent un.
+
+**Ce que l'audit a trouvé et n'a délibérément pas corrigé**, parce que la mesure
+ne le justifiait pas :
+
+- Le tableau des bilans transfère 474 Ko sur un régime chargé. Compressé par
+  Caddy, cela fait **38 Ko** : ce n'est pas un problème de réseau, et le
+  découper aurait coûté un rechargement à chaque ouverture de carte.
+- Les requêtes de la base répondent en **moins d'une milliseconde** à 940
+  fiches, plan d'exécution à l'appui. Rien à indexer.
+
 ### Le suivi des déclarations de revenus, repris
 
 L'écran le plus ancien du produit — jamais retouché, 607 lignes, aucun

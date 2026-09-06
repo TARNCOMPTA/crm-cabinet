@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { verifierTvaIntracom } from '../../lib/tvaService';
-import { payloadCreationClient } from './creationClient';
+import { payloadCreationClient } from '../../lib/champsClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useRegimesFiscaux } from '../../hooks/useRegimesFiscaux';
@@ -196,7 +196,8 @@ export function ClientCreateModal({ isOpen, onClose, onCreated, initialSiret, in
         rend `''`, pas `null`, et PostgreSQL refuse : « invalid input syntax for
         type date: "" ». La fiche n'etait alors pas creee, et le message parlait
         de syntaxe de date a quelqu'un qui venait de saisir un nom d'entreprise.
-        La transformation est dans `creationClient.ts`, avec ses tests.
+        La transformation est dans `lib/champsClient.ts`, avec ses tests — et la
+        fiche client la partage, parce qu'elle avait le meme defaut.
       */
       const clientData = payloadCreationClient({
         ...formData,

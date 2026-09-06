@@ -151,10 +151,23 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       .select('id, nom_entreprise, date_cloture_exercice_social, last_inpi_sync')
       .eq('statut', 'actif')
       .not('date_cloture_exercice_social', 'is', null),
-    supabase
-      .from('bilan_cards')
-      .select('id, regime_fiscal, column_id, client_id')
-      ,
+    /*
+      ⚠️ UNE VUE QUI COMPTE, ET NON LES CARTES ELLES-MEMES.
+      Cet appel lisait `bilan_cards` EN ENTIER — toutes annees, tous regimes —
+      pour n'en faire qu'un comptage par colonne. Mesure le 2026-09-05 sur 940
+      fiches : 537 lignes, 93 Ko. Ce n'etait pas un probleme ; ce qui en faisait
+      un, c'est que RIEN NE BORNAIT cette lecture. Une carte nait par client et
+      par exercice, aucune ne disparait : 4 400 lignes a cinq ans, 8 800 a dix,
+      pour produire les memes vingt nombres.
+
+      `get_bilan_progression()` (increment 017) rend ces nombres directement :
+      neuf lignes, 0,8 Ko, et ce total ne depend que du nombre de colonnes de
+      bilan. La semantique est identique — toutes annees confondues, comme avant.
+
+      Une FONCTION et non une vue : `generer-types.mjs` ne type que les tables et
+      les fonctions, et le tableau de bord appelle deja `get_dashboard_stats`.
+    */
+    supabase.rpc('get_bilan_progression'),
     supabase
       .from('bilan_columns')
       .select('id, regime_fiscal, name, color, position')
@@ -332,13 +345,14 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
 
   const bilanProgress: BilanProgressData[] = [];
   for (const [regime, cols] of columnsByRegime.entries()) {
-    const cardsForRegime = bilanCards.filter(c => c.regime_fiscal === regime);
-    if (cardsForRegime.length === 0) continue;
+    const lignesDuRegime = bilanCards.filter((c) => c.regime_fiscal === regime);
+    const total = lignesDuRegime.reduce((n, l) => n + (l.cartes ?? 0), 0);
+    if (total === 0) continue;
     const columnsWithCount = cols.map(col => ({
       id: col.id, name: col.name, color: col.color, position: col.position,
-      count: cardsForRegime.filter(c => c.column_id === col.id).length,
+      count: lignesDuRegime.find((l) => l.column_id === col.id)?.cartes ?? 0,
     }));
-    bilanProgress.push({ regime_fiscal: regime, columns: columnsWithCount, total: cardsForRegime.length });
+    bilanProgress.push({ regime_fiscal: regime, columns: columnsWithCount, total });
   }
 
   // Recent activity feed
