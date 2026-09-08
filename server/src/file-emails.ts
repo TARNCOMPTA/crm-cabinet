@@ -25,6 +25,12 @@ export interface BilanEnvoi {
   envoyes: number;
   echecs: number;
   total: number;
+  /**
+   * Le lot a été interrompu parce que le serveur refuse nos identifiants.
+   * Les lignes non traitées restent `pending` et repartiront telles quelles une
+   * fois les réglages corrigés.
+   */
+  interrompu: boolean;
 }
 
 interface LigneFile {
@@ -80,8 +86,25 @@ export async function viderFile(): Promise<BilanEnvoi> {
         [ligne.id, abandonner ? 'error' : 'pending', ligne.retry_count + 1, r.raison.slice(0, 500)]
       );
       echecs++;
+
+      /**
+       * ⚠️ ON ARRÊTE LE LOT, ET C'EST POUR PROTÉGER LA BOÎTE DU CABINET.
+       *
+       * Un refus d'identifiants ne concerne pas CE message : il concerne la
+       * connexion. Poursuivre le lot enverrait quarante-neuf demandes
+       * d'authentification de plus, toutes vouées au même refus — et c'est
+       * exactement ce qui fait verrouiller un compte Microsoft 365. Constaté en
+       * production le 2026-09-08 : « account locked. Contact your
+       * administrator. »
+       *
+       * Les lignes non traitées restent `pending`, donc rien n'est perdu :
+       * elles repartiront au prochain tour, une fois les réglages corrigés.
+       * Et le tour suivant ne coûtera qu'UNE tentative, puisqu'il s'arrêtera
+       * de la même façon.
+       */
+      if (r.authentification) return { envoyes, echecs, total: rows.length, interrompu: true };
     }
 
-    return { envoyes, echecs, total: rows.length };
+    return { envoyes, echecs, total: rows.length, interrompu: false };
   });
 }

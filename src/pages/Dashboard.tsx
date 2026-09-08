@@ -17,6 +17,7 @@ import { DashboardRecentCompanies } from '../components/dashboard/DashboardRecen
 import { SpeedDialFAB } from '../components/ui/SpeedDialFAB';
 import { ClientCreateModal } from '../components/clients/ClientCreateModal';
 import { DashboardMeetingNoteModal } from '../components/clients/DashboardMeetingNoteModal';
+import { BandeauEnvoiEmails } from '../components/dashboard/BandeauEnvoiEmails';
 
 function formatTodayFR(): string {
   const now = new Date();
@@ -133,6 +134,10 @@ export function Dashboard() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/80 to-gray-50 dark:via-gray-950/80 dark:to-gray-950" />
       </div>
+      {/* Avant tout le reste : si les courriels ne partent plus, c'est la
+          premiere chose a savoir en ouvrant l'ecran. */}
+      <BandeauEnvoiEmails />
+
       <div className="relative">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Bonjour {profile?.prenom} !

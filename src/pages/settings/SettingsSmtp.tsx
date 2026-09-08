@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Mail, Server, Shield, Send, CheckCircle2, XCircle, Loader2, Eye, EyeOff, Info } from 'lucide-react';
+import { Mail, Server, Shield, Send, CheckCircle2, XCircle, Loader2, Eye, EyeOff, Info, KeyRound } from 'lucide-react';
+import { champsManquants } from './reglagesSmtp';
 
 interface SmtpFormData {
   smtp_host: string;
@@ -16,6 +17,10 @@ interface SmtpFormData {
   smtp_from_name: string;
   use_tls: boolean;
   is_enabled: boolean;
+  auth_mode: 'motdepasse' | 'oauth2';
+  oauth_tenant_id: string;
+  oauth_client_id: string;
+  oauth_client_secret: string;
 }
 
 const PRESET_CONFIGS: Record<string, Partial<SmtpFormData>> = {
@@ -33,6 +38,7 @@ export function SettingsSmtp() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const [configExists, setConfigExists] = useState(false);
   const [lastTestStatus, setLastTestStatus] = useState<{ at: string | null; status: string | null }>({ at: null, status: null });
 
@@ -45,6 +51,10 @@ export function SettingsSmtp() {
     smtp_from_name: '',
     use_tls: true,
     is_enabled: false,
+    auth_mode: 'motdepasse',
+    oauth_tenant_id: '',
+    oauth_client_id: '',
+    oauth_client_secret: '',
   });
 
   useEffect(() => {
@@ -76,6 +86,10 @@ export function SettingsSmtp() {
           smtp_from_name: data.smtp_from_name || '',
           use_tls: data.use_tls ?? true,
           is_enabled: data.is_enabled ?? false,
+          auth_mode: data.auth_mode === 'oauth2' ? 'oauth2' : 'motdepasse',
+          oauth_tenant_id: data.oauth_tenant_id || '',
+          oauth_client_id: data.oauth_client_id || '',
+          oauth_client_secret: data.oauth_client_secret || '',
         });
         setLastTestStatus({ at: data.last_test_at, status: data.last_test_status });
       }
@@ -89,8 +103,12 @@ export function SettingsSmtp() {
   async function handleSave() {
     if (!profile) return;
 
-    if (formData.is_enabled && (!formData.smtp_host || !formData.smtp_user || !formData.smtp_password || !formData.smtp_from_email)) {
-      showToast('Veuillez remplir tous les champs obligatoires avant d\'activer le SMTP', 'error');
+    // Les champs requis dependent du mode : voir `reglagesSmtp.ts`, ou la regle
+    // est ecrite une fois et prouvee. Le message NOMME ce qui manque — un
+    // « champs obligatoires » sans liste fait recommencer a l'aveugle.
+    const manque = formData.is_enabled ? champsManquants(formData) : [];
+    if (manque.length > 0) {
+      showToast(`A renseigner avant d'activer l'envoi : ${manque.join(', ')}.`, 'error');
       return;
     }
 
@@ -105,6 +123,10 @@ export function SettingsSmtp() {
         smtp_from_name: formData.smtp_from_name.trim() || null,
         use_tls: formData.use_tls,
         is_enabled: formData.is_enabled,
+        auth_mode: formData.auth_mode,
+        oauth_tenant_id: formData.oauth_tenant_id.trim(),
+        oauth_client_id: formData.oauth_client_id.trim(),
+        oauth_client_secret: formData.oauth_client_secret,
         updated_at: new Date().toISOString(),
       };
 
@@ -232,7 +254,17 @@ export function SettingsSmtp() {
                 </p>
               </div>
             </div>
+            {/* `role="switch"` + `aria-checked` + un nom : sans eux, cette bascule
+                est un bouton anonyme — un lecteur d'ecran n'annonce ni ce
+                qu'elle fait ni son etat, et aucun test ne peut la designer.
+                C'est le defaut que le parcours de bout en bout existe pour
+                attraper, et il porte ici le reglage le plus consequent de
+                l'ecran. */}
             <button
+              type="button"
+              role="switch"
+              aria-checked={formData.is_enabled}
+              aria-label="Activer l'envoi par votre serveur SMTP"
               onClick={() => setFormData((prev) => ({ ...prev, is_enabled: !prev.is_enabled }))}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.is_enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
             >
@@ -292,30 +324,131 @@ export function SettingsSmtp() {
             />
           </div>
 
+          {/*
+            LE MODE D'AUTHENTIFICATION.
+            Microsoft 365 coupe l'authentification par mot de passe sur SMTP
+            depuis 2023 et la retire progressivement ; les mots de passe
+            d'application suivent. OAuth 2.0 est la voie qui reste. Le choix
+            reste explicite : la plupart des hebergeurs acceptent encore le mot
+            de passe, et on ne change pas le mode de quelqu'un a sa place.
+          */}
+          <fieldset className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <legend className="px-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Authentification
+            </legend>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+              {([
+                { v: 'motdepasse', t: 'Mot de passe', d: 'La plupart des hébergeurs' },
+                { v: 'oauth2', t: 'OAuth 2.0 (Microsoft 365)', d: 'Authentification moderne' },
+              ] as const).map((o) => (
+                <label key={o.v} className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="auth_mode"
+                    className="mt-1"
+                    checked={formData.auth_mode === o.v}
+                    onChange={() => setFormData((prev) => ({ ...prev, auth_mode: o.v }))}
+                  />
+                  <span>
+                    <span className="block text-sm text-gray-900 dark:text-gray-100">{o.t}</span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">{o.d}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Identifiant SMTP *"
               placeholder="votre@email.com"
               value={formData.smtp_user}
               onChange={(e) => setFormData((prev) => ({ ...prev, smtp_user: e.target.value }))}
+              helperText={
+                formData.auth_mode === 'oauth2'
+                  ? "La boîte au nom de laquelle l'application envoie."
+                  : undefined
+              }
             />
-            <div className="relative">
-              <Input
-                label="Mot de passe SMTP *"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.smtp_password}
-                onChange={(e) => setFormData((prev) => ({ ...prev, smtp_password: e.target.value }))}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[34px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
+            {formData.auth_mode === 'motdepasse' && (
+              <div className="relative">
+                <Input
+                  label="Mot de passe SMTP *"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={formData.smtp_password}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, smtp_password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  title={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[34px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            )}
           </div>
+
+          {formData.auth_mode === 'oauth2' && (
+            <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4 dark:border-teal-900 dark:bg-teal-950/20">
+              <div className="flex items-start gap-2">
+                <KeyRound className="mt-0.5 h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="font-medium">Application Azure (flux « client credentials »)</p>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    À préparer côté Microsoft, dans cet ordre : enregistrer une application dans
+                    Azure ; lui donner la permission <strong>d'application</strong>{' '}
+                    <code>SMTP.SendAsApp</code> sur Office&nbsp;365 Exchange Online, avec
+                    consentement administrateur ; puis autoriser cette application à envoyer pour{' '}
+                    <strong>cette boîte précise</strong> — sans quoi elle pourrait écrire au nom de
+                    n'importe laquelle du locataire.
+                  </p>
+                </div>
+              </div>
+
+              <Input
+                label="Identifiant de locataire (tenant) *"
+                placeholder="contoso.onmicrosoft.com"
+                value={formData.oauth_tenant_id}
+                onChange={(e) => setFormData((prev) => ({ ...prev, oauth_tenant_id: e.target.value }))}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Identifiant d'application (client) *"
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  value={formData.oauth_client_id}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, oauth_client_id: e.target.value }))}
+                />
+                <div className="relative">
+                  <Input
+                    label="Secret d'application *"
+                    type={showSecret ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.oauth_client_secret}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, oauth_client_secret: e.target.value }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label={showSecret ? 'Masquer le secret' : 'Afficher le secret'}
+                    title={showSecret ? 'Masquer le secret' : 'Afficher le secret'}
+                    onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-3 top-[34px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Le secret Azure a une date d'expiration, fixée à sa création. Notez-la : le jour où
+                il expire, plus aucun courriel ne part.
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">

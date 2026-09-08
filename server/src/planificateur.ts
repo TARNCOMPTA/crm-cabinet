@@ -84,7 +84,10 @@ const TACHES: Tache[] = [
       // Silence quand il n'y a rien à faire : 720 lignes de journal par jour
       // pour dire « file vide » noieraient le reste.
       if (b.total === 0) return;
-      return `${b.envoyes} envoye(s), ${b.echecs} echec(s)`;
+      // L'interruption se DIT : sans elle, « 0 envoye, 1 echec » sur un lot de
+      // cinquante laisserait croire que les quarante-neuf autres sont partis.
+      const reste = b.interrompu ? ` — lot interrompu (identifiants refuses), ${b.total - b.echecs} en attente` : '';
+      return `${b.envoyes} envoye(s), ${b.echecs} echec(s)${reste}`;
     },
   },
   {

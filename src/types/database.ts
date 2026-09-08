@@ -600,6 +600,10 @@ export interface Database {
           smtp_from_name: string | null
           use_tls: boolean
           is_enabled: boolean
+          auth_mode: string
+          oauth_tenant_id: string
+          oauth_client_id: string
+          oauth_client_secret: string
           last_test_at: string | null
           last_test_status: string | null
           created_at: string | null
@@ -615,6 +619,10 @@ export interface Database {
           smtp_from_name?: string | null
           use_tls?: boolean
           is_enabled?: boolean
+          auth_mode?: string
+          oauth_tenant_id?: string
+          oauth_client_id?: string
+          oauth_client_secret?: string
           last_test_at?: string | null
           last_test_status?: string | null
           created_at?: string | null
@@ -630,6 +638,10 @@ export interface Database {
           smtp_from_name?: string | null
           use_tls?: boolean
           is_enabled?: boolean
+          auth_mode?: string
+          oauth_tenant_id?: string
+          oauth_client_id?: string
+          oauth_client_secret?: string
           last_test_at?: string | null
           last_test_status?: string | null
           created_at?: string | null

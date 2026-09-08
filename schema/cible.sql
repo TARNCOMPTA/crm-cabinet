@@ -234,11 +234,19 @@ CREATE TABLE "cabinet_smtp_config" (
   "smtp_from_name" text,
   "use_tls" boolean DEFAULT true NOT NULL,
   "is_enabled" boolean DEFAULT false NOT NULL,
+  -- Repris de schema/increments/018-smtp-oauth.sql, qui porte le raisonnement
+  -- complet. `motdepasse` par defaut : appliquer l'increment ne change le
+  -- comportement d'aucune instance.
+  "auth_mode" text DEFAULT 'motdepasse'::text NOT NULL,
+  "oauth_tenant_id" text DEFAULT ''::text NOT NULL,
+  "oauth_client_id" text DEFAULT ''::text NOT NULL,
+  "oauth_client_secret" text DEFAULT ''::text NOT NULL,
   "last_test_at" timestamp with time zone,
   "last_test_status" text,
   "created_at" timestamp with time zone DEFAULT now(),
   "updated_at" timestamp with time zone DEFAULT now(),
-  CONSTRAINT "cabinet_smtp_config_pkey" PRIMARY KEY (id)
+  CONSTRAINT "cabinet_smtp_config_pkey" PRIMARY KEY (id),
+  CONSTRAINT "cabinet_smtp_config_auth_mode_check" CHECK ((auth_mode = ANY (ARRAY['motdepasse'::text, 'oauth2'::text])))
 );
 
 CREATE TABLE "cabinets" (

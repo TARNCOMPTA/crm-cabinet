@@ -50,6 +50,42 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
          FROM email_queue`
     );
 
+    /**
+     * DE QUOI DIRE « LES COURRIELS NE PARTENT PLUS DEPUIS LE … ».
+     * -----------------------------------------------------------------------
+     * Les compteurs ci-dessus portent tout l'historique : ils disent combien
+     * d'envois ont echoue un jour, jamais si l'envoi marche AUJOURD'HUI. C'est
+     * ce qui a permis a une panne de durer vingt-quatre jours sans que rien ne
+     * la signale (voir `src/lib/etatEmails.ts`).
+     *
+     * ⚠️ ON NE COMPTE QUE LES ECHECS POSTERIEURS AU DERNIER ENVOI REUSSI. Une
+     * adresse invalide d'il y a six mois est un incident clos ; la compter
+     * afficherait une alarme permanente, que plus personne ne lirait. Et c'est
+     * ce qui fait que le bandeau s'efface tout seul des qu'un courriel repart,
+     * sans qu'aucun code n'ait a l'effacer.
+     */
+    const panne = await requeteUne<{
+      dernier_envoi: string | null;
+      en_echec: string;
+      depuis: string | null;
+      derniere_erreur: string | null;
+    }>(
+      `WITH dernier AS (
+         SELECT max(sent_at) AS le FROM email_queue WHERE status = 'sent'
+       ),
+       echecs AS (
+         SELECT eq.created_at, eq.error_message
+           FROM email_queue eq, dernier d
+          WHERE eq.status = 'error'
+            AND (d.le IS NULL OR eq.created_at > d.le)
+       )
+       SELECT (SELECT le FROM dernier)                            AS dernier_envoi,
+              (SELECT count(*) FROM echecs)::text                 AS en_echec,
+              (SELECT min(created_at) FROM echecs)                AS depuis,
+              (SELECT error_message FROM echecs
+                ORDER BY created_at DESC LIMIT 1)                 AS derniere_erreur`
+    );
+
     return {
       configure: Boolean(reglages),
       origine: reglages?.origine ?? null,
@@ -60,6 +96,12 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
         enAttente: Number(compteurs?.en_attente ?? 0),
         envoyes: Number(compteurs?.envoyes ?? 0),
         enErreur: Number(compteurs?.en_erreur ?? 0),
+      },
+      panne: {
+        enEchec: Number(panne?.en_echec ?? 0),
+        depuis: panne?.depuis ?? null,
+        dernierEnvoi: panne?.dernier_envoi ?? null,
+        derniereErreur: panne?.derniere_erreur ?? null,
       },
     };
   });
@@ -117,7 +159,7 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
        SELECT count(*)::text AS n FROM s`
     );
     const remis = Number(r[0]?.n ?? 0);
-    const b = remis > 0 ? await viderFile() : { envoyes: 0, echecs: 0, total: 0 };
+    const b = remis > 0 ? await viderFile() : { envoyes: 0, echecs: 0, total: 0, interrompu: false };
     return { remisEnFile: remis, sent: b.envoyes, failed: b.echecs };
   });
 }

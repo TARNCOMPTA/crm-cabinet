@@ -222,12 +222,19 @@ suite('schema appliqué à PostgreSQL', () => {
    *     `redirect_uris` — verifie dans `mcp-oauth.ts`. La colonne est
    *     l'emplacement prevu pour un futur client confidentiel ; le jour ou elle
    *     sera alimentee, ce devra rester une empreinte.
+   *   · `cabinet_smtp_config.oauth_client_secret` — le secret de l'application
+   *     Azure, arrive avec l'increment 018. Meme justification que
+   *     `smtp_password` juste au-dessus : le serveur doit le PRESENTER a
+   *     Microsoft pour obtenir un jeton, donc aucune empreinte ne conviendrait.
+   *     Il vit dans la meme table, fermee aux non-administrateurs par
+   *     `TABLES_LECTURE_ADMIN`, et le chiffrer avec une clef posee sur la meme
+   *     machine ne protegerait de rien.
    *
    * Toute autre colonne au nom de secret doit etre justifiee ici, ou n'exister
    * pas. C'est la contrepartie de la promesse du produit : aucun service tiers,
    * donc aucune raison de stocker la cle d'un tiers.
    */
-  it('ne garde aucun secret en clair hors des trois colonnes prevues', async () => {
+  it('ne garde aucun secret en clair hors des quatre colonnes prevues', async () => {
     const { rows } = await client.query(
       `SELECT c.relname || '.' || a.attname AS colonne
          FROM pg_attribute a
@@ -239,6 +246,7 @@ suite('schema appliqué à PostgreSQL', () => {
         ORDER BY 1`
     );
     const attendues = [
+      'cabinet_smtp_config.oauth_client_secret',
       'cabinet_smtp_config.smtp_password',
       'mcp_api_keys.client_secret_hash',
       'mcp_oauth_clients.client_secret_hash',
@@ -261,6 +269,70 @@ suite('schema appliqué à PostgreSQL', () => {
       .filter((r) => /\b(auth|vault|net)\.[a-z_]/i.test(r.corps.replace(/--[^\n]*/g, '')))
       .map((r) => r.nom);
     expect(fautives, `fonctions referencant un schema absent : ${fautives.join(', ')}`).toEqual([]);
+  });
+
+  it('porte le contrat de l increment 018 : OAuth, sans changer les instances existantes', async () => {
+    /*
+      Les quatre colonnes d'authentification moderne. Ce que ce cas protege
+      n'est PAS leur presence — ce serait un test qui recopie le schema — mais
+      LA VALEUR PAR DEFAUT DE `auth_mode`.
+
+      Une instance qui applique cet increment ne doit rien changer a son
+      comportement : celles qui envoient par mot de passe continuent
+      exactement comme avant, et le passage a OAuth est une decision
+      d'administrateur prise dans l'ecran. Un defaut a `oauth2` couperait
+      l'envoi de tous les cabinets le jour de la mise a jour, sans qu'aucun
+      d'eux n'ait rien demande — et personne ne s'en apercevrait avant des
+      semaines, comme le 15 aout.
+    */
+    const { rows: cols } = await client.query(
+      `SELECT column_name, data_type, is_nullable, column_default
+         FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'cabinet_smtp_config'
+          AND column_name IN ('auth_mode','oauth_tenant_id','oauth_client_id','oauth_client_secret')
+        ORDER BY column_name`
+    );
+    expect(cols.map((c) => c.column_name)).toEqual([
+      'auth_mode',
+      'oauth_client_id',
+      'oauth_client_secret',
+      'oauth_tenant_id',
+    ]);
+    for (const c of cols) {
+      expect(c.data_type, c.column_name).toBe('text');
+      expect(c.is_nullable, c.column_name).toBe('NO');
+    }
+
+    const mode = cols.find((c) => c.column_name === 'auth_mode');
+    expect(mode.column_default, "auth_mode ne vaut plus « motdepasse » par defaut").toMatch(
+      /'motdepasse'/
+    );
+
+    // Et la valeur par defaut se constate SUR UNE LIGNE, pas seulement dans le
+    // catalogue : c'est ce qu'une instance existante recevra.
+    await client.query(
+      `INSERT INTO cabinet_smtp_config (smtp_host, smtp_from_email)
+       VALUES ('zz-smtp.test', 'zz@exemple.test')`
+    );
+    const { rows: pose } = await client.query(
+      `SELECT auth_mode, oauth_tenant_id, oauth_client_id, oauth_client_secret
+         FROM cabinet_smtp_config WHERE smtp_host = 'zz-smtp.test'`
+    );
+    expect(pose[0]).toEqual({
+      auth_mode: 'motdepasse',
+      oauth_tenant_id: '',
+      oauth_client_id: '',
+      oauth_client_secret: '',
+    });
+
+    // Le CHECK, prouve negativement : un mode inconnu est refuse.
+    await expect(
+      client.query(
+        `UPDATE cabinet_smtp_config SET auth_mode = 'basic' WHERE smtp_host = 'zz-smtp.test'`
+      )
+    ).rejects.toThrow(/cabinet_smtp_config_auth_mode_check/);
+
+    await client.query(`DELETE FROM cabinet_smtp_config WHERE smtp_host = 'zz-smtp.test'`);
   });
 
   it('porte le contrat de l increment 017 : compter sans tout lire', async () => {
