@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  XCircle,
 } from 'lucide-react';
 
 interface MCPKey {
@@ -54,6 +55,7 @@ export function SettingsMCPConnector() {
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<MCPKey | null>(null);
+  const [cibleSuppression, setCibleSuppression] = useState<MCPKey | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyData, setNewKeyData] = useState<NewKeyData | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -271,6 +273,38 @@ export function SettingsMCPConnector() {
       showToast(messageErreur(err, 'Erreur de generation'), 'error');
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /**
+   * Suppression definitive d'une cle DEJA REVOQUEE.
+   *
+   * ⚠️ CE QU'ON PERD : la revocation garde la ligne expres — le nom, qui l'a
+   * creee, sa derniere utilisation. C'est ce qui permet de repondre le jour ou
+   * l'on se demande par ou une donnee est sortie. La suppression efface cette
+   * trace, et le dialogue le dit avant de la demander.
+   *
+   * Le serveur refuse une cle encore active (`AND NOT is_active`) : ce n'est
+   * donc pas au bouton de le garantir, mais l'ecran n'offre le geste que sur
+   * une ligne revoquee, pour ne pas proposer ce qui sera refuse.
+   */
+  async function supprimerDefinitivement() {
+    if (!cibleSuppression) return;
+    try {
+      const response = await fetch(`/api/mcp-keys/supprimer`, {
+        method: 'POST',
+        ...OPTIONS_API,
+        body: JSON.stringify({ key_id: cibleSuppression.id }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur lors de la suppression');
+      }
+      showToast('Clé supprimée définitivement', 'success');
+      setCibleSuppression(null);
+      loadKeys();
+    } catch (err) {
+      showToast(messageErreur(err, 'Erreur'), 'error');
     }
   }
 
@@ -494,13 +528,26 @@ export function SettingsMCPConnector() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {key.is_active && (
+                      {key.is_active ? (
                         <button
                           onClick={() => { setRevokeTarget(key); setShowRevokeModal(true); }}
+                          aria-label={`Révoquer la clé ${key.name}`}
                           className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           title="Révoquer cette clé"
                         >
                           <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        /* Le second temps, et il n'est offert QUE sur une ligne
+                           deja revoquee : revoquer coupe l'acces tout de suite,
+                           supprimer n'est jamais urgent. */
+                        <button
+                          onClick={() => setCibleSuppression(key)}
+                          aria-label={`Supprimer définitivement la clé ${key.name}`}
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Supprimer définitivement cette clé révoquée"
+                        >
+                          <XCircle className="w-4 h-4" />
                         </button>
                       )}
                     </td>
@@ -731,7 +778,7 @@ export function SettingsMCPConnector() {
             </Button>
             <Button onClick={handleGenerate} disabled={generating || !newKeyName.trim()}>
               {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Key className="w-4 h-4 mr-1" />}
-              Generer
+              Générer
             </Button>
           </div>
         </div>
@@ -830,6 +877,37 @@ export function SettingsMCPConnector() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Suppression definitive : le dialogue NOMME ce qu'on perd. Une
+          confirmation qui se contente de « etes-vous sur ? » ne fait rien
+          decider — elle fait cliquer. */}
+      <Modal
+        isOpen={cibleSuppression !== null}
+        onClose={() => setCibleSuppression(null)}
+        title="Supprimer définitivement cette clé ?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            La clé <strong>"{cibleSuppression?.name}"</strong> est déjà révoquée : elle n'ouvre
+            plus aucun accès. La supprimer efface sa <strong>trace</strong> — son nom, sa date de
+            création et sa dernière utilisation
+            {cibleSuppression?.last_used_at ? ` (${formatDate(cibleSuppression.last_used_at)})` : ''}.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            C'est cette trace qui permet de répondre, plus tard, à « par où cette donnée
+            est-elle sortie ? ». Il n'y a pas de retour en arrière.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setCibleSuppression(null)}>
+              Annuler
+            </Button>
+            <Button variant="danger" onClick={supprimerDefinitivement}>
+              <XCircle className="w-4 h-4 mr-1" />
+              Supprimer définitivement
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Revoke confirmation modal */}

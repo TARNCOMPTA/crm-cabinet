@@ -168,4 +168,53 @@ export function enregistrerRoutesMcpCles(app: FastifyInstance): void {
     if (!r) return reply.code(404).send({ error: 'Cle introuvable ou deja revoquee.' });
     return { success: true };
   });
+
+  /**
+   * Suppression définitive d'une clé RÉVOQUÉE.
+   *
+   * ⚠️ CE QUE CELA COÛTE, ET IL FAUT LE SAVOIR AVANT. La révocation garde la
+   * ligne exprès : elle conserve le nom de la clé, qui l'a créée et sa dernière
+   * utilisation — c'est-à-dire de quoi répondre le jour où l'on se demande par
+   * où une donnée est sortie. Supprimer efface cette trace, définitivement.
+   *
+   * La route existe quand même, parce que l'inverse a un coût réel aussi : une
+   * liste qui ne fait que grandir devient illisible, et une liste illisible
+   * n'est plus relue — donc une clé active oubliée au milieu de vingt clés
+   * mortes ne se remarque plus. Le compromis retenu est de rendre le geste
+   * possible mais DÉLIBÉRÉ, en deux temps.
+   *
+   * ⚠️ SEULEMENT UNE CLÉ DÉJÀ RÉVOQUÉE — `AND NOT is_active`. Une clé vivante
+   * doit d'abord être révoquée. Sans cette condition, un clic de trop effacerait
+   * un accès en cours d'usage sans laisser la moindre trace de ce qui vient
+   * d'être coupé : ni le nom, ni la date, ni de quoi comprendre pourquoi une
+   * intégration s'est arrêtée. Révoquer coupe l'accès tout de suite ; supprimer
+   * n'est jamais urgent.
+   *
+   * L'appartenance se vérifie dans le `WHERE`, comme pour la révocation, et pour
+   * les mêmes raisons — même 404 pour « pas à vous » et pour « inexistante », de
+   * sorte qu'on ne puisse pas énumérer les clés des collègues. L'administrateur
+   * passe outre : le jour où un collaborateur s'en va, il faut pouvoir faire le
+   * ménage sans son concours.
+   */
+  app.post<{ Body: { key_id?: string } }>('/api/mcp-keys/supprimer', async (request, reply) => {
+    const session = await exigerSession(request, reply);
+    if (!session) return;
+
+    const id = request.body?.key_id;
+    if (!id) return reply.code(400).send({ error: 'key_id requis.' });
+
+    const r = await requeteUne<{ id: string }>(
+      `DELETE FROM mcp_api_keys
+        WHERE id = $1 AND NOT is_active
+          AND ($2::uuid IS NULL OR created_by = $2)
+        RETURNING id`,
+      [id, session.roleApp === 'admin' ? null : session.sub]
+    );
+    if (!r) {
+      return reply
+        .code(404)
+        .send({ error: 'Cle introuvable, ou encore active : revoquez-la avant de la supprimer.' });
+    }
+    return { success: true };
+  });
 }
