@@ -38,6 +38,9 @@ Détail complet : [installation/NOTICE-INSTALLATION.md](installation/NOTICE-INST
 - **TVA intracommunautaire** — numéro calculé depuis le SIREN, vérifié auprès du
   registre européen VIES d'un clic, à la création d'une fiche, et une fois par
   mois par petits lots espacés
+- **Facturation électronique** — l'adresse à laquelle chaque client reçoit ses
+  factures, saisie à la main ou cherchée d'un clic dans l'annuaire public par
+  SIREN
 - **Connecteur MCP** — accès en lecture depuis un assistant IA, par clé d'API
 
 ---
@@ -49,8 +52,9 @@ Détail complet : [installation/NOTICE-INSTALLATION.md](installation/NOTICE-INST
 - **Aucun mot de passe** : la connexion se fait par passkey
 - **Aucun service tiers** imposé : le courrier part de votre SMTP, et les seuls
   appels sortants sont ceux que vous activez (INPI, BODACC, jedeclare — avec
-  **votre** compte, jamais un compte mutualisé), plus le registre public VIES.
-  Chacun est déclaré ici, et vous pouvez le couper
+  **votre** compte, jamais un compte mutualisé), plus le registre public VIES et
+  l'annuaire de la facturation électronique. Chacun est déclaré ici, et vous
+  pouvez le couper
 
   > **Ce qui part tout seul, et il faut le savoir.** INPI, BODACC et jedeclare
   > se synchronisent selon le rythme que vous réglez. VIES est interrogé quand
@@ -59,8 +63,12 @@ Détail complet : [installation/NOTICE-INSTALLATION.md](installation/NOTICE-INST
   > le service ne répond plus. Un numéro intracommunautaire se désactive sans
   > prévenir : c'est ce que ce contrôle mensuel existe pour attraper.
   > `VIES_PERIODIQUE_DISABLED=1` coupe la partie périodique en gardant le
-  > bouton ; `VIES_DISABLED=1` coupe tout. Aucun de ces appels n'envoie de
-  > données de vos clients au-delà du numéro ou de l'identifiant interrogé
+  > bouton ; `VIES_DISABLED=1` coupe tout. L'annuaire de la facturation
+  > électronique, lui, n'est interrogé QUE sur un clic — aucune tâche, aucun
+  > traitement par lot — et ce qui sort est le SIREN, une donnée publique.
+  > `ANNUAIRE_FACTURATION_DISABLED=1` coupe le bouton sans rendre le champ
+  > moins saisissable. Aucun de ces appels n'envoie de données de vos clients
+  > au-delà du numéro ou de l'identifiant interrogé
 
 Conséquence : **votre cabinet est seul responsable de traitement** au sens du
 RGPD. Pas de sous-traitant à déclarer, pas de contrat à signer, pas de transfert

@@ -7,6 +7,8 @@ import { TvaStatusBadge } from '../../components/clients/TvaStatusBadge';
 import { TvaVerifyButton } from '../../components/clients/TvaVerifyButton';
 import type { StatutTvaAffiche } from '../../components/clients/tvaStatut';
 import { controlerSaisieTva, formaterNumeroTva } from '../../lib/tva';
+import { AdresseFacturationAnnuaire } from '../../components/clients/AdresseFacturationAnnuaire';
+import { controlerAdresseFacturation } from '../../lib/facturationElectronique';
 import { AdresseEdition, AdresseLecture } from '../../components/clients/AdresseFields';
 import { composerAdresse } from '../../lib/adresseHeritee';
 import { EmailLink, PhoneLink } from '../../components/ui/ContactLinks';
@@ -86,6 +88,13 @@ export function lignesGenerales(ctx: ContexteFiche): DataTableRow[] {
   // Controle local de la cle, recalcule a chaque frappe : il dit ce qu'on peut
   // dire sans reseau, avant de deranger VIES.
   const controleTva = controlerSaisieTva(formData.tva_intracom);
+
+  // Meme principe pour l'adresse de facturation, a une difference pres : il ne
+  // refuse jamais rien. Voir `lib/facturationElectronique.ts`.
+  const controleFacturation = controlerAdresseFacturation(
+    formData.adresse_facturation_electronique,
+    formData.siret
+  );
 
   const estPhysique = formData.type_personne === 'physique';
 
@@ -326,6 +335,83 @@ export function lignesGenerales(ctx: ContexteFiche): DataTableRow[] {
       ),
       helperText:
         'Calcule depuis le SIREN. Le remplacer a la main le fige : vider le champ rend la main au calcul.',
+    },
+    /**
+     * L'adresse a laquelle le client RECOIT ses factures electroniques.
+     *
+     * Elle se pose juste apres la TVA intracommunautaire, et pour la meme
+     * raison : c'est un identifiant de la meme famille, le plus souvent derive
+     * du SIRET, et il herite du voisinage SIREN/SIRET — police a chasse fixe,
+     * bouton de copie.
+     *
+     * ⚠️ ELLE N'EST PAS `siret`, meme quand elle lui ressemble. Elle peut
+     * porter un code de routage vers un service, ou designer une autre entite
+     * du groupe. Le controle affiche le signale sans jamais refuser : voir
+     * `lib/facturationElectronique.ts`.
+     */
+    {
+      key: 'adresse_facturation_electronique',
+      label: 'Adresse de facturation electronique',
+      value: client.adresse_facturation_electronique,
+      copyable: true,
+      copyLabel: 'Adresse de facturation electronique',
+      customDisplay: (
+        <div className="space-y-2">
+          {client.adresse_facturation_electronique ? (
+            <span className="font-mono">{client.adresse_facturation_electronique}</span>
+          ) : (
+            <span className="text-gray-400 dark:text-gray-500">Non renseignee</span>
+          )}
+          {/*
+            Le bouton est ICI, en lecture, et pas seulement en edition — la
+            lecon du bouton VIES, signalee le 2026-09-05 : une commande qui
+            n'existe qu'en mode edition est introuvable depuis la fiche
+            ouverte, c'est-a-dire depuis le seul endroit ou l'on pense a s'en
+            servir. En lecture, retenir une adresse ECRIT et recharge.
+          */}
+          <AdresseFacturationAnnuaire
+            clientId={client.id}
+            siren={client.siren}
+            adresseActuelle={client.adresse_facturation_electronique}
+            onEnregistre={recharger}
+          />
+        </div>
+      ),
+      customEditDisplay: (
+        <div className="space-y-1">
+          <Input
+            value={formData.adresse_facturation_electronique ?? ''}
+            onChange={(e) => modifier({ adresse_facturation_electronique: e.target.value })}
+            placeholder={client.siret || '30326504500069'}
+            className="font-mono"
+          />
+          {/*
+            En edition, la recherche REMPLIT le champ et n'ecrit rien : la fiche
+            s'enregistre par son propre bouton, donc par `patchFicheClient` et
+            la normalisation unique. Ecrire ici court-circuiterait les deux, et
+            l'enregistrement suivant remettrait l'ancienne valeur par-dessus.
+          */}
+          <AdresseFacturationAnnuaire
+            clientId={client.id}
+            siren={client.siren}
+            adresseActuelle={formData.adresse_facturation_electronique}
+            onRemplir={(v) => modifier({ adresse_facturation_electronique: v })}
+          />
+          {controleFacturation && (
+            <p
+              className={`text-xs ${
+                controleFacturation.niveau === 'warning'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-green-600 dark:text-green-400'
+              }`}
+            >
+              {controleFacturation.message}
+            </p>
+          )}
+        </div>
+      ),
+      helperText:
+        'Ou le client recoit ses factures : le plus souvent son SIRET, parfois avec un code de routage.',
     },
     { label: 'Forme juridique', value: client.forme_juridique, copyable: true, customDisplay: <LegalFormDisplay value={client.forme_juridique} />, customEditDisplay: <LegalFormSelect value={formData.forme_juridique || ''} onChange={(v) => modifier({ forme_juridique: v })} /> },
     {

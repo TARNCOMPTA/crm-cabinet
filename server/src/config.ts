@@ -314,6 +314,26 @@ export const config = {
   },
 
   /**
+   * L'annuaire de la facturation électronique, interrogé par SIREN.
+   *
+   * Ouvert lui aussi — le contrat de SUPER PDP porte `"security": []` sur cette
+   * route — donc rien à configurer pour que la recherche marche : un CRM qui
+   * exigerait une clé pour lire un annuaire public serait cassé par défaut.
+   *
+   *   `ANNUAIRE_FACTURATION_DISABLED=1` coupe le bouton. Le champ reste
+   *                                     saisissable à la main, à l'écran comme
+   *                                     par le connecteur : couper la recherche
+   *                                     ne doit pas couper la donnée.
+   *
+   * `ANNUAIRE_FACTURATION_URL` existe aussi, mais se lit dans
+   * `annuaire-facturation.ts` : ce module n'importe pas `config`, pour rester
+   * testable sans base. Voir le commentaire qui y est posé.
+   */
+  annuaireFacturation: {
+    desactive: booleen('ANNUAIRE_FACTURATION_DISABLED', false),
+  },
+
+  /**
    * Manifeste de version lu sur GitHub, seul flux sortant du produit.
    *
    * ⚠️ L'ADRESSE VISE LE DÉPÔT PUBLIC, ET ELLE NE PEUT PAS VISER AUTRE CHOSE.

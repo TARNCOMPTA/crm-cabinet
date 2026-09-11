@@ -30,6 +30,7 @@ import { enregistrerRoutesEmails } from './routes/emails.js';
 import { enregistrerRoutesInpi } from './routes/inpi.js';
 import { enregistrerRoutesJedeclare } from './routes/jedeclare.js';
 import { enregistrerRoutesTva } from './routes/tva.js';
+import { enregistrerRoutesFacturationElectronique } from './routes/facturation-electronique.js';
 import { enregistrerRoutesPdf } from './routes/pdf.js';
 import { enregistrerRoutesMcpCles } from './routes/mcp-cles.js';
 import { enregistrerRoutesMcp } from './routes/mcp.js';
@@ -148,6 +149,7 @@ async function demarrer() {
   enregistrerRoutesInpi(app);
   enregistrerRoutesJedeclare(app);
   enregistrerRoutesTva(app);
+  enregistrerRoutesFacturationElectronique(app);
   enregistrerRoutesPdf(app);
   enregistrerRoutesMcpCles(app);
   enregistrerRoutesMcp(app);

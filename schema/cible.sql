@@ -462,6 +462,10 @@ CREATE TABLE "clients" (
   "code_insee" text,
   -- Longueur libre : un numéro allemand fait 11 caractères, un français 13.
   "tva_intracom" text,
+  -- Repris de schema/increments/019-facturation-electronique.sql, qui porte le
+  -- raisonnement. DISTINCTE de `siret` : l'adresse peut porter un code de
+  -- routage, ou designer une autre entite du groupe.
+  "adresse_facturation_electronique" text,
   "tva_intracom_source" text DEFAULT 'calcule'::text NOT NULL,
   "tva_verif_statut" text DEFAULT 'non_verifie'::text NOT NULL,
   "tva_verif_le" timestamp with time zone,

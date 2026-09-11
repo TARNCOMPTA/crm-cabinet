@@ -45,6 +45,8 @@
  * mois ». Il a été corrigé là où il naissait, pas masqué ici.
  */
 
+import { normaliserAdresseFacturation } from './facturationElectronique';
+
 /** Les colonnes `date` de la fiche client, telles que le formulaire les nomme. */
 const CHAMPS_DATE = ['date_cloture', 'date_creation_entreprise', 'date_entree_cabinet', 'date_sortie_cabinet'] as const;
 
@@ -53,6 +55,21 @@ const CHAMPS_NOMBRE = ['capital_social', 'parts_totales'] as const;
 
 /** Les listes déroulantes qui portent « aucun choix » comme valeur vide. */
 const CHAMPS_CHOIX = ['type_personne', 'civilite'] as const;
+
+/**
+ * L'adresse de facturation électronique, normalisée par sa propre règle.
+ *
+ * ⚠️ ELLE PASSE ICI POUR NE PAS DIVERGER DU CONNECTEUR MCP. Les deux écrivent
+ * dans la même colonne, et le connecteur normalise (`303 265 045 00069` →
+ * `30326504500069`). Sans cette ligne, l'écran enregistrait la saisie telle
+ * quelle : la même adresse valait deux valeurs différentes selon la porte
+ * d'entrée, et une recherche ne retrouvait plus la fiche.
+ *
+ * Constaté en navigateur le 2026-09-10, APRÈS avoir écrit la garde qui tient
+ * les deux implémentations ensemble — elle éprouve les deux fonctions, pas le
+ * fait que l'écran en appelle une. Une garde ne couvre que ce qu'elle regarde.
+ */
+const CHAMPS_ADRESSE_FACTURATION = ['adresse_facturation_electronique'] as const;
 
 type Saisie = Record<string, unknown>;
 
@@ -98,6 +115,16 @@ export function normaliserChampsClient<T extends Saisie>(saisie: T): T {
 
   for (const champ of CHAMPS_CHOIX) {
     if (sortie[champ] === '') sortie[champ] = null;
+  }
+
+  for (const champ of CHAMPS_ADRESSE_FACTURATION) {
+    const v = sortie[champ];
+    if (typeof v === 'string') {
+      const propre = normaliserAdresseFacturation(v);
+      // Vidée à la main, la colonne redevient NULLE : « pas renseignée » et
+      // « chaîne vide » ne doivent pas coexister dans la même colonne.
+      sortie[champ] = propre === '' ? null : propre;
+    }
   }
 
   return sortie as T;

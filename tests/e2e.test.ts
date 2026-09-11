@@ -403,6 +403,44 @@ suite('parcours de bout en bout', () => {
   }, 120_000);
 
   /**
+   * La recherche d'adresse de facturation, ATTEIGNABLE DEPUIS LA FICHE OUVERTE.
+   *
+   * ⚠️ CE TEST EXISTE POUR UNE RECHUTE, PAS POUR UNE FONCTIONNALITE. Le bouton
+   * de verification TVA n'a longtemps existe qu'en mode edition : pour s'en
+   * servir il fallait passer la fiche en modification, deviner que la commande
+   * s'y trouvait, puis en ressortir. Signale le 2026-09-05 sous la forme « le
+   * connecteur VIES ne marche pas » — il marchait, il etait introuvable. Ce
+   * cas fige la lecon sur le bouton suivant : il doit se voir SANS cliquer sur
+   * « Modifier ».
+   *
+   * Aucun reseau n'est en jeu : `SANS EMAIL SARL` n'a pas de SIREN, donc le
+   * bouton est desactive et le dit. C'est exactement ce qui le rend
+   * deterministe en CI, ou l'annuaire n'est pas joignable.
+   */
+  it('propose la recherche dans l’annuaire depuis la fiche, sans passer en edition', async () => {
+    await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+
+    const mesDossiers = page.getByRole('checkbox', { name: /Mes dossiers/i }).first();
+    await mesDossiers.waitFor({ timeout: 30_000 });
+    if (await mesDossiers.isChecked()) await mesDossiers.uncheck();
+
+    const ligne = page.locator('tbody tr', { hasText: 'SANS EMAIL SARL' }).first();
+    await ligne.waitFor({ timeout: 30_000 });
+    await ligne.getByRole('link').first().click();
+    await page.waitForURL(/\/clients\/[0-9a-f-]{36}/, { timeout: 30_000 });
+
+    const bouton = page.getByRole('button', { name: /Chercher dans l’annuaire/i }).first();
+    await bouton.waitFor({ timeout: 20_000 });
+    expect(await bouton.isVisible()).toBe(true);
+
+    // Sans SIREN il n'y a rien a demander : desactive, et l'infobulle dit quoi
+    // faire. Un bouton grise sans explication ferait chercher la panne
+    // ailleurs.
+    expect(await bouton.isDisabled()).toBe(true);
+    expect(await bouton.getAttribute('title')).toMatch(/Renseignez le SIREN/i);
+  }, 120_000);
+
+  /**
    * L'ascenseur horizontal de la liste clients.
    *
    * ⚠️ CE CAS NE SE VOIT QUE DANS UN NAVIGATEUR, et il ne se voyait pas du tout

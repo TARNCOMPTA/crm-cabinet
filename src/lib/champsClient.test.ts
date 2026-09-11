@@ -75,6 +75,33 @@ describe('payloadCreationClient', () => {
   });
 });
 
+describe("l adresse de facturation electronique", () => {
+  it('est normalisee comme le connecteur MCP la normalise', () => {
+    // Les deux ecrivent dans la MEME colonne. Sans cette normalisation,
+    // l'ecran enregistrait « 303 265 045 00069 » la ou le connecteur ecrivait
+    // « 30326504500069 » : deux valeurs pour la meme adresse, et une recherche
+    // qui ne retrouve plus la fiche. Trouve en navigateur, pas a la relecture.
+    const p = payloadCreationClient({
+      ...MINIMAL,
+      adresse_facturation_electronique: ' 303 265 045 00069 ',
+    });
+    expect(p.adresse_facturation_electronique).toBe('30326504500069');
+  });
+
+  it('garde les espaces d un identifiant qui n est pas numerique', () => {
+    const p = payloadCreationClient({
+      ...MINIMAL,
+      adresse_facturation_electronique: '  PDP ACME 00421  ',
+    });
+    expect(p.adresse_facturation_electronique).toBe('PDP ACME 00421');
+  });
+
+  it('rend NULL quand on la vide, jamais une chaine vide', () => {
+    const p = payloadCreationClient({ ...MINIMAL, adresse_facturation_electronique: '   ' });
+    expect(p.adresse_facturation_electronique).toBeNull();
+  });
+});
+
 describe('nombreSaisi', () => {
   it('rend ZERO pour « 0 », et non null', () => {
     // `parseFloat(v) || null` rendait `null` : un capital de 0 EUR — une

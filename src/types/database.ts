@@ -1303,6 +1303,7 @@ export interface Database {
           pays: string | null
           code_insee: string | null
           tva_intracom: string | null
+          adresse_facturation_electronique: string | null
           tva_intracom_source: string
           tva_verif_statut: string
           tva_verif_le: string | null
@@ -1367,6 +1368,7 @@ export interface Database {
           pays?: string | null
           code_insee?: string | null
           tva_intracom?: string | null
+          adresse_facturation_electronique?: string | null
           tva_intracom_source?: string
           tva_verif_statut?: string
           tva_verif_le?: string | null
@@ -1431,6 +1433,7 @@ export interface Database {
           pays?: string | null
           code_insee?: string | null
           tva_intracom?: string | null
+          adresse_facturation_electronique?: string | null
           tva_intracom_source?: string
           tva_verif_statut?: string
           tva_verif_le?: string | null

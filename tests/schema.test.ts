@@ -271,6 +271,59 @@ suite('schema appliqué à PostgreSQL', () => {
     expect(fautives, `fonctions referencant un schema absent : ${fautives.join(', ')}`).toEqual([]);
   });
 
+  it('porte le contrat de l increment 019 : l adresse de facturation, DISTINCTE du SIRET', async () => {
+    /*
+      Ce que ce cas protege n'est pas la presence de la colonne — ce serait un
+      test qui recopie le schema — mais le fait qu'elle soit AUTONOME.
+
+      L'adresse de facturation electronique EST le plus souvent le SIRET, et
+      c'est ce qui rend la confusion tentante : quelqu'un pourrait un jour la
+      remplacer par une valeur calculee depuis `siret`, ou lui poser une
+      contrainte qui l'y ramene. Elle ne l'est pas toujours — code de routage
+      vers un service, autre entite du groupe, identifiant de plateforme — et
+      le jour ou les deux different est exactement le jour ou cette colonne
+      sert. On prouve donc qu'elle accepte une valeur qui n'a rien a voir.
+    */
+    const { rows: col } = await client.query(
+      `SELECT data_type, is_nullable, column_default
+         FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'clients'
+          AND column_name = 'adresse_facturation_electronique'`
+    );
+    expect(col, 'colonne absente').toHaveLength(1);
+    expect(col[0].data_type).toBe('text');
+    // Nullable et sans defaut : « pas encore renseignee » ne doit pas se
+    // confondre avec « vide », et aucune fiche existante n'est modifiee.
+    expect(col[0].is_nullable).toBe('YES');
+    expect(col[0].column_default).toBeNull();
+
+    await client.query(
+      `INSERT INTO clients (id, nom_entreprise, siret, adresse_facturation_electronique)
+       VALUES ('00000000-0000-4000-8000-0000000f0019', 'ZZ FACTURATION SARL',
+               '30326504500069', 'PDP-ACME-00421+COMPTA')`
+    );
+    const { rows: pose } = await client.query(
+      `SELECT siret, adresse_facturation_electronique AS adresse
+         FROM clients WHERE id = '00000000-0000-4000-8000-0000000f0019'`
+    );
+    // Les deux coexistent, et n'ont pas la meme valeur.
+    expect(pose[0].siret).toBe('30326504500069');
+    expect(pose[0].adresse).toBe('PDP-ACME-00421+COMPTA');
+
+    // Et l'absence reste distincte de la chaine vide.
+    await client.query(
+      `UPDATE clients SET adresse_facturation_electronique = NULL
+        WHERE id = '00000000-0000-4000-8000-0000000f0019'`
+    );
+    const { rows: vide } = await client.query(
+      `SELECT adresse_facturation_electronique IS NULL AS absente
+         FROM clients WHERE id = '00000000-0000-4000-8000-0000000f0019'`
+    );
+    expect(vide[0].absente).toBe(true);
+
+    await client.query(`DELETE FROM clients WHERE id = '00000000-0000-4000-8000-0000000f0019'`);
+  });
+
   it('porte le contrat de l increment 018 : OAuth, sans changer les instances existantes', async () => {
     /*
       Les quatre colonnes d'authentification moderne. Ce que ce cas protege

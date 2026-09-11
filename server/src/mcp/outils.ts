@@ -42,6 +42,9 @@
  */
 
 import { requete, requeteUne, transaction } from '../db.js';
+// ⚠️ Jumelle de `src/lib/facturationElectronique.ts` — le serveur ne peut pas
+// importer du front. Les deux sont tenues par `tests/facturation-jumelles.test.ts`.
+import { normaliserAdresseFacturation } from '../facturation-electronique.js';
 import { construireSuivi } from '../jedeclare/suivi.js';
 import {
   estHorsPortefeuille,
@@ -991,6 +994,116 @@ async function ecrireRepartition(
   };
 }
 
+/**
+ * Ecrit l'adresse de facturation electronique d'un client.
+ * ---------------------------------------------------------------------------
+ * Le SECOND outil de ce connecteur qui modifie quelque chose, et il porte les
+ * memes gardes que le premier : droit d'ecriture explicite, imputation dans
+ * `audit_logs`, refus d'ecraser sans confirmation.
+ *
+ * ⚠️ LE REFUS D'ECRASEMENT N'EST PAS UNE PRUDENCE DECORATIVE. Une adresse deja
+ * renseignee a ete saisie par quelqu'un du cabinet, d'apres un courrier ou un
+ * contrat. La remplacer par une valeur deduite d'une conversation ferait partir
+ * les factures suivantes ailleurs — et personne ne s'en apercevrait avant que
+ * le client ne reclame.
+ */
+async function ecrireAdresseFacturation(
+  args: Record<string, unknown>,
+  contexte: ContexteAppel | undefined
+) {
+  if (!contexte?.peutEcrire) {
+    return {
+      erreur: 'Ecriture non autorisee pour cet acces.',
+      comment_faire:
+        'Cet acces est en LECTURE. Ouvrez Parametres → Connecteur MCP dans le CRM : la liste ' +
+        '« Autorisations » y indique, pour chaque connecteur, s il est en lecture seule, et un ' +
+        "bouton y accorde l'ecriture. Meme chose cle par cle pour un acces par cle statique " +
+        "(Claude Code, Cursor). C'est a l'utilisateur de faire ce geste, pas a vous.",
+    };
+  }
+  if (!contexte.userId) {
+    return {
+      erreur: "Ecriture impossible : cet acces n'est rattache a aucun utilisateur.",
+      comment_faire:
+        "Une ecriture doit pouvoir etre imputee a quelqu'un. Utilisez un acces OAuth, ou une " +
+        'cle MCP creee depuis Parametres → Connecteur MCP.',
+    };
+  }
+
+  const clientId = String(args.client_id ?? '');
+  if (!clientId) return { erreur: 'client_id requis.' };
+
+  const client = await requeteUne<{
+    id: string;
+    nom_entreprise: string | null;
+    siret: string | null;
+    adresse_facturation_electronique: string | null;
+  }>(
+    `SELECT id, nom_entreprise, siret, adresse_facturation_electronique
+       FROM clients WHERE id = $1`,
+    [clientId]
+  );
+  if (!client) return { erreur: 'Client introuvable.' };
+
+  // Meme normalisation que l'ecran : deux regles donneraient deux valeurs pour
+  // la meme saisie selon la porte d'entree.
+  const adresse = normaliserAdresseFacturation(String(args.adresse ?? ''));
+  if (!adresse) {
+    return {
+      erreur: 'adresse vide.',
+      comment_faire:
+        "Cet outil ne sert qu'a POSER une adresse. Pour en retirer une, l'utilisateur vide le " +
+        "champ dans la fiche : un parametre vide est trop facile a envoyer par accident pour " +
+        'valoir suppression.',
+    };
+  }
+
+  const deja = client.adresse_facturation_electronique;
+  if (deja && adresse !== deja && args.remplacer !== true) {
+    return {
+      erreur: 'Une adresse de facturation est deja renseignee.',
+      adresse_actuelle: deja,
+      adresse_proposee: adresse,
+      comment_faire:
+        "MONTREZ LES DEUX A L'UTILISATEUR et demandez-lui laquelle vaut. Ne rappelez cet outil " +
+        "avec `remplacer: true` que s'il confirme : l'adresse en place a ete saisie par le " +
+        'cabinet, et la remplacer a tort ferait partir les factures suivantes ailleurs.',
+    };
+  }
+
+  await transaction(async (cx) => {
+    await cx.query('UPDATE clients SET adresse_facturation_electronique = $2 WHERE id = $1', [
+      clientId,
+      adresse,
+    ]);
+    await cx.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'set_client_facturation_electronique', 'client', $2, $3)`,
+      [
+        contexte.userId,
+        clientId,
+        JSON.stringify({
+          via: 'connecteur MCP',
+          acces: contexte.cle,
+          ancienne: deja,
+          nouvelle: adresse,
+        }),
+      ]
+    );
+  });
+
+  return {
+    ecrit: true,
+    client: { id: client.id, nom: client.nom_entreprise },
+    adresse_facturation_electronique: adresse,
+    ancienne: deja,
+    // Le SIRET de la fiche accompagne la reponse : il permet au modele de dire
+    // a l'utilisateur « attention, ce n'est pas le SIRET du dossier » sans
+    // avoir a redemander la fiche.
+    siret_de_la_fiche: client.siret,
+  };
+}
+
 export const OUTILS: Outil[] = [
   {
     nom: 'list_clients',
@@ -1656,6 +1769,43 @@ export const OUTILS: Outil[] = [
       required: ['client_id', 'detentions'],
     },
     executer: async (a, contexte) => ecrireRepartition(a, contexte),
+  },
+  {
+    nom: 'set_client_facturation_electronique',
+    titre: 'Enregistrer l adresse de facturation electronique',
+    description:
+      "ECRIT l'adresse a laquelle un client recoit ses factures electroniques (reforme de la " +
+      'facturation electronique). Le plus souvent son SIRET, parfois suivi d un code de ' +
+      'routage vers un service, parfois un identifiant porte par sa plateforme. ' +
+      "MONTREZ TOUJOURS A L'UTILISATEUR CE QUE VOUS ALLEZ ECRIRE, ET ATTENDEZ SON ACCORD : " +
+      "cet outil modifie le dossier d'un client reel. " +
+      'REFUS PAR DEFAUT SI UNE ADRESSE EXISTE : montrez alors les deux valeurs et ne rappelez ' +
+      "cet outil avec `remplacer: true` que si l'utilisateur confirme. L'adresse en place a " +
+      'ete saisie par le cabinet ; la remplacer a tort ferait partir les factures suivantes ' +
+      "ailleurs, sans que personne ne le voie avant une reclamation. " +
+      "N'INVENTEZ PAS CETTE ADRESSE : elle vient du client, d'un courrier ou d'un contrat. Le " +
+      "SIRET de la fiche est une hypothese frequente, pas une certitude — proposez-le a " +
+      "l'utilisateur, ne l'ecrivez pas de vous-meme.",
+    parametres: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string', description: 'UUID du client' },
+        adresse: {
+          type: 'string',
+          description:
+            "L'adresse telle que le client la communique. Les espaces d'un SIRET recopie sont " +
+            'retires ; ceux d un identifiant de plateforme sont conserves.',
+        },
+        remplacer: {
+          type: 'boolean',
+          description:
+            "A ne passer a true QUE si l'utilisateur a vu l'adresse existante et confirme son " +
+            'remplacement.',
+        },
+      },
+      required: ['client_id', 'adresse'],
+    },
+    executer: async (a, contexte) => ecrireAdresseFacturation(a, contexte),
   },
 ];
 

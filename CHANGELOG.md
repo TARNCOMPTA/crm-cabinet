@@ -38,6 +38,36 @@ n'arrivent que quand on les ouvre.
 
 ## Non publié
 
+### L'adresse de facturation électronique se cherche dans l'annuaire
+
+La colonne existait déjà, saisissable à l'écran et par le connecteur MCP. Il
+fallait encore la recopier d'un courrier, fiche par fiche. Un bouton
+« Chercher dans l'annuaire » la ramène désormais depuis l'annuaire public de la
+réforme, à partir du SIREN de la fiche.
+
+- **Rien ne part sans un clic**, et ce qui sort est le SIREN — donnée publique.
+  Aucune tâche planifiée, aucun traitement du portefeuille par lot :
+  contrairement à VIES, une adresse de facturation ne se désactive pas dans le
+  dos du cabinet au point de justifier une surveillance continue.
+  `ANNUAIRE_FACTURATION_DISABLED=1` coupe le bouton sans rendre le champ moins
+  saisissable.
+- **Le bouton existe en lecture, pas seulement en édition.** C'est la leçon du
+  bouton VIES, signalé le 2026-09-05 comme « ne marche pas » alors qu'il
+  marchait : il n'était visible qu'en mode modification, donc introuvable
+  depuis la fiche ouverte. Un cas de bout en bout fige la correction.
+- **Remplacer une adresse déjà saisie demande un second clic**, et les deux
+  valeurs sont montrées côte à côte. Celle de la fiche a pu être communiquée
+  directement par le client et rester la bonne ; la remplacer à tort ferait
+  partir les factures suivantes ailleurs, sans que rien ne le signale avant une
+  réclamation.
+- **Plusieurs adresses actives ne sont jamais arbitrées à votre place** : la
+  liste s'affiche et le cabinet choisit.
+- **« Pas encore inscrit » et « annuaire injoignable » ne disent pas la même
+  chose.** Beaucoup d'entreprises en règle ne figurent pas encore à l'annuaire :
+  le message le dit sans laisser croire à une faute de saisie. Une panne, elle,
+  ne se présente jamais comme une absence — sinon on saisirait une adresse à la
+  main par-dessus celle qui existe.
+
 ### Second audit de performance : une lecture qui grossissait toute seule
 
 Mesuré dans un vrai navigateur, sur un portefeuille de **940 fiches** chargé pour
