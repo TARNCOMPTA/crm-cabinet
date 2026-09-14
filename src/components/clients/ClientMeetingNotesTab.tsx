@@ -185,10 +185,10 @@ export function ClientMeetingNotesTab({ clientId }: ClientMeetingNotesTabProps) 
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             <MessageSquareText className="w-7 h-7 text-gray-400" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
             Aucun compte-rendu pour ce client
           </p>
-          <p className="text-gray-400 dark:text-gray-500 text-xs">
+          <p className="text-gray-600 dark:text-gray-400 text-xs">
             Cliquez sur "Nouveau" pour ajouter votre premier compte-rendu de RDV
           </p>
         </div>
@@ -221,7 +221,7 @@ export function ClientMeetingNotesTab({ clientId }: ClientMeetingNotesTabProps) 
                           );
                         })()}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                         <span className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5" />
                           {formatDate(note.date_rdv)}
@@ -299,7 +299,7 @@ export function ClientMeetingNotesTab({ clientId }: ClientMeetingNotesTabProps) 
                     </div>
                   )}
 
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                     <span>Par {getAuthorName(note)}</span>
                     <span>
                       {new Date(note.created_at).toLocaleDateString('fr-FR')}

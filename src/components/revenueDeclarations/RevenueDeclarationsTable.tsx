@@ -244,7 +244,7 @@ export function RevenueDeclarationsTable({
                             {d.person_name}
                           </div>
                           {d.client_id && d.clients?.numero_dossier && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
                               {d.clients.numero_dossier}
                             </div>
                           )}
@@ -270,7 +270,7 @@ export function RevenueDeclarationsTable({
                                 ref={popoverRef}
                                 className="absolute left-0 top-full mt-1 z-20 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1"
                               >
-                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                                <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
                                   Pieces jointes
                                 </div>
                                 {loadingAttachments ? (
@@ -278,7 +278,7 @@ export function RevenueDeclarationsTable({
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                   </div>
                                 ) : attachmentsList.length === 0 ? (
-                                  <div className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                  <div className="px-3 py-3 text-xs text-gray-600 dark:text-gray-400">
                                     Aucune piece jointe
                                   </div>
                                 ) : (
@@ -323,14 +323,14 @@ export function RevenueDeclarationsTable({
                             <div className={`text-xs ${
                               new Date(deadlinesMap[d.zone] + 'T00:00:00') < new Date() && d.statut !== 'fait'
                                 ? 'text-red-600 dark:text-red-400 font-medium'
-                                : 'text-gray-500 dark:text-gray-400'
+                                : 'text-gray-600 dark:text-gray-400'
                             }`}>
                               {new Date(deadlinesMap[d.zone] + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">--</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">--</span>
                       )}
                     </td>
                     <td className="px-4 py-3">

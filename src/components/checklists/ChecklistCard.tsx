@@ -165,7 +165,7 @@ export function ChecklistCard({
                   Partagee
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">
                   <Lock className="w-3 h-3" />
                   Privee
                 </span>
@@ -177,7 +177,7 @@ export function ChecklistCard({
                 </span>
               )}
               {!isOwner && checklist.owner && (
-                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                <span className="text-[11px] text-gray-600 dark:text-gray-400">
                   par {checklist.owner.prenom} {checklist.owner.nom}
                 </span>
               )}
@@ -308,7 +308,7 @@ export function ChecklistCard({
           </SortableContext>
         </DndContext>
         {totalItems === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">
+          <p className="text-xs text-gray-600 dark:text-gray-400 text-center py-4">
             Aucun element. Ajoutez-en un ci-dessous.
           </p>
         )}

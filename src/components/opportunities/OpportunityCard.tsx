@@ -67,7 +67,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
       </div>
 
       {!isProspect && card.clients?.numero_dossier && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -86,7 +86,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
         )}
 
         {card.source && (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[100px]">
+          <span className="text-[10px] text-gray-600 dark:text-gray-400 truncate max-w-[100px]">
             {card.source}
           </span>
         )}
@@ -95,7 +95,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
           <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
             checklistProgress.checked === checklistProgress.total
               ? 'text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30'
-              : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50'
+              : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50'
           }`}>
             <CheckSquare className="w-3 h-3" />
             {checklistProgress.checked}/{checklistProgress.total}
@@ -103,7 +103,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
         )}
 
         {attachmentCount != null && attachmentCount > 0 && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
             <Paperclip className="w-3 h-3" />
             {attachmentCount}
           </span>
@@ -111,7 +111,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
       </div>
 
       {card.comment && (
-        <div className="mt-2 flex items-start gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-2 flex items-start gap-1 text-xs text-gray-600 dark:text-gray-400">
           <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
           <span className="line-clamp-2">{card.comment}</span>
         </div>

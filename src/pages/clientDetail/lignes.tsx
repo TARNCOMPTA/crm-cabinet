@@ -263,7 +263,7 @@ export function lignesGenerales(ctx: ContexteFiche): DataTableRow[] {
             indisponibleTransitoire={viesIndisponible}
           />
           {client.tva_intracom_source === 'manuel' && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">saisi a la main</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">saisi a la main</span>
           )}
           {/*
             ⚠️ LE BOUTON EST ICI, EN LECTURE, ET C'EST TOUT LE SUJET.

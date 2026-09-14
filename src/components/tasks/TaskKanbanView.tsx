@@ -211,10 +211,10 @@ export const TaskCardContent = React.memo(function TaskCardContent({
       )}
 
       {task.clients && (
-        <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">{task.clients.nom_entreprise}</p>
+        <p className="text-xs text-gray-600 dark:text-slate-400 mb-1">{task.clients.nom_entreprise}</p>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400 flex-wrap">
+      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 flex-wrap">
         {task.profiles && (
           <div className="flex items-center gap-1">
             <CollaboratorAvatar

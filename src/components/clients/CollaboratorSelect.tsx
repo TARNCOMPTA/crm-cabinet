@@ -144,7 +144,7 @@ export function CollaboratorSelect({ collaborators, onChange, label = 'Collabora
                       <p className="text-sm font-medium text-gray-900">
                         {user?.prenom} {user?.nom}
                       </p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{user?.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -214,7 +214,7 @@ export function CollaboratorSelect({ collaborators, onChange, label = 'Collabora
         )}
 
         {collaborators.length === 0 && availableUsers.length === 0 && (
-          <p className="text-sm text-gray-500 text-center py-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
             Aucun collaborateur disponible
           </p>
         )}

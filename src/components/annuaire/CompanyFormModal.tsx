@@ -284,7 +284,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {client.nom_entreprise}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       {[client.siren && `SIREN ${client.siren}`, client.forme_juridique].filter(Boolean).join(' - ')}
                     </p>
                   </li>
@@ -374,7 +374,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
 
         {inpiError && !inpiSearching && (
           <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{inpiError}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{inpiError}</span>
           </div>
         )}
 

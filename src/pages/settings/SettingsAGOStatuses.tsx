@@ -159,7 +159,7 @@ export function SettingsAGOStatuses() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Statuts d'avancement AGO
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
             Definissez les etats d'avancement pour le suivi des assemblees generales
           </p>
         </div>

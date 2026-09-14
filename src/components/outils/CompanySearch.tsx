@@ -405,7 +405,7 @@ export function CompanySearch() {
                   Masquer les cessees
                 </label>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {sortedResults.length} resultat(s) sur {results.length}
               </p>
             </CardContent>
@@ -456,7 +456,7 @@ export function CompanySearch() {
                         )}
                         <Badge variant={cessee ? 'danger' : 'success'}>{r.statut}</Badge>
                         {r.dateCreation && (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                             <Calendar className="w-3 h-3" />
                             {formatDate(r.dateCreation)}
                           </span>
@@ -469,7 +469,7 @@ export function CompanySearch() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">SIREN</span>
+                          <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">SIREN</span>
                           <p className="font-mono text-gray-900 dark:text-gray-100">
                             {formatSiren(r.siren)}
                           </p>
@@ -485,7 +485,7 @@ export function CompanySearch() {
                       {r.siret && (
                         <div className="flex items-center justify-between gap-2">
                           <div>
-                            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">SIRET (siege)</span>
+                            <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">SIRET (siege)</span>
                             <p className="font-mono text-gray-900 dark:text-gray-100">
                               {formatSiret(r.siret)}
                             </p>
@@ -505,7 +505,7 @@ export function CompanySearch() {
                       {r.codeNaf && (
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">
                               Code NAF / APE
                             </span>
                             <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -528,7 +528,7 @@ export function CompanySearch() {
                       {fullAddress(r.adresse) && (
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Adresse</span>
+                            <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">Adresse</span>
                             <p className="text-gray-900 dark:text-gray-100 flex items-start gap-2">
                               <MapPin className="w-3.5 h-3.5 mt-0.5 text-gray-500 flex-shrink-0" />
                               <span>{fullAddress(r.adresse)}</span>
@@ -546,7 +546,7 @@ export function CompanySearch() {
                       {r.adresse.codeInsee && (
                         <div className="flex items-center justify-between gap-2">
                           <div>
-                            <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Code INSEE</span>
+                            <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">Code INSEE</span>
                             <p className="font-mono text-gray-900 dark:text-gray-100">
                               {r.adresse.codeInsee}
                             </p>
@@ -579,7 +579,7 @@ export function CompanySearch() {
               </h3>
             </div>
             {history.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Aucune recherche enregistree
               </p>
             ) : (
@@ -593,7 +593,7 @@ export function CompanySearch() {
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {h.query}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {h.results_count} resultat(s) - {formatDate(h.created_at)}
                       </p>
                     </button>

@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { BilanDAS2Panel } from './BilanDAS2Panel';
 import { PieceJointeLigne, type PieceJointe } from './PieceJointeLigne';
 import { VignettesCollaborateurs } from './VignettesCollaborateurs';
@@ -240,6 +241,23 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
     }
   }
 
+  /**
+   * La piece dont la suppression est DEMANDEE, pas encore faite.
+   *
+   * ⚠️ POURQUOI CET ETAT EXISTE. Les deux suppressions de pieces jointes
+   * partaient sur un seul clic, sans rien demander — et elles retirent le
+   * fichier du STOCKAGE, pas seulement la ligne : un courrier de banque ou une
+   * balance du confrere precedent disparaissait sans retour possible. C'est le
+   * seul geste irreversible de cet ecran, et c'etait le seul sans garde.
+   *
+   * Le dialogue NOMME le fichier : une confirmation qui se contente de « etes-
+   * vous sur ? » ne fait rien decider, elle fait cliquer — la meme regle que
+   * pour la suppression d'une cle MCP.
+   */
+  const [pieceASupprimer, setPieceASupprimer] = useState<
+    { piece: PieceJointe; itemId: string | null } | null
+  >(null);
+
   async function handleDeleteAttachment(itemId: string, attachment: Attachment) {
     try {
       await deleteChecklistAttachment(attachment.id, attachment.storage_path);
@@ -403,7 +421,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
         */}
         {vignettes.length > 0 && (
           <div className="flex items-center gap-3">
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
               Équipe
             </h3>
             <VignettesCollaborateurs
@@ -434,7 +452,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
             <span className={`text-xs font-semibold ${
               moisTraites.length === 12 ? 'text-emerald-600 dark:text-emerald-400' :
               moisTraites.length >= 6 ? 'text-amber-600 dark:text-amber-400' :
-              'text-gray-500 dark:text-gray-400'
+              'text-gray-600 dark:text-gray-400'
             }`}>{moisTraites.length}/12</span>
           </div>
           <div className="grid grid-cols-6 gap-1.5">
@@ -510,7 +528,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
                       onBasculer={() => handleCheckToggle(item.id, !checklistState[item.id])}
                       onFichiers={(fichiers) => handleFileUpload(item.id, fichiers)}
                       onTelecharger={(p) => handleDownloadAttachment(p as Attachment)}
-                      onSupprimer={(p) => handleDeleteAttachment(item.id, p as Attachment)}
+                      onSupprimer={(p) => setPieceASupprimer({ piece: p, itemId: item.id })}
                     />
                   ))}
               </div>
@@ -518,7 +536,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
           )}
 
           <TabsContent value="pieces" className="pt-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
               Les pieces qui ne relevent d’aucun point de la checklist : courrier de la banque,
               balance du confrere precedent, PV recu en vrac.
             </p>
@@ -529,7 +547,7 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
                     key={piece.id}
                     piece={piece}
                     onTelecharger={(p) => handleDownloadAttachment(p as Attachment)}
-                    onSupprimer={supprimerPieceDiverse}
+                    onSupprimer={(p) => setPieceASupprimer({ piece: p, itemId: null })}
                   />
                 ))}
               </div>
@@ -544,13 +562,41 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
                 Glissez vos fichiers ici
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">PDF et images · ou </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">PDF et images · ou </p>
             </ZoneDepot>
           </TabsContent>
         </Tabs>
 
         {das2Enabled && card && <BilanDAS2Panel cardId={card.id} onSaved={onUpdated} />}
       </div>
+
+      {/*
+        Un seul dialogue pour les deux familles de pieces — celles d'un point de
+        checklist et les pieces diverses. `itemId` dit laquelle, et c'est lui
+        qui choisit la fonction de suppression : deux dialogues auraient diverge
+        des la premiere retouche du libelle.
+      */}
+      <ConfirmDialog
+        isOpen={pieceASupprimer !== null}
+        onClose={() => setPieceASupprimer(null)}
+        onConfirm={() => {
+          const demande = pieceASupprimer;
+          if (!demande) return;
+          setPieceASupprimer(null);
+          void (demande.itemId
+            ? handleDeleteAttachment(demande.itemId, demande.piece as Attachment)
+            : supprimerPieceDiverse(demande.piece));
+        }}
+        title="Supprimer cette piece jointe ?"
+        message={
+          pieceASupprimer
+            ? `« ${pieceASupprimer.piece.file_name} » sera retiree du dossier ET du stockage. ` +
+              'Cette suppression est definitive : le fichier ne pourra pas etre recupere.'
+            : ''
+        }
+        confirmText="Supprimer definitivement"
+        variant="danger"
+      />
     </Modal>
   );
 }
@@ -631,11 +677,11 @@ function LigneChecklist({
           {coche && <Check className="w-3.5 h-3.5 text-white" />}
         </button>
         <div className="flex-1 min-w-0">
-          <span className={`text-sm ${coche ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
+          <span className={`text-sm ${coche ? 'text-gray-600 dark:text-gray-400 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
             {nom}
           </span>
           {auteur && (
-            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-600 dark:text-gray-400">
               <User className="w-3 h-3" />
               <span>
                 {auteur.display_name || `${auteur.prenom || ''} ${auteur.nom || ''}`.trim() || 'Utilisateur'}
@@ -651,7 +697,7 @@ function LigneChecklist({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {pieces.length > 0 && (
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+            <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">
               {pieces.length}
             </span>
           )}

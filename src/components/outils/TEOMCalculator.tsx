@@ -110,7 +110,7 @@ export function TEOMCalculator() {
                 <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
                   {formatCurrency(results.taxeDeductible)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   Montant annuel a reporter sur la declaration
                 </p>
               </CardContent>
@@ -130,7 +130,7 @@ export function TEOMCalculator() {
                 <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
                   {formatCurrency(results.montantARetrancher)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   TEOM + prorata frais de gestion
                 </p>
               </CardContent>
@@ -226,7 +226,7 @@ export function TEOMCalculator() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
               Taxe Fonciere Deductible
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
               Renseignez les montants figurant sur votre avis de taxe fonciere pour calculer le montant deductible a reporter sur votre declaration de revenus fonciers.
             </p>
           </CardContent>

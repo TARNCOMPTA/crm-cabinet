@@ -349,7 +349,7 @@ export function SettingsCollaboratorRoles() {
                           <button
                             type="button"
                             onClick={() => handleSetDefault(role)}
-                            className="text-xs text-gray-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                            className="text-xs text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
                           >
                             Definir
                           </button>
@@ -481,12 +481,12 @@ export function SettingsCollaboratorRoles() {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {list.length} utilisateur{list.length > 1 ? 's' : ''}
                     </span>
                   </div>
                   {list.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic px-4 py-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 italic px-4 py-3">
                       Aucun utilisateur n'a ce rôle comme défaut
                     </p>
                   ) : (
@@ -505,7 +505,7 @@ export function SettingsCollaboratorRoles() {
                               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                 {u.prenom} {u.nom}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{u.email}</p>
                             </div>
                           </div>
                           <Select
@@ -534,7 +534,7 @@ export function SettingsCollaboratorRoles() {
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Aucun rôle défini (utilisera le rôle par défaut du cabinet)
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
                     {groupedUsers.noDefault.length}
                   </span>
                 </div>
@@ -553,7 +553,7 @@ export function SettingsCollaboratorRoles() {
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                             {u.prenom} {u.nom}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{u.email}</p>
                         </div>
                       </div>
                       <Select
@@ -587,7 +587,7 @@ export function SettingsCollaboratorRoles() {
                     <li key={u.id} className="flex items-center justify-between gap-3">
                       <span className="text-sm text-gray-900 dark:text-gray-100">
                         {u.prenom} {u.nom}{' '}
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           (clé : {u.default_collaborator_role_key})
                         </span>
                       </span>

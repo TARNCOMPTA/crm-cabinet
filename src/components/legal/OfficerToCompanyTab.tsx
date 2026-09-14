@@ -69,12 +69,12 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
         {clientCount === 0 ? (
           <>
             <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">Aucun client dans ce cabinet</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Ajoutez des clients pour voir leurs dirigeants.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Ajoutez des clients pour voir leurs dirigeants.</p>
           </>
         ) : (
           <>
             <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">Aucun dirigeant enregistre</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Synchronisez vos clients avec l'INPI pour importer les dirigeants.
             </p>
           </>
@@ -121,7 +121,7 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
-        <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Trier :</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 mr-1">Trier :</span>
         <SortButton label="Nom" field="nom" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Mandats total" field="mandats_total" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Mandats actifs" field="mandats_actifs" activeField={sortField} direction={sortDir} onSort={onSortChange} />
@@ -169,7 +169,7 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
                   {officer.nationality && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <Globe className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{officer.nationality}</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">{officer.nationality}</span>
                     </div>
                   )}
                 </div>
@@ -193,15 +193,15 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
                             <p className={`text-sm font-medium ${isMandateExcluded ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{mandate.client.nom_entreprise}</p>
                             <div className="flex items-center gap-3 mt-1 flex-wrap">
                               {mandate.client.siren && (
-                                <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{mandate.client.siren}</span>
+                                <span className="text-xs font-mono text-gray-600 dark:text-gray-400">{mandate.client.siren}</span>
                               )}
                               {mandate.client.forme_juridique && (
                                 isEntrepreneurIndividuel(mandate.client.forme_juridique)
                                   ? <Badge variant="violet" className="text-[10px]">{EI_LABEL}</Badge>
-                                  : <span className={`text-xs ${isMandateExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}><LegalFormDisplay value={mandate.client.forme_juridique} /></span>
+                                  : <span className={`text-xs ${isMandateExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}><LegalFormDisplay value={mandate.client.forme_juridique} /></span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {mandate.role} - Du {new Date(mandate.start_date).toLocaleDateString('fr-FR')}
                               {mandate.end_date && ` au ${new Date(mandate.end_date).toLocaleDateString('fr-FR')}`}
@@ -228,7 +228,7 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
         {filtered.length === 0 && search && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-12 text-center">
             <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun resultat pour "{search}"</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucun resultat pour "{search}"</p>
           </div>
         )}
       </div>

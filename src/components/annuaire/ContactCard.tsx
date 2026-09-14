@@ -45,7 +45,7 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
                 {contact.first_name} {contact.last_name}
               </h3>
               {contact.role && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                   {contact.role}
                 </p>
               )}
@@ -100,7 +100,7 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
 
         {companiesCount > 0 && (
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
               <Building2 className="w-3.5 h-3.5" />
               <span className="truncate">
                 {contact.directory_contact_companies

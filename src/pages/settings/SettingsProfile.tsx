@@ -183,7 +183,7 @@ export function SettingsProfile() {
                     <button
                       type="button"
                       onClick={() => setAvatarColor(null)}
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
                       <RotateCcw className="w-3 h-3" />
                       Réinitialiser la couleur automatique
@@ -240,7 +240,7 @@ export function SettingsProfile() {
                   </option>
                 ))}
               </Select>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                 Ce rôle sera proposé automatiquement lors de votre ajout sur une fiche client. Il reste modifiable au cas par cas.
               </p>
             </div>
@@ -267,7 +267,7 @@ export function SettingsProfile() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Rôle</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {getRoleLabel(profile?.role || '')}
                   </p>
                 </div>

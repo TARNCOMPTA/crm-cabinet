@@ -418,7 +418,7 @@ export function RevenueDeclarations() {
           </Button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="ml-auto text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="ml-auto text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             Tout désélectionner
           </button>
@@ -543,7 +543,7 @@ export function RevenueDeclarations() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               {bulkAssignMode === 'add'
                 ? 'Les collaborateurs seront ajoutés aux attributions existantes.'
                 : 'Les attributions actuelles seront remplacées.'}

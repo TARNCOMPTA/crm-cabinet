@@ -79,7 +79,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
             Echeances a venir
           </h3>
           {countNext30 > 0 && (
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
               {countNext30} sous 30j
             </span>
           )}
@@ -95,7 +95,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
         {displayed.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucune echeance prochaine</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucune echeance prochaine</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -123,7 +123,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
                         {typeInfo.text}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                       {item.label}
                     </p>
                   </div>
@@ -131,7 +131,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
                     <span className={`text-xs font-medium ${isPast ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>
                       {formatDateFR(item.date)}
                     </span>
-                    <p className={`text-[10px] ${isPast ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <p className={`text-[10px] ${isPast ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                       {isPast ? `${Math.abs(daysUntil)}j en retard` : daysUntil === 0 ? "Aujourd'hui" : `dans ${daysUntil}j`}
                     </p>
                   </div>

@@ -349,13 +349,13 @@ export function Settings() {
 
             <nav className="space-y-5" aria-label="Navigation des parametres">
               {visibleGroups.length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 px-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 px-2">
                   Aucun parametre ne correspond a votre recherche.
                 </p>
               )}
               {visibleGroups.map((group) => (
                 <div key={group.key}>
-                  <h2 className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <h2 className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                     {group.title}
                   </h2>
                   <ul className="space-y-0.5">
@@ -410,7 +410,7 @@ export function Settings() {
                     {activeItem.label}
                   </h2>
                   {activeItem.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                       {activeItem.description}
                     </p>
                   )}

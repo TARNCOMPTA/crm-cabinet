@@ -145,7 +145,7 @@ export function AnalyseModal({
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                <tr className="text-left text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                   <th className="px-4 py-2">Compte de flux</th>
                   <th className="px-4 py-2 text-right">Trouvés</th>
                   <th className="px-4 py-2 text-right">En cache</th>

@@ -53,13 +53,13 @@ export function DashboardTopCities({ cities, loading }: DashboardTopCitiesProps)
         {cities.length === 0 ? (
           <div className="text-center py-8">
             <MapPin className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucune ville renseignee</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucune ville renseignee</p>
           </div>
         ) : (
           <div className="space-y-2.5">
             {cities.map((item, i) => (
               <div key={item.city} className="flex items-center gap-3">
-                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 w-4 text-right">
+                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 w-4 text-right">
                   {i + 1}.
                 </span>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-28 flex-shrink-0 truncate capitalize">

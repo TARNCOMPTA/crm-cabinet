@@ -89,7 +89,7 @@ function SortableTemplateItem({
           <GripVertical className="w-3 h-3" />
         </button>
       )}
-      <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
+      <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
         {index + 1}
       </span>
       <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{label}</span>
@@ -255,7 +255,7 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Creez des modeles reutilisables pour generer rapidement des checklists pre-remplies.
         </p>
         <button
@@ -273,7 +273,7 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
           <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
             Aucun modele
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Les modeles permettent de creer des checklists avec des elements pre-definis
           </p>
           <button
@@ -330,12 +330,12 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
                             <Users className="w-3 h-3" />
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-gray-600 dark:text-gray-400">
                             <Lock className="w-3 h-3" />
                           </span>
                         )}
                         {!isOwner && template.owner && (
-                          <span className="text-[11px] text-gray-400">
+                          <span className="text-[11px] text-gray-600 dark:text-gray-400">
                             par {template.owner.prenom} {template.owner.nom}
                           </span>
                         )}
@@ -554,7 +554,7 @@ function CreateTemplateModal({
             <div className="space-y-1 mb-3">
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2 py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-400 bg-white dark:bg-gray-700 rounded">
+                  <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 rounded">
                     {idx + 1}
                   </span>
                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{item}</span>
@@ -609,7 +609,7 @@ function CreateTemplateModal({
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Partager avec le cabinet
                 </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   Les autres membres pourront utiliser ce modele
                 </p>
               </div>

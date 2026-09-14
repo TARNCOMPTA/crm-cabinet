@@ -249,7 +249,7 @@ export function SettingsSmtp() {
               </div>
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">SMTP personnalise</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {formData.is_enabled ? 'Actif — les emails partent de votre serveur' : 'Inactif — le systeme par defaut est utilise'}
                 </p>
               </div>
@@ -351,7 +351,7 @@ export function SettingsSmtp() {
                   />
                   <span>
                     <span className="block text-sm text-gray-900 dark:text-gray-100">{o.t}</span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">{o.d}</span>
+                    <span className="block text-xs text-gray-600 dark:text-gray-400">{o.d}</span>
                   </span>
                 </label>
               ))}

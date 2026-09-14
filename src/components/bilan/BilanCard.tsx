@@ -118,13 +118,13 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
         )}
 
         {card.clients?.numero_dossier && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
         )}
 
         {total > 0 && (
           <div className="mb-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">{checked}/{total}</span>
+              <span className="text-[11px] text-gray-600 dark:text-gray-400">{checked}/{total}</span>
               <span className={`text-[11px] font-semibold ${getProgressTextColor(progress)}`}>{progress}%</span>
             </div>
             <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
@@ -157,7 +157,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
               e.stopPropagation();
               setExpanded((prev) => !prev);
             }}
-            className="w-full flex items-center justify-between px-3.5 py-2 text-[11px] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-b-xl"
+            className="w-full flex items-center justify-between px-3.5 py-2 text-[11px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-b-xl"
           >
             <span className="font-medium">Checklist {checked}/{total}</span>
             {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -187,7 +187,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
                     </button>
                     <span
                       className={`text-xs leading-tight truncate ${
-                        item.is_checked ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'
+                        item.is_checked ? 'text-gray-600 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {item.template?.name || 'Element'}
@@ -204,7 +204,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center gap-1 mb-1 text-[11px] text-gray-400 dark:text-gray-500">
+                <div className="flex items-center gap-1 mb-1 text-[11px] text-gray-600 dark:text-gray-400">
                   <MessageSquare className="w-3 h-3" />
                   <span>Commentaire</span>
                 </div>
@@ -235,7 +235,7 @@ export function BilanCardOverlay({ card }: { card: BilanCardWithDetails }) {
         {card.clients?.nom_entreprise}
       </h4>
       {card.clients?.numero_dossier && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{card.clients.numero_dossier}</p>
       )}
       {total > 0 && (
         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">

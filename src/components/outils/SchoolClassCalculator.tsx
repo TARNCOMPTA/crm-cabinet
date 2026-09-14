@@ -171,7 +171,7 @@ export function SchoolClassCalculator() {
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                 Classe scolaire
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Saisissez une date de naissance
               </p>
             </div>
@@ -217,7 +217,7 @@ export function SchoolClassCalculator() {
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Aucune date saisie
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 max-w-xs">
                 Entrez une date de naissance pour decouvrir la classe correspondante
                 selon le calendrier scolaire francais.
               </p>
@@ -244,7 +244,7 @@ export function SchoolClassCalculator() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">
                     <Baby className="w-3.5 h-3.5" />
                     Age au 31/12
                   </div>
@@ -253,7 +253,7 @@ export function SchoolClassCalculator() {
                   </p>
                 </div>
                 <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">
                     <BookOpen className="w-3.5 h-3.5" />
                     Cycle
                   </div>
@@ -264,7 +264,7 @@ export function SchoolClassCalculator() {
               </div>
 
               {result.refDate && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
                   Reference : age atteint au {result.refDate}
                 </div>
               )}

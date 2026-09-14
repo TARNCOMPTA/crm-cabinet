@@ -300,7 +300,7 @@ export function AssignmentsManagementModal({
             <span className="text-xs text-teal-600 font-medium">Ordre personnalise actif</span>
             <button
               onClick={resetOrder}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               Reinitialiser

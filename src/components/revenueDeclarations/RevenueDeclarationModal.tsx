@@ -453,7 +453,7 @@ export function RevenueDeclarationModal({
             <span className="text-sm text-gray-700 dark:text-gray-300">
               Derniere annee
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               (ne pas creer la declaration pour l'annee suivante)
             </span>
           </label>
@@ -529,7 +529,7 @@ export function RevenueDeclarationModal({
                       </button>
                     ))}
                   {cabinetUsers.filter((u) => !selectedCollabIds.includes(u.id)).length === 0 && (
-                    <p className="px-3 py-2 text-sm text-gray-500 italic">Tous les collaborateurs sont deja assignes</p>
+                    <p className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 italic">Tous les collaborateurs sont deja assignes</p>
                   )}
                 </div>
               )}
@@ -550,7 +550,7 @@ export function RevenueDeclarationModal({
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
                   PDF uniquement - max 10 Mo
                 </span>
               </div>
@@ -601,7 +601,7 @@ export function RevenueDeclarationModal({
               </div>
 
               {attachmentsLoading ? (
-                <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Chargement...
                 </div>
@@ -619,7 +619,7 @@ export function RevenueDeclarationModal({
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {att.file_name}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
                           {formatFileSize(att.file_size)} -{' '}
                           {new Date(att.created_at).toLocaleDateString('fr-FR')}
                         </div>
@@ -644,7 +644,7 @@ export function RevenueDeclarationModal({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400 italic">
+                <p className="mt-3 text-xs text-gray-600 dark:text-gray-400 italic">
                   Aucune piece jointe pour cette annee.
                 </p>
               )}
@@ -653,7 +653,7 @@ export function RevenueDeclarationModal({
 
           {!isEdit && (
             <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                 <Paperclip className="w-3.5 h-3.5" />
                 <span>
                   Enregistrez d'abord la declaration pour pouvoir ajouter des pieces

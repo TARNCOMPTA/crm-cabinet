@@ -6,6 +6,7 @@ import {
   nettoyerSujet,
   normaliserAdresse,
   normaliserCodeNaf,
+  validerPieces,
   prefixesNaf,
   resoudreDestinataires,
   signerDesinscription,
@@ -506,5 +507,142 @@ describe('code NAF', () => {
   it('garde des codes qui ne se recouvrent pas, tries', () => {
     expect(prefixesNaf(['43', '41', '4120A'])).toEqual(['41', '43']);
     expect(prefixesNaf(['6201Z', '6820A'])).toEqual(['6201Z', '6820A']);
+  });
+});
+
+/**
+ * Le contrôle des pièces jointes avant mise en file.
+ *
+ * Ce que ces cas protègent : une campagne part à trois cents clients, au nom du
+ * cabinet, et ne se reprend pas. Une pièce acceptée ici est recopiée sur trois
+ * cents lignes de file avant que qui que ce soit puisse la relire.
+ */
+describe('validerPieces', () => {
+  const LIMITES = { nombreMax: 3, octetsMax: 1000 };
+  const piece = (o: Record<string, unknown> = {}) => ({
+    nom: 'lettre.pdf',
+    bucket: 'campagne-attachments',
+    chemin: '2026/09/a.pdf',
+    type: 'application/pdf',
+    taille: 100,
+    ...o,
+  });
+
+  it('accepte l absence de pieces — le cas normal', () => {
+    expect(validerPieces(undefined, LIMITES)).toEqual({ ok: true, pieces: [] });
+    expect(validerPieces(null, LIMITES)).toEqual({ ok: true, pieces: [] });
+    expect(validerPieces([], LIMITES)).toEqual({ ok: true, pieces: [] });
+  });
+
+  it('accepte une piece bien formee et la normalise', () => {
+    const r = validerPieces([piece()], LIMITES);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.pieces[0]).toEqual({
+      nom: 'lettre.pdf',
+      bucket: 'campagne-attachments',
+      chemin: '2026/09/a.pdf',
+      type: 'application/pdf',
+      taille: 100,
+    });
+  });
+
+  /*
+    ⚠️ LE BUCKET EST IMPOSÉ, JAMAIS REPRIS DE LA REQUÊTE. L'accepter laisserait
+    l'appelant désigner « tax-exemption-docs » et joindre à une campagne le
+    justificatif d'exonération déposé pour un autre client.
+  */
+  it('REFUSE un bucket autre que celui des campagnes', () => {
+    const r = validerPieces([piece({ bucket: 'tax-exemption-docs' })], LIMITES);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toContain('stockage des campagnes');
+  });
+
+  it('impose le bon bucket meme quand la requete n en donne aucun', () => {
+    const sansBucket = { nom: 'a.pdf', chemin: 'x.pdf', taille: 10 };
+    const r = validerPieces([sansBucket], LIMITES);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.pieces[0].bucket).toBe('campagne-attachments');
+  });
+
+  it('REFUSE au-dela du nombre maximal', () => {
+    const r = validerPieces([piece(), piece(), piece(), piece()], LIMITES);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toContain('3 pieces');
+  });
+
+  /*
+    Le piège que ferme ce cas : un contrôle par pièce laisserait passer quatre
+    fichiers de 400 octets sous un plafond de 500, pour un message de 1600.
+  */
+  it('REFUSE sur le TOTAL, et non piece par piece', () => {
+    const trois = [piece({ taille: 400 }), piece({ taille: 400 }), piece({ taille: 400 })];
+    // Chacune passe largement le plafond de 1000 prise isolement.
+    const r = validerPieces(trois, LIMITES);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toContain('au total');
+  });
+
+  it('REFUSE une piece sans nom ou sans chemin', () => {
+    expect(validerPieces([piece({ nom: '  ' })], LIMITES).ok).toBe(false);
+    expect(validerPieces([piece({ chemin: '' })], LIMITES).ok).toBe(false);
+  });
+
+  it('REFUSE ce qui n est pas une liste', () => {
+    expect(validerPieces('lettre.pdf', LIMITES).ok).toBe(false);
+    expect(validerPieces({ nom: 'x' }, LIMITES).ok).toBe(false);
+  });
+
+  it('REFUSE une taille negative', () => {
+    expect(validerPieces([piece({ taille: -1 })], LIMITES).ok).toBe(false);
+  });
+
+  it('annonce le poids en megaoctets, a la francaise', () => {
+    const r = validerPieces([piece({ taille: 3 * 1024 * 1024 })], {
+      nombreMax: 3,
+      octetsMax: 1024 * 1024,
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.message).toContain('3,0 Mo');
+    expect(r.message).toContain('1,0 Mo');
+  });
+});
+
+/**
+ * Le contrôle de forme du chemin, à la porte.
+ *
+ * Il ne remplace pas la résolution faite à l'envoi — elle seule résiste aux
+ * encodages. Il évite qu'un chemin aberrant traverse la validation, soit recopié
+ * sur trois cents lignes de file, et fasse trois cents échecs au lieu d'une
+ * erreur immédiate.
+ */
+describe('validerPieces — la forme du chemin', () => {
+  const L = { nombreMax: 5, octetsMax: 10_000 };
+  const avec = (chemin: string) =>
+    validerPieces([{ nom: 'a.pdf', bucket: 'campagne-attachments', chemin, taille: 10 }], L);
+
+  it('REFUSE un chemin absolu', () => {
+    expect(avec('/etc/passwd').ok).toBe(false);
+  });
+
+  it('REFUSE un segment de remontee', () => {
+    expect(avec('../secret.pdf').ok).toBe(false);
+    expect(avec('2026/../../secret.pdf').ok).toBe(false);
+  });
+
+  it('accepte un nom de fichier qui CONTIENT deux points sans etre une remontee', () => {
+    // « rapport..final.pdf » n'est pas une remontee : le segment entier doit
+    // valoir « .. ». Une garde ecrite en `includes('..')` refuserait ce fichier
+    // parfaitement legitime.
+    expect(avec('2026/rapport..final.pdf').ok).toBe(true);
+  });
+
+  it('accepte un chemin ordinaire', () => {
+    expect(avec('2026/09/lettre.pdf').ok).toBe(true);
   });
 });

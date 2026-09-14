@@ -418,10 +418,10 @@ export function ClientPartsTab({
               <p className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                 La répartition n&apos;a pas pu être lue
               </p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                 Ce client a peut-être des associés enregistrés : cet écran ne peut pas le dire.
               </p>
-              <p className="mt-2 text-xs text-gray-400">{erreurChargement}</p>
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">{erreurChargement}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={charger}>
                 Réessayer
               </Button>
@@ -464,7 +464,7 @@ export function ClientPartsTab({
           <CardContent className="py-12">
             <div className="text-center">
               <PieChart className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-3 text-sm text-gray-500">
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
                 Aucune répartition saisie pour ce client
               </p>
               <Button variant="outline" size="sm" className="mt-4" onClick={ouvrirAjout}>
@@ -480,7 +480,7 @@ export function ClientPartsTab({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-xs uppercase text-gray-600 dark:text-gray-400">
                     <th className="px-4 py-2 font-medium">Associé</th>
                     <th className="px-4 py-2 font-medium text-right">
                       {mots.pluriel.charAt(0).toUpperCase() + mots.pluriel.slice(1)}
@@ -576,7 +576,7 @@ export function ClientPartsTab({
             {/* Sans cette note, la somme du bandeau ne correspondrait pas a ce
                 qu'on lit dans la colonne, et l'ecran aurait l'air de se tromper. */}
             {lignes.some((x) => x.demembrement === 'usufruit') && (
-              <p className="px-4 py-3 text-xs text-gray-500 border-t border-gray-100 dark:border-gray-800">
+              <p className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 L&apos;usufruit n&apos;entre pas dans le total : il porte sur des {mots.pluriel} dont
                 une autre personne est nu-propriétaire, et les compter deux fois ferait dépasser le
                 capital.

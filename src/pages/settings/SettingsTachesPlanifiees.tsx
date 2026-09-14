@@ -88,7 +88,7 @@ export function SettingsTachesPlanifiees() {
 
   if (chargement) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <Loader2 className="w-4 h-4 animate-spin" />
         Lecture de l'etat des taches…
       </div>
@@ -139,7 +139,7 @@ export function SettingsTachesPlanifiees() {
                     )}
                   </div>
 
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
                     {t.quand}
                   </p>
@@ -175,7 +175,7 @@ export function SettingsTachesPlanifiees() {
                       className={`mt-1.5 text-xs break-words ${
                         t.statut === 'echec'
                           ? 'text-red-700 dark:text-red-300'
-                          : 'text-gray-500 dark:text-gray-400'
+                          : 'text-gray-600 dark:text-gray-400'
                       }`}
                     >
                       {t.detail}
@@ -201,7 +201,7 @@ export function SettingsTachesPlanifiees() {
         ))}
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-gray-600 dark:text-gray-400">
         Le bouton lance la tache immediatement. La reponse n'arrive qu'a la fin : une
         synchronisation INPI peut tenir plusieurs minutes.
       </p>

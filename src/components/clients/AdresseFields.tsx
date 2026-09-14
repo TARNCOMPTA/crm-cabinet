@@ -229,7 +229,7 @@ export function AdresseEdition({ composants, adresseHeritee, onChange }: PropsEd
         </div>
       )}
 
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-gray-600 dark:text-gray-400">
         L&apos;adresse en une ligne est recomposee automatiquement :{' '}
         <span className="font-mono">
           {composerAdresse({

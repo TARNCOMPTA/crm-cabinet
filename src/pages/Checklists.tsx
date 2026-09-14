@@ -403,7 +403,7 @@ export function Checklists() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Checklists</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Gerez vos listes de controle personnelles ou partagees avec le cabinet
           </p>
         </div>
@@ -425,7 +425,7 @@ export function Checklists() {
           className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
             mainTab === 'checklists'
               ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
           <span className="inline-flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export function Checklists() {
           className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
             mainTab === 'templates'
               ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
           <span className="inline-flex items-center gap-1.5">
@@ -483,7 +483,7 @@ export function Checklists() {
                   ? 'Aucune checklist partagee'
                   : 'Aucune checklist'}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 {searchQuery
                   ? 'Essayez avec un autre terme de recherche'
                   : viewMode === 'shared'

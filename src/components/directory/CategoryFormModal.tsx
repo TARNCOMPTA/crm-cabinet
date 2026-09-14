@@ -91,7 +91,7 @@ export function CategoryFormModal({ isOpen, onClose, onSubmit, category }: Categ
                   title={opt.label}
                 >
                   <IconComp className={`w-5 h-5 ${isSelected ? selectedColor.text : 'text-gray-500'}`} />
-                  <span className={`text-[10px] leading-tight ${isSelected ? selectedColor.text : 'text-gray-400'}`}>
+                  <span className={`text-[10px] leading-tight ${isSelected ? selectedColor.text : 'text-gray-600 dark:text-gray-400'}`}>
                     {opt.label}
                   </span>
                 </button>

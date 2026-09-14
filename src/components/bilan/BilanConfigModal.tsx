@@ -281,7 +281,7 @@ export function BilanConfigModal({
                       />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
                     Permet de rechercher une entreprise tierce par SIRET et de telecharger sa fiche INPI en PDF directement depuis chaque fiche bilan. Utile pour la preparation de la DAS2.
                   </p>
                 </div>

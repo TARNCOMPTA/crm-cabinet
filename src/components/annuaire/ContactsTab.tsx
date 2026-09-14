@@ -180,7 +180,7 @@ export function ContactsTab({ contacts, companies, loading, onRefresh, highlight
             {searchTerm ? 'Aucun contact trouve' : 'Aucun contact dans l\'annuaire'}
           </p>
           {!searchTerm && (
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Ajoutez votre premier contact pour commencer
             </p>
           )}

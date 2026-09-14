@@ -96,7 +96,7 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
         {activities.length === 0 ? (
           <div className="text-center py-8">
             <Activity className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucune activite recente</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucune activite recente</p>
           </div>
         ) : (
           <div className="max-h-[350px] overflow-y-auto space-y-1 -mx-1 px-1 scrollbar-thin">
@@ -125,13 +125,13 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
                         )
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                       <span className="font-medium text-gray-700 dark:text-gray-300">
                         {item.clientName}
                       </span>
                     </p>
                   </div>
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5 whitespace-nowrap">
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5 whitespace-nowrap">
                     {relativeTime(item.date)}
                   </span>
                 </button>

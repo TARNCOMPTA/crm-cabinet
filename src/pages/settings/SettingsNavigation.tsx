@@ -67,7 +67,7 @@ export function SettingsNavigation() {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           Menu de navigation
         </h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
           Choisissez les éléments à afficher dans la barre latérale.
           Les éléments masqués restent accessibles via la recherche.
         </p>
@@ -121,14 +121,14 @@ export function SettingsNavigation() {
                 <span
                   className={`text-sm font-medium ${
                     isHidden
-                      ? 'text-gray-400 dark:text-slate-500'
+                      ? 'text-gray-600 dark:text-slate-500'
                       : 'text-gray-900 dark:text-white'
                   }`}
                 >
                   {item.label}
                 </span>
                 {isLocked && (
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-600 dark:text-slate-500 bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded">
                     requis
                   </span>
                 )}

@@ -496,7 +496,7 @@ function getPriorityVariant(priorite: string | null) {
                       </span>
                     </div>
                   ) : (
-                    <span className="text-gray-500 text-sm">Non assigné</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Non assigné</span>
                   )}
                 </div>
 
@@ -508,7 +508,7 @@ function getPriorityVariant(priorite: string | null) {
                   {task.clients ? (
                     <span className="text-gray-900">{task.clients.nom_entreprise}</span>
                   ) : (
-                    <span className="text-gray-500 text-sm">Aucun client</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Aucun client</span>
                   )}
                 </div>
               </div>
@@ -524,7 +524,7 @@ function getPriorityVariant(priorite: string | null) {
                       {new Date(task.date_echeance).toLocaleDateString('fr-FR')}
                     </span>
                   ) : (
-                    <span className="text-gray-500 text-sm">Aucune échéance</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Aucune échéance</span>
                   )}
                 </div>
 
@@ -536,7 +536,7 @@ function getPriorityVariant(priorite: string | null) {
                   {task.estimated_hours ? (
                     <span className="text-gray-900">{task.estimated_hours}h</span>
                   ) : (
-                    <span className="text-gray-500 text-sm">Non défini</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Non défini</span>
                   )}
                 </div>
               </div>
@@ -552,7 +552,7 @@ function getPriorityVariant(priorite: string | null) {
               </div>
 
               {task.creator && (
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   Créée par {task.creator.prenom} {task.creator.nom} le{' '}
                   {task.created_at && new Date(task.created_at).toLocaleDateString('fr-FR')}
                 </div>
@@ -611,7 +611,7 @@ function getPriorityVariant(priorite: string | null) {
                         <div className="text-sm font-medium text-gray-900">
                           {comment.profiles.display_name || `${comment.profiles.prenom} ${comment.profiles.nom}`}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
                           {comment.created_at && new Date(comment.created_at).toLocaleString('fr-FR')}
                         </div>
                       </div>
@@ -670,7 +670,7 @@ function getPriorityVariant(priorite: string | null) {
                         >
                           {att.file_name}
                         </button>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {formatFileSize(att.file_size)} - {new Date(att.created_at).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
@@ -724,7 +724,7 @@ function getPriorityVariant(priorite: string | null) {
                   }}
                 />
                 <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1" />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   {isUploading ? (
                     <span className="text-teal-600">Upload en cours...</span>
                   ) : (
@@ -740,7 +740,7 @@ function getPriorityVariant(priorite: string | null) {
                     </>
                   )}
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">PDF, images, Word, Excel - 10 Mo max</p>
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">PDF, images, Word, Excel - 10 Mo max</p>
               </div>
             )}
           </div>

@@ -182,7 +182,7 @@ export function CompanyToOfficerTab({
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-16 text-center">
         <Building2 className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">Aucun client dans ce cabinet</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Ajoutez des clients pour voir leurs dirigeants.</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Ajoutez des clients pour voir leurs dirigeants.</p>
       </div>
     );
   }
@@ -236,7 +236,7 @@ export function CompanyToOfficerTab({
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
-        <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Trier :</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 mr-1">Trier :</span>
         <SortButton label="Nom" field="nom_entreprise" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="SIREN" field="siren" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Nb dirigeants" field="nombre_dirigeants" activeField={sortField} direction={sortDir} onSort={onSortChange} />
@@ -274,7 +274,7 @@ export function CompanyToOfficerTab({
                     <span className={`text-sm font-semibold truncate ${isExcluded ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
                       {client.nom_entreprise}
                     </span>
-                    {siren && <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{siren}</span>}
+                    {siren && <span className="text-xs font-mono text-gray-600 dark:text-gray-400">{siren}</span>}
                     {client.forme_juridique && (
                       isEntrepreneurIndividuel(client.forme_juridique)
                         ? <Badge variant="violet" className="text-[10px]">{EI_LABEL}</Badge>
@@ -282,7 +282,7 @@ export function CompanyToOfficerTab({
                     )}
                   </div>
                   {Number(client.capital_social) > 0 ? (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 block">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 block">
                       Capital: {Number(client.capital_social).toLocaleString('fr-FR')} EUR
                     </span>
                   ) : isEntrepreneurIndividuel(client.forme_juridique) ? (
@@ -340,13 +340,13 @@ export function CompanyToOfficerTab({
                                   {isMorale ? 'Personne morale' : 'Personne physique'}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
                                 {rel.role} - Du {new Date(rel.start_date).toLocaleDateString('fr-FR')}
                                 {rel.end_date && ` au ${new Date(rel.end_date).toLocaleDateString('fr-FR')}`}
                               </p>
                               {rel.officer.birth_date && (
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                   Ne(e) le {new Date(rel.officer.birth_date).toLocaleDateString('fr-FR')}
                                   {rel.officer.nationality && ` - ${rel.officer.nationality}`}
                                 </p>
@@ -425,7 +425,7 @@ export function CompanyToOfficerTab({
         {filtered.length === 0 && search && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-12 text-center">
             <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun resultat pour "{search}"</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucun resultat pour "{search}"</p>
           </div>
         )}
       </div>

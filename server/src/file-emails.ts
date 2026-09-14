@@ -16,7 +16,7 @@
  */
 
 import { transaction } from './db.js';
-import { envoyer } from './mail.js';
+import { envoyer, type PieceJointe } from './mail.js';
 
 const TAILLE_LOT = 50;
 const TENTATIVES_MAX = 3;
@@ -39,6 +39,15 @@ interface LigneFile {
   subject: string;
   html_body: string;
   retry_count: number;
+  /**
+   * Les pieces a joindre, references vers le stockage.
+   *
+   * ⚠️ `pg` REND DEJA DU `jsonb` DECODE : c'est un tableau, pas une chaine a
+   * analyser. Y appliquer `JSON.parse` planterait sur « [object Object] ».
+   * Le defaut `'[]'` de la colonne garantit qu'il n'est jamais nul, y compris
+   * pour les lignes inserees par le reste du produit, qui ignorent ce champ.
+   */
+  pieces_jointes: PieceJointe[];
 }
 
 export async function viderFile(): Promise<BilanEnvoi> {
@@ -47,7 +56,7 @@ export async function viderFile(): Promise<BilanEnvoi> {
   // n'est lue que par ce processus.
   return transaction(async (client) => {
     const { rows } = await client.query<LigneFile>(
-      `SELECT id, to_email, subject, html_body, retry_count
+      `SELECT id, to_email, subject, html_body, retry_count, pieces_jointes
          FROM email_queue
         WHERE status = 'pending' AND retry_count < $1
         ORDER BY created_at
@@ -64,6 +73,7 @@ export async function viderFile(): Promise<BilanEnvoi> {
         destinataire: ligne.to_email,
         sujet: ligne.subject,
         html: ligne.html_body,
+        pieces: ligne.pieces_jointes ?? [],
       });
 
       if (r.ok) {

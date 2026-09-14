@@ -28,6 +28,8 @@ import { synchroniserTous as synchroniserBodacc } from './bodacc.js';
 import { analyserPeriode } from './jedeclare/suivi.js';
 import { verifierLot } from './tva-verification.js';
 import { config } from './config.js';
+import { readdir, rm, stat } from 'node:fs/promises';
+import { join, relative, sep } from 'node:path';
 
 /** Une ligne de `taches_planifiees`, telle que la requête la demande. */
 interface LigneSuivi {
@@ -74,6 +76,61 @@ const chaqueDimancheA = (heure: number): EstDue => (d) =>
  * La purge de `chat_rate_limits` est partie avec la table, supprimée en même
  * temps que l'assistant IA.
  */
+/**
+ * Sept jours avant qu'une piece non referencee soit consideree abandonnee.
+ *
+ * ⚠️ PAS ZERO. Un fichier tout juste depose n'est reference par AUCUNE campagne :
+ * elle n'est pas encore partie. Purger sans delai effacerait la piece sous les
+ * doigts de qui est en train d'ecrire son message.
+ */
+export const AGE_ORPHELINE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Supprime les fichiers du bucket qu'aucune campagne ne cite et qui sont plus
+ * vieux que `limiteMs`. Rend le nombre de suppressions.
+ *
+ * ⚠️ EXPORTEE POUR ETRE EPROUVABLE. Cette fonction EFFACE DES FICHIERS : la
+ * confier a une fermeture au fond d'une tache planifiee la rendrait impossible a
+ * tester autrement qu'en attendant un dimanche.
+ *
+ * ⚠️ LES CHEMINS SONT COMPARES EN « / », comme ils sont ecrits en base. Sur un
+ * systeme ou le separateur differe, comparer la forme native ne reconnaitrait
+ * aucune reference et supprimerait TOUT.
+ */
+export async function purgerPiecesOrphelines(
+  racine: string,
+  references: Set<string>,
+  limiteMs: number
+): Promise<number> {
+  let supprimes = 0;
+
+  async function parcourir(repertoire: string): Promise<void> {
+    let entrees;
+    try {
+      entrees = await readdir(repertoire, { withFileTypes: true });
+    } catch {
+      // Le bucket n'existe pas encore : aucune piece n'a jamais ete deposee.
+      return;
+    }
+    for (const entree of entrees) {
+      const absolu = join(repertoire, entree.name);
+      if (entree.isDirectory()) {
+        await parcourir(absolu);
+        continue;
+      }
+      const relatif = relative(racine, absolu).split(sep).join('/');
+      if (references.has(relatif)) continue;
+      const info = await stat(absolu).catch(() => null);
+      if (!info || info.mtimeMs > limiteMs) continue;
+      await rm(absolu, { force: true });
+      supprimes++;
+    }
+  }
+
+  await parcourir(racine);
+  return supprimes;
+}
+
 const TACHES: Tache[] = [
   {
     nom: 'emails-en-attente',
@@ -286,6 +343,44 @@ const TACHES: Tache[] = [
       const b = await synchroniserBodacc(journal);
       return `${b.traites}/${b.total} client(s), ${b.nouveaux} nouveau(x) depot(s)` +
         (b.erreurs > 0 ? `, ${b.erreurs} erreur(s)` : '');
+    },
+  },
+  {
+    /**
+     * Les pièces de campagne déposées mais jamais envoyées.
+     *
+     * ⚠️ CETTE TÂCHE EXISTE À CAUSE D'UN CHOIX DE L'ÉCRAN, ET IL FAUT LE SAVOIR :
+     * le fichier est monté dans le stockage AVANT que la campagne parte, pour que
+     * cinq mégaoctets et l'envoi n'échouent pas ensemble sur une coupure réseau.
+     * Conséquence : déposer une pièce puis quitter la page sans envoyer laisse un
+     * fichier que plus rien ne référence, et que rien ne ramasserait.
+     *
+     * ⚠️ ON NE SUPPRIME QUE CE QU'AUCUNE CAMPAGNE NE CITE. Une pièce référencée
+     * reste, quel que soit son âge : `mailing_campagnes.pieces_jointes` est la
+     * trace de ce qui est parti, et un fichier effacé la rendrait mensongère.
+     *
+     * ⚠️ ET SEULEMENT AU-DELÀ DE SEPT JOURS. Un fichier tout juste déposé n'est
+     * pas encore référencé — la campagne n'est pas partie. Purger sans délai
+     * effacerait la pièce sous les doigts de qui est en train d'écrire son
+     * message.
+     */
+    nom: 'purge-pieces-campagnes',
+    quand: 'le dimanche a 3h',
+    estDue: chaqueDimancheA(3),
+    executer: async () => {
+      const lignes = await requete<{ chemin: string }>(
+        `SELECT DISTINCT p ->> 'chemin' AS chemin
+           FROM mailing_campagnes c,
+                LATERAL jsonb_array_elements(c.pieces_jointes) AS p
+          WHERE p ->> 'chemin' IS NOT NULL`
+      );
+      const supprimes = await purgerPiecesOrphelines(
+        join(config.storage.racine, 'campagne-attachments'),
+        new Set(lignes.map((l) => l.chemin)),
+        Date.now() - AGE_ORPHELINE_MS
+      );
+      if (supprimes === 0) return;
+      return `${supprimes} piece(s) orpheline(s) supprimee(s)`;
     },
   },
   {

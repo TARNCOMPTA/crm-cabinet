@@ -264,7 +264,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-400 text-[15px]"
             aria-label="Commande"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
             ESC
           </kbd>
         </div>
@@ -273,13 +273,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           {items.length === 0 && !searching && (
             <div className="px-6 py-10 text-center">
               <Search className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Aucun resultat pour "{query}"
               </p>
             </div>
           )}
           {searching && items.length === 0 && (
-            <div className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="px-6 py-10 text-center text-sm text-gray-600 dark:text-gray-400">
               Recherche en cours...
             </div>
           )}
@@ -289,7 +289,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             if (!groupItems || groupItems.length === 0) return null;
             return (
               <div key={group} className="mb-1">
-                <div className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500">
+                <div className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider font-semibold text-gray-600 dark:text-gray-400">
                   {group}
                 </div>
                 {groupItems.map((it) => {
@@ -317,7 +317,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       />
                       <span className="flex-1 text-sm font-medium truncate">{it.label}</span>
                       {it.hint && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[40%]">
+                        <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[40%]">
                           {it.hint}
                         </span>
                       )}
@@ -332,7 +332,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           })}
         </div>
 
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-950/40 text-[11px] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-950/40 text-[11px] text-gray-600 dark:text-gray-400">
           <span className="inline-flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <CornerDownLeft className="w-3 h-3" />

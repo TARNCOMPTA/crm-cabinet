@@ -66,11 +66,11 @@ function JobRow({ job, onDismiss }: { job: SyncJob; onDismiss: (id: string) => v
             </button>
           </div>
           {job.message && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{job.message}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">{job.message}</p>
           )}
           {job.total > 0 && (
             <div className="mt-2 space-y-1">
-              <div className="flex items-center justify-between text-[11px] text-gray-500">
+              <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
                 <span>
                   {job.processed}/{job.total}
                   {job.error_count > 0 && (
@@ -152,7 +152,7 @@ export function SyncJobsIndicator() {
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-900">Synchronisations</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 {hasActive
                   ? `${activeJobs.length} en cours en arrière-plan`
                   : 'Aucune synchronisation en cours'}

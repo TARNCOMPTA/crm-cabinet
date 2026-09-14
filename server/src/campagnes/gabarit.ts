@@ -427,3 +427,124 @@ export function construireCourriel(o: OptionsCourriel): string {
 </table>
 </body></html>`;
 }
+
+// ---------------------------------------------------------------------------
+// Les pièces jointes
+// ---------------------------------------------------------------------------
+
+/** Le seul bucket où une pièce de campagne a le droit d'être. */
+export const BUCKET_PIECES = 'campagne-attachments';
+
+/**
+ * Ce que l'écran envoie pour chaque pièce déjà déposée dans le stockage.
+ * Le contenu n'est jamais transmis ici : il est monté séparément par la route
+ * de stockage, et seule sa référence remonte.
+ */
+export interface PieceCampagne {
+  nom: string;
+  bucket: string;
+  chemin: string;
+  type?: string | null;
+  taille?: number | null;
+}
+
+export type ValidationPieces =
+  | { ok: true; pieces: PieceCampagne[] }
+  | { ok: false; message: string };
+
+/**
+ * Contrôle des pièces avant la mise en file.
+ *
+ * ⚠️ CE CONTRÔLE NE REMPLACE PAS CELUI DE `resoudrePieces` (mail.ts), IL LE
+ * DOUBLE À UN AUTRE MOMENT. Celui-ci refuse une saisie ; l'autre refuse une
+ * LECTURE, des jours plus tard, sur une valeur qui a pu changer entre-temps.
+ * Supprimer l'un des deux en croyant l'autre suffisant laisserait un trou : le
+ * premier ne protège pas la base, le second ne protège pas l'utilisateur.
+ *
+ * ⚠️ LE PLAFOND PORTE SUR LE TOTAL, PAS SUR CHAQUE PIÈCE. Cinq fichiers de
+ * quatre mégaoctets passeraient un contrôle par pièce et feraient un message de
+ * vingt — refusé par Microsoft 365, après avoir occupé la file.
+ *
+ * Fonction pure : ni disque, ni base, ni réseau.
+ */
+export function validerPieces(
+  brutes: unknown,
+  limites: { nombreMax: number; octetsMax: number }
+): ValidationPieces {
+  // Absent et vide sont ici la même chose — une campagne sans pièce jointe est
+  // le cas normal, pas une anomalie à signaler.
+  if (brutes === undefined || brutes === null) return { ok: true, pieces: [] };
+  if (!Array.isArray(brutes)) {
+    return { ok: false, message: 'Les pieces jointes doivent etre une liste.' };
+  }
+  if (brutes.length === 0) return { ok: true, pieces: [] };
+
+  if (brutes.length > limites.nombreMax) {
+    return {
+      ok: false,
+      message: `Pas plus de ${limites.nombreMax} pieces jointes par campagne (${brutes.length} fournies).`,
+    };
+  }
+
+  const pieces: PieceCampagne[] = [];
+  let total = 0;
+
+  for (const brute of brutes) {
+    if (typeof brute !== 'object' || brute === null) {
+      return { ok: false, message: 'Piece jointe mal formee.' };
+    }
+    const p = brute as Record<string, unknown>;
+
+    const nom = typeof p.nom === 'string' ? p.nom.trim() : '';
+    const chemin = typeof p.chemin === 'string' ? p.chemin.trim() : '';
+    if (!nom || !chemin) {
+      return { ok: false, message: 'Chaque piece jointe doit porter un nom et un chemin.' };
+    }
+
+    /*
+     * ⚠️ CE CONTROLE DE FORME N'EST PAS LA VRAIE GARDE, ET IL NE DOIT PAS EN
+     * TENIR LIEU. Filtrer « .. » se contourne par les encodages ; la seule
+     * verification qui resiste est la resolution du chemin absolu, faite par
+     * `stockage-chemin.ts` au moment d'ouvrir le fichier.
+     *
+     * Il sert a REFUSER TOT. Sans lui, un chemin aberrant serait accepte ici,
+     * recopie sur trois cents lignes de file, et chacune echouerait a l'envoi :
+     * trois cents echecs pour une faute que le serveur pouvait voir a la
+     * premiere requete. Une erreur immediate vaut mieux qu'une campagne morte.
+     */
+    if (chemin.startsWith('/') || chemin.split('/').includes('..') || chemin.includes('\0')) {
+      return { ok: false, message: 'Chemin de piece jointe invalide.' };
+    }
+
+    // Le bucket est IMPOSÉ, jamais repris de la requête. L'accepter laisserait
+    // l'appelant désigner « tax-exemption-docs » et joindre à une campagne un
+    // justificatif d'exonération déposé pour un autre client.
+    if (typeof p.bucket === 'string' && p.bucket !== BUCKET_PIECES) {
+      return { ok: false, message: 'Une piece de campagne ne peut venir que du stockage des campagnes.' };
+    }
+
+    const taille = typeof p.taille === 'number' && Number.isFinite(p.taille) ? p.taille : 0;
+    if (taille < 0) {
+      return { ok: false, message: 'Taille de piece jointe invalide.' };
+    }
+    total += taille;
+
+    pieces.push({
+      nom,
+      bucket: BUCKET_PIECES,
+      chemin,
+      type: typeof p.type === 'string' && p.type ? p.type : null,
+      taille: taille || null,
+    });
+  }
+
+  if (total > limites.octetsMax) {
+    const mo = (n: number) => (n / (1024 * 1024)).toFixed(1).replace('.', ',');
+    return {
+      ok: false,
+      message: `Les pieces jointes pesent ${mo(total)} Mo au total, le maximum est ${mo(limites.octetsMax)} Mo.`,
+    };
+  }
+
+  return { ok: true, pieces };
+}

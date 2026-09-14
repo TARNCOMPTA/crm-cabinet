@@ -132,7 +132,7 @@ export function IncompleteBulkActionsBar({
 
         {activeDateField === 'date_cloture' ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium">Cloture :</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Cloture :</span>
             <input
               type="date"
               value={dateValue}
@@ -161,7 +161,7 @@ export function IncompleteBulkActionsBar({
 
         {activeDateField === 'date_creation_entreprise' ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium">Creation :</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Creation :</span>
             <input
               type="date"
               value={dateValue}
@@ -190,7 +190,7 @@ export function IncompleteBulkActionsBar({
 
         {activeTextField ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium">
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
               {TEXT_FIELDS.find(f => f.key === activeTextField)?.shortLabel} :
             </span>
             <input

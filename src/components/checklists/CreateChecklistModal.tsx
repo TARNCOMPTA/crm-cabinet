@@ -111,7 +111,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
               autoFocus
             />
             {selectedTemplate && !title.trim() && (
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                 Le titre du modele sera utilise par defaut
               </p>
             )}
@@ -172,7 +172,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                     <div className="fixed inset-0 z-10" onClick={() => setShowTemplateDropdown(false)} />
                     <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredTemplates.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                        <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
                           {templates.length === 0 ? 'Aucun modele disponible' : 'Aucun resultat'}
                         </div>
                       ) : (
@@ -190,7 +190,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                           >
                             <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             <span className="flex-1 truncate">{t.title}</span>
-                            <span className="text-xs text-gray-400">{t.items.length} el.</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">{t.items.length} el.</span>
                           </button>
                         ))
                       )}
@@ -257,7 +257,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                           <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           <span className="flex-1 truncate">{cl.nom_entreprise}</span>
                           {cl.numero_dossier && (
-                            <span className="text-xs text-gray-400">#{cl.numero_dossier}</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">#{cl.numero_dossier}</span>
                           )}
                         </button>
                       ))}
@@ -285,7 +285,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Visible par le cabinet
                 </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   Les autres membres pourront voir cette checklist (en lecture seule)
                 </p>
               </div>

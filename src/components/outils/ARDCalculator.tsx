@@ -100,7 +100,7 @@ export function ARDCalculator() {
       <Card>
         <CardContent className="py-6">
           <div className="mb-5">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 flex items-center justify-center text-xs font-bold">
                 1
               </span>
@@ -121,7 +121,7 @@ export function ARDCalculator() {
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-800 pt-5 mb-5">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 flex items-center justify-center text-xs font-bold">
                 2
               </span>
@@ -144,7 +144,7 @@ export function ARDCalculator() {
           <div className="border-t border-gray-200 dark:border-gray-800 pt-5 mb-5">
             <button
               onClick={() => setShowChargesDetail(!showChargesDetail)}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold">
                 3
@@ -212,7 +212,7 @@ export function ARDCalculator() {
           <div className="border-t border-gray-200 dark:border-gray-800 pt-5 mb-5">
             <button
               onClick={() => setShowAmortDetail(!showAmortDetail)}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 flex items-center justify-center text-xs font-bold">
                 4
@@ -268,7 +268,7 @@ export function ARDCalculator() {
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-800 pt-5">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs font-bold">
                 ?
               </span>
@@ -375,7 +375,7 @@ export function ARDCalculator() {
                 >
                   {formatCurrency(results.a5)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {results.a5 > 0
                     ? 'A reintegrer fiscalement'
                     : 'Tout est deductible'}
@@ -455,7 +455,7 @@ export function ARDCalculator() {
                             formatCurrency(Math.abs(results.regularisation))}
                     </p>
                   </div>
-                  <div className="text-right text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                  <div className="text-right text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">
                     <p>
                       A5 = {formatCurrency(results.a5)}
                     </p>
@@ -653,7 +653,7 @@ export function ARDCalculator() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
               Calcul des Amortissements Reputes Differes
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
               Renseignez les donnees de l'exercice pour determiner le plafond d'amortissements deductibles et le montant a reintegrer fiscalement pour un loueur en meuble au regime reel BIC.
             </p>
           </CardContent>

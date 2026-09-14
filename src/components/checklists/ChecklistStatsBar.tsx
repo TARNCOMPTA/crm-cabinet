@@ -71,7 +71,7 @@ export function ChecklistStatsBar({ checklists }: Props) {
             <p className="text-lg font-bold text-gray-900 dark:text-white leading-none">
               {stat.value}
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
               {stat.label}
             </p>
           </div>

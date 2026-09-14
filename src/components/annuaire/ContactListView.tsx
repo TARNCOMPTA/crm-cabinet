@@ -31,7 +31,7 @@ export const ContactListView = memo(function ContactListView({
           onChange={onSelectAll}
           className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
         />
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {contacts.length} contact{contacts.length > 1 ? 's' : ''}
         </span>
       </div>
@@ -70,7 +70,7 @@ export const ContactListView = memo(function ContactListView({
                   {contact.first_name} {contact.last_name}
                 </span>
                 {contact.role && (
-                  <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">
+                  <span className="hidden sm:inline text-xs text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
                     {contact.role}
                   </span>
                 )}
@@ -90,7 +90,7 @@ export const ContactListView = memo(function ContactListView({
                     <span className="truncate">{contact.mobile || contact.phone}</span>
                   </a>
                 ) : (
-                  <span className="text-xs text-gray-400">-</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">-</span>
                 )}
               </div>
 
@@ -104,12 +104,12 @@ export const ContactListView = memo(function ContactListView({
                     <span className="truncate">{contact.email}</span>
                   </a>
                 ) : (
-                  <span className="text-xs text-gray-400">-</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">-</span>
                 )}
               </div>
 
               {companies.length > 0 && (
-                <div className="hidden sm:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 max-w-[140px]">
+                <div className="hidden sm:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 max-w-[140px]">
                   <Building2 className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate">
                     {companies.slice(0, 1).join(', ')}

@@ -55,7 +55,7 @@ export function KPIConfigModal({ isOpen, onClose, config, onSave }: KPIConfigMod
                 <span className={`text-sm font-medium ${
                   item.visible
                     ? 'text-gray-900 dark:text-gray-100'
-                    : 'text-gray-400 dark:text-gray-500'
+                    : 'text-gray-600 dark:text-gray-400'
                 }`}>
                   {item.label}
                 </span>

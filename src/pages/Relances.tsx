@@ -162,7 +162,7 @@ export function Relances() {
             <Receipt className="w-7 h-7 text-teal-600 dark:text-teal-400" />
             Relances
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Suivi des factures impayees et relances clients
           </p>
         </div>
@@ -182,7 +182,7 @@ export function Relances() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Total impaye
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
@@ -193,7 +193,7 @@ export function Relances() {
                 <Receipt className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
               {stats.countUnpaid} facture{stats.countUnpaid > 1 ? 's' : ''} en cours
             </p>
           </CardContent>
@@ -203,7 +203,7 @@ export function Relances() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   En retard
                 </p>
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
@@ -214,7 +214,7 @@ export function Relances() {
                 <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
               {stats.countOverdue} facture{stats.countOverdue > 1 ? 's' : ''} en retard
             </p>
           </CardContent>
@@ -224,7 +224,7 @@ export function Relances() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   En attente
                 </p>
                 <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">
@@ -235,7 +235,7 @@ export function Relances() {
                 <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
               A relancer
             </p>
           </CardContent>
@@ -245,7 +245,7 @@ export function Relances() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Relancees
                 </p>
                 <p className="text-2xl font-bold text-teal-600 dark:text-teal-400 mt-1">
@@ -256,7 +256,7 @@ export function Relances() {
                 <CheckCircle2 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
               En suivi
             </p>
           </CardContent>

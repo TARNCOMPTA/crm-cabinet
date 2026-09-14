@@ -377,26 +377,26 @@ export function SettingsUsers() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Utilisateur
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Rôle par défaut
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Statut
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                     Date d'ajout
                   </th>
                   {isAdmin && (
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                       Actions
                     </th>
                   )}
@@ -422,7 +422,7 @@ export function SettingsUsers() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                         <Mail className="w-4 h-4 mr-2" />
                         {user.email}
                       </div>
@@ -458,7 +458,7 @@ export function SettingsUsers() {
                         {user.is_active ? 'Actif' : 'Inactif'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                       {user.created_at && new Date(user.created_at).toLocaleDateString('fr-FR')}
                     </td>
                     {isAdmin && (
@@ -494,7 +494,7 @@ export function SettingsUsers() {
                                   <button
                                     type="button"
                                     onClick={() => handleAvatarColorChange(user.id, null)}
-                                    className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                    className="mt-2 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                                   >
                                     Réinitialiser
                                   </button>
@@ -572,16 +572,16 @@ export function SettingsUsers() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                         Collaborateur
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                         Nombre de clients
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                         Clients assignés
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
                         Actions
                       </th>
                     </tr>
@@ -601,7 +601,7 @@ export function SettingsUsers() {
                               <div className="text-sm font-medium text-gray-900">
                                 {user.prenom} {user.nom}
                               </div>
-                              <div className="text-xs text-gray-500">{user.email}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400">{user.email}</div>
                             </div>
                           </div>
                         </td>
@@ -619,7 +619,7 @@ export function SettingsUsers() {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-sm text-gray-500 italic">Aucun client</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400 italic">Aucun client</span>
                             )}
                             {user.clientNames.length > 3 && (
                               <Badge variant="default" className="text-xs">
@@ -752,7 +752,7 @@ export function SettingsUsers() {
             </div>
 
             {codeEnrolement.expireLe && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Valable jusqu&apos;à{' '}
                 <span className="font-medium">
                   {new Date(codeEnrolement.expireLe).toLocaleTimeString('fr-FR', {

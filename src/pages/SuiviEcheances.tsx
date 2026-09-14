@@ -462,7 +462,7 @@ export function SuiviEcheances() {
       </div>
 
       {suivi && (
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           <span>
             <strong className="text-gray-900 dark:text-gray-100">{suivi.nbDeclarations}</strong>{' '}
             déclaration{suivi.nbDeclarations > 1 ? 's' : ''} sur la période

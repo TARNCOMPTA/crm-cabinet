@@ -454,7 +454,7 @@ export function SettingsMCPConnector() {
           <Card>
             <CardContent className="p-8 text-center">
               <Key className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Aucune clé générée. Créez votre première clé pour connecter un LLM.
               </p>
             </CardContent>
@@ -569,7 +569,7 @@ export function SettingsMCPConnector() {
               <Plug className="w-4 h-4 text-teal-600" />
               Autorisations accordees
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               {isAdmin
                 ? "Les assistants connectés par OAuth, pour tout le cabinet. Révoquer coupe l'accès immédiatement — les jetons en cours sont invalides, pas seulement les prochains, et le client ne peut plus en obtenir de nouveaux."
                 : "Les assistants que VOUS avez autorisés. Révoquer coupe votre accès immédiatement, sans toucher à celui de vos collègues."}
@@ -584,7 +584,7 @@ export function SettingsMCPConnector() {
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {a.nom}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       Autorise le {formatDate(a.creeLe)}
                       {a.dernierAcces ? ` — dernier appel le ${formatDate(a.dernierAcces)}` : ' — jamais utilise'}
                     </p>
@@ -655,7 +655,7 @@ export function SettingsMCPConnector() {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">URL du serveur MCP</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">URL du serveur MCP</label>
               <div className="flex items-center gap-2 mt-1">
                 <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                   {mcpEndpoint}
@@ -689,7 +689,7 @@ export function SettingsMCPConnector() {
                 </li>
                 <li>Un ecran « Autoriser Claude ? » s'affiche. Vous acceptez, et c'est fini.</li>
               </ol>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 L'autorisation se renouvelle d'elle-meme tant qu'elle sert. Inutilisee trente jours,
                 elle se referme et un clic la retablit. Elle apparait plus bas, revocable a tout moment.
               </p>
@@ -699,7 +699,7 @@ export function SettingsMCPConnector() {
               <p className="text-xs font-semibold text-gray-900 dark:text-white">
                 Voie 2 — Claude Code, Cursor, VS Code : une clé dans un en-tête
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Ces clients acceptent un en-tête fixe. Créez une clé ci-dessous, puis :
               </p>
               <div className="relative">
@@ -714,7 +714,7 @@ export function SettingsMCPConnector() {
                   {copiedField === 'cmd-code' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Ou, par fichier de configuration :</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Ou, par fichier de configuration :</p>
               <div className="relative">
                 <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
                   {mcpConfigDirect}
@@ -731,7 +731,7 @@ export function SettingsMCPConnector() {
           </div>
 
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Outils disponibles :</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">Outils disponibles :</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
               {OUTILS_MCP.map((tool) => (
                 <div key={tool.nom} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
@@ -801,7 +801,7 @@ export function SettingsMCPConnector() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Client ID</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Client ID</label>
                 <div className="flex items-center gap-2 mt-1">
                   <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                     {newKeyData.client_id}
@@ -816,7 +816,7 @@ export function SettingsMCPConnector() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Client Secret</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Client Secret</label>
                 <div className="flex items-center gap-2 mt-1">
                   <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                     {showSecret ? newKeyData.client_secret : '••••••••••••••••••••••••••••••••••••••••••••••••'}
@@ -837,7 +837,7 @@ export function SettingsMCPConnector() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Configuration complète</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Configuration complète</label>
                 <div className="relative mt-1">
                   <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded-lg overflow-x-auto border border-gray-700">
                     {JSON.stringify({

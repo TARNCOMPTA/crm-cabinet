@@ -118,7 +118,7 @@ export function DataTable({ rows, editMode = false }: DataTableProps) {
                   automatiquement »), en edition ce qu'on attend du champ.
                 */}
                 {row.helperText && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{row.helperText}</p>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{row.helperText}</p>
                 )}
               </td>
             </tr>

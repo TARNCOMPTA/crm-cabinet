@@ -83,7 +83,7 @@ export function DashboardAlerts({ alerts, loading }: DashboardAlertsProps) {
       {hasMore && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mx-auto py-1 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mx-auto py-1 transition-colors"
         >
           {expanded ? (
             <>Reduire <ChevronUp className="w-3.5 h-3.5" /></>

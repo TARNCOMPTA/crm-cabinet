@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, Mail, Send, Users, X } from 'lucide-react';
+import { Eye, Mail, Paperclip, Send, Trash2, Users, X } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { supabase } from '../lib/supabase';
 import { libelleSection, optionsNaf, type CodeNafPresent } from '../lib/naf';
 
 /**
@@ -54,6 +56,21 @@ interface Apercu {
   apercu: { client: string | null; email: string | null; html: string } | null;
 }
 
+/**
+ * Une piece deja deposee dans le stockage, en attente d'etre jointe.
+ *
+ * ⚠️ LE FICHIER EST MONTE AVANT L'ENVOI, PAS AVEC LUI. Le corps de la requete
+ * d'envoi ne porte que la reference : monter cinq megaoctets dans le meme appel
+ * que la campagne ferait echouer les deux ensemble sur une coupure reseau, et
+ * l'administrateur ne saurait pas lequel reprendre.
+ */
+interface PieceCampagne {
+  nom: string;
+  chemin: string;
+  type: string | null;
+  taille: number;
+}
+
 interface Campagne {
   id: string;
   sujet: string;
@@ -64,6 +81,32 @@ interface Campagne {
   envoyes: number;
   erreurs: number;
   enAttente: number;
+  /**
+   * ⚠️ OPTIONNEL, ET CE N'EST PAS UN OUBLI. Le service worker de la PWA peut
+   * servir une reponse mise en cache AVANT cette mise a jour, donc depourvue du
+   * champ. `c.pieces.length` sur cette reponse-la ferait ecran blanc.
+   */
+  pieces?: Array<{ nom: string; taille: number | null }>;
+}
+
+/** Le bucket des pieces de campagne. Le serveur l'impose aussi, et refuse tout autre. */
+const BUCKET_PIECES = 'campagne-attachments';
+
+/**
+ * Plafonds de repli, utilises seulement si `/api/config` ne repond pas.
+ *
+ * ⚠️ LA VALEUR QUI FAIT AUTORITE EST CELLE DU SERVEUR. Ces deux nombres ne sont
+ * la que pour qu'un ecran prive de configuration reste utilisable ; s'ils
+ * divergeaient du serveur, c'est le serveur qui refuserait, et l'ecran aurait
+ * promis ce qu'il ne pouvait pas tenir. D'ou le chargement au montage.
+ */
+const PLAFONDS_DEFAUT = { piecesMax: 5, piecesOctetsMax: 10 * 1024 * 1024 };
+
+/** « 1,4 Mo », « 312 ko » — jamais « 1468006 octets ». */
+function poids(octets: number): string {
+  if (octets >= 1024 * 1024) return `${(octets / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+  if (octets >= 1024) return `${Math.round(octets / 1024)} ko`;
+  return `${octets} octets`;
 }
 
 const OPTIONS_API: RequestInit = {
@@ -95,6 +138,11 @@ export function Campagnes() {
   const [historique, setHistorique] = useState<Campagne[]>([]);
   /** Les clients retires a la main. Envoyes au serveur, jamais appliques ici. */
   const [retires, setRetires] = useState<Set<string>>(new Set());
+
+  const [pieces, setPieces] = useState<PieceCampagne[]>([]);
+  const [televersement, setTeleversement] = useState(false);
+  const [pieceASupprimer, setPieceASupprimer] = useState<PieceCampagne | null>(null);
+  const [plafonds, setPlafonds] = useState(PLAFONDS_DEFAUT);
 
   const filtres = useMemo(
     () => ({ statut, regime, cloture, recherche, codesNaf }),
@@ -130,6 +178,86 @@ export function Campagnes() {
     }
   }
 
+  /**
+   * Les plafonds, lus sur le serveur.
+   *
+   * ⚠️ ILS NE SONT PAS RECOPIES DANS L'ECRAN. Une constante locale divergerait le
+   * jour ou l'exploitant releve CAMPAGNE_PIECES_TAILLE_MAX dans son `.env`, et
+   * l'ecran refuserait un fichier que le serveur accepte — ou pire, l'inverse.
+   */
+  async function chargerPlafonds() {
+    try {
+      const r = await fetch('/api/config', { method: 'GET', ...OPTIONS_API });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d?.campagnes?.piecesMax && d?.campagnes?.piecesOctetsMax) {
+        setPlafonds({
+          piecesMax: d.campagnes.piecesMax,
+          piecesOctetsMax: d.campagnes.piecesOctetsMax,
+        });
+      }
+    } catch {
+      // Les plafonds de repli restent en place : le serveur tranchera de toute facon.
+    }
+  }
+
+  /**
+   * Depose un fichier dans le stockage et l'ajoute a la liste.
+   *
+   * ⚠️ LES PLAFONDS SONT VERIFIES AVANT LE TELEVERSEMENT, pas apres. Monter huit
+   * megaoctets pour s'entendre dire qu'ils sont de trop fait attendre pour rien,
+   * sur une liaison montante de cabinet qui est lente.
+   */
+  async function ajouterPiece(fichier: File) {
+    if (pieces.length >= plafonds.piecesMax) {
+      showToast(`Pas plus de ${plafonds.piecesMax} pieces jointes par campagne.`, 'error');
+      return;
+    }
+    const total = pieces.reduce((n, p) => n + p.taille, 0) + fichier.size;
+    if (total > plafonds.piecesOctetsMax) {
+      showToast(
+        `Total de ${poids(total)} : le maximum est ${poids(plafonds.piecesOctetsMax)}.`,
+        'error'
+      );
+      return;
+    }
+
+    setTeleversement(true);
+    try {
+      // Le chemin porte un identifiant tire au sort : deux campagnes joignant un
+      // « lettre.pdf » ne doivent pas s'ecraser l'une l'autre.
+      const chemin = `${new Date().getFullYear()}/${crypto.randomUUID()}-${fichier.name}`;
+      const { error } = await supabase.storage.from(BUCKET_PIECES).upload(chemin, fichier, {
+        contentType: fichier.type || 'application/octet-stream',
+      });
+      // ⚠️ ON LIT `error`. Annoncer « ajoutee » sans le verifier est exactement le
+      // defaut corrige en 96c9896 : l'ecran disait enregistre, la base ne portait rien.
+      if (error) throw new Error(error.message);
+
+      setPieces((p) => [
+        ...p,
+        {
+          nom: fichier.name,
+          chemin,
+          type: fichier.type || null,
+          taille: fichier.size,
+        },
+      ]);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Televersement impossible', 'error');
+    } finally {
+      setTeleversement(false);
+    }
+  }
+
+  async function retirerPiece(piece: PieceCampagne) {
+    setPieces((p) => p.filter((x) => x.chemin !== piece.chemin));
+    setPieceASupprimer(null);
+    // Le fichier part aussi du stockage : le garder laisserait s'accumuler des
+    // pieces qu'aucune campagne ne reference, et que rien ne purge.
+    await supabase.storage.from(BUCKET_PIECES).remove([piece.chemin]);
+  }
+
   async function chargerCodesNaf() {
     try {
       const r = await fetch('/api/campagnes/codes-naf', { method: 'GET', ...OPTIONS_API });
@@ -145,6 +273,7 @@ export function Campagnes() {
   useEffect(() => {
     void chargerHistorique();
     void chargerCodesNaf();
+    void chargerPlafonds();
   }, []);
 
   /**
@@ -210,7 +339,7 @@ export function Campagnes() {
       const r = await fetch('/api/campagnes', {
         method: 'POST',
         ...OPTIONS_API,
-        body: JSON.stringify({ filtres, sujet, corps, retires: [...retires] }),
+        body: JSON.stringify({ filtres, sujet, corps, retires: [...retires], pieces }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.message ?? 'Envoi impossible');
@@ -223,6 +352,10 @@ export function Campagnes() {
       setRetires(new Set());
       setSujet('');
       setCorps('');
+      // Les pieces sont oubliees par l'ecran, PAS supprimees du stockage : les
+      // courriels en file les reference encore, et le depart s'etale sur des
+      // minutes. Les effacer ici ferait echouer les envois restants.
+      setPieces([]);
       await chargerHistorique();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Envoi impossible', 'error');
@@ -232,6 +365,8 @@ export function Campagnes() {
   }
 
   const pret = sujet.trim().length > 0 && corps.trim().length > 0;
+  const totalPieces = pieces.reduce((n, p) => n + p.taille, 0);
+  const peutAjouterPiece = !televersement && pieces.length < plafonds.piecesMax;
   const exclusParMotif = (apercu?.exclus ?? []).reduce<Record<string, Exclu[]>>((acc, e) => {
     (acc[e.motif] ??= []).push(e);
     return acc;
@@ -345,14 +480,14 @@ export function Campagnes() {
               <button
                 type="button"
                 onClick={() => setCodesNaf([])}
-                className="text-xs text-gray-500 dark:text-gray-400 hover:underline px-1"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:underline px-1"
               >
                 Tout enlever
               </button>
             </div>
           )}
 
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             Sans code NAF, toutes les activites sont visees. Plusieurs codes s additionnent :
             <span className="font-mono"> 6201Z</span> vise une activite precise,
             <span className="font-mono"> 62</span> toute sa division. Les effectifs annonces
@@ -386,7 +521,7 @@ export function Campagnes() {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none font-mono"
               placeholder={'Bonjour {{dirigeant}},\n\nVotre declaration de TVA...'}
             />
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
               Texte simple : les sauts de ligne sont respectes, la mise en forme est celle du
               cabinet. Variables disponibles, a cliquer pour inserer :
             </p>
@@ -405,6 +540,80 @@ export function Campagnes() {
               )}
             </div>
           </div>
+
+          {/* Les pieces jointes */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                Pieces jointes
+                {pieces.length > 0 && (
+                  <span className="ml-2 font-normal text-gray-600 dark:text-gray-400">
+                    {pieces.length} / {plafonds.piecesMax} — {poids(totalPieces)} sur{' '}
+                    {poids(plafonds.piecesOctetsMax)}
+                  </span>
+                )}
+              </h3>
+              <label
+                className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                  peutAjouterPiece
+                    ? 'cursor-pointer border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    : 'cursor-not-allowed border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-500'
+                }`}
+              >
+                <Paperclip className="w-4 h-4" aria-hidden="true" />
+                {televersement ? 'Envoi du fichier...' : 'Ajouter un fichier'}
+                <input
+                  type="file"
+                  className="sr-only"
+                  disabled={!peutAjouterPiece}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    // Le champ est remis a zero pour que redeposer le MEME fichier
+                    // apres l'avoir retire declenche bien un nouvel evenement.
+                    e.target.value = '';
+                    if (f) void ajouterPiece(f);
+                  }}
+                />
+              </label>
+            </div>
+
+            {pieces.length === 0 ? (
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                Aucune piece jointe. Le meme fichier partira a chaque destinataire : au-dela de{' '}
+                {poids(plafonds.piecesOctetsMax)} au total, l&apos;envoi est refuse par les
+                messageries.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {pieces.map((p) => (
+                  <li
+                    key={p.chemin}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+                  >
+                    <Paperclip
+                      className="w-4 h-4 shrink-0 text-gray-600 dark:text-gray-400"
+                      aria-hidden="true"
+                    />
+                    <span className="flex-1 min-w-0 truncate text-sm text-gray-900 dark:text-white">
+                      {p.nom}
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-600 dark:text-gray-400">
+                      {poids(p.taille)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPieceASupprimer(p)}
+                      aria-label={`Retirer la piece jointe ${p.nom}`}
+                      title={`Retirer ${p.nom}`}
+                      className="shrink-0 p-1 rounded text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -420,7 +629,7 @@ export function Campagnes() {
           </div>
 
           {!pret && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Renseignez un sujet et un corps pour verifier.
             </p>
           )}
@@ -492,7 +701,7 @@ export function Campagnes() {
                           type="button"
                           onClick={() => void retirer(d.id)}
                           disabled={chargement}
-                          className="shrink-0 text-xs px-2 py-1 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+                          className="shrink-0 text-xs px-2 py-1 rounded text-gray-600 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
                           title={`Retirer ${d.nom ?? ''} de cet envoi`}
                         >
                           Retirer
@@ -513,7 +722,7 @@ export function Campagnes() {
                   <summary className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
                     {liste.length} — {MOTIFS[motif] ?? motif}
                   </summary>
-                  <ul className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5 max-h-40 overflow-y-auto">
+                  <ul className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5 max-h-40 overflow-y-auto">
                     {liste.map((e) => (
                       <li key={e.clientId}>
                         {e.nom}
@@ -526,7 +735,7 @@ export function Campagnes() {
 
               {apercu.apercu && (
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                     Apercu reel, tel que <strong>{apercu.apercu.client}</strong> le recevra sur{' '}
                     {apercu.apercu.email} :
                   </p>
@@ -577,11 +786,12 @@ export function Campagnes() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                  <tr className="text-left text-xs text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                     <th className="py-2 pr-4">Sujet</th>
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Par</th>
                     <th className="py-2 pr-4">Destinataires</th>
+                    <th className="py-2 pr-4">Pieces</th>
                     <th className="py-2">Etat</th>
                   </tr>
                 </thead>
@@ -594,6 +804,21 @@ export function Campagnes() {
                       </td>
                       <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{c.auteur ?? '-'}</td>
                       <td className="py-2 pr-4 text-gray-900 dark:text-gray-100">{c.destinataires}</td>
+                      <td className="py-2 pr-4">
+                        {(c.pieces?.length ?? 0) > 0 ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                            title={(c.pieces ?? []).map((p) => p.nom).join(', ')}
+                          >
+                            <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />
+                            {c.pieces?.length}
+                          </span>
+                        ) : (
+                          // Un tiret, et non une case vide : « aucune piece » se
+                          // distingue ainsi d'une colonne qui n'aurait pas charge.
+                          <span className="text-xs text-gray-600 dark:text-gray-400">—</span>
+                        )}
+                      </td>
                       <td className="py-2 text-xs">
                         <span className="text-green-700 dark:text-green-400">{c.envoyes} envoye(s)</span>
                         {c.enAttente > 0 && (
@@ -608,12 +833,29 @@ export function Campagnes() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Les compteurs d etat proviennent de la file d envoi, purgee au bout de 30 jours :
               ils retombent a zero pour les campagnes plus anciennes.
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/*
+        ⚠️ RETIRER UNE PIECE EFFACE AUSSI LE FICHIER DU STOCKAGE. Un clic isole
+        sur une icone de corbeille ne doit pas suffire : c'est la regle posee pour
+        les pieces jointes des bilans, pour la meme raison.
+      */}
+      {pieceASupprimer && (
+        <ConfirmDialog
+          isOpen
+          onClose={() => setPieceASupprimer(null)}
+          onConfirm={() => void retirerPiece(pieceASupprimer)}
+          title="Retirer cette piece jointe ?"
+          message={`« ${pieceASupprimer.nom} » sera retiree de la campagne ET supprimee du stockage. Les campagnes deja parties qui la referencent ne pourront plus etre renvoyees.`}
+          confirmText="Retirer definitivement"
+          variant="danger"
+        />
       )}
     </div>
   );

@@ -230,7 +230,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
             Reset ordre
           </button>
         )}
-        <span className="text-xs text-gray-400 mr-1">Trier :</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 mr-1">Trier :</span>
         <SortButton label="Nom" field="nom_entreprise" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Nb depots" field="nombre_depots" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Derniere cloture" field="date_cloture" activeField={sortField} direction={sortDir} onSort={onSortChange} />
@@ -251,15 +251,15 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
           {clientsWithSiren.length === 0 ? (
             <>
               <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">Aucun client avec SIREN</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Ajoutez un SIREN a vos clients pour consulter les depots des comptes BODACC.
               </p>
             </>
           ) : searchQuery ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun resultat pour "{searchQuery}"</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucun resultat pour "{searchQuery}"</p>
           ) : (
             <>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Aucun depot des comptes. Lancez une synchronisation BODACC.
               </p>
               <Button onClick={handleSyncAll} variant="secondary" disabled={syncingAll}>
@@ -300,7 +300,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
                       </h3>
                       <Badge variant="default">{depots.length} depot(s)</Badge>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                       <span className="font-mono">{client.siren}</span>
                       {latestDepot?.date_cloture && (
                         <span className="flex items-center gap-1">
@@ -332,7 +332,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
                 {isExpanded && (
                   <CardContent className="pt-0 pb-4 px-5">
                     {depots.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 py-3 text-center">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 py-3 text-center">
                         Aucun depot des comptes trouve. Lancez une synchronisation.
                       </p>
                     ) : (

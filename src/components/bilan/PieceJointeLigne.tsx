@@ -163,9 +163,18 @@ export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
         >
           <Download className="w-3.5 h-3.5" />
         </button>
+        {/*
+          ⚠️ CE BOUTON ETAIT INVISIBLE JUSQU'AU SURVOL (`opacity-0
+          group-hover/att:opacity-100`), collé au bouton de téléchargement.
+          Deux défauts d'un coup : la seule action DESTRUCTRICE de la ligne
+          était la moins visible des deux, et elle apparaissait SOUS le
+          pointeur, à quelques pixels d'une action anodine — la géométrie même
+          du clic manqué. Il est désormais montré comme le reste, et la
+          confirmation vit chez l'appelant.
+        */}
         <button
           type="button"
-          className="p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors opacity-0 group-hover/att:opacity-100 focus:opacity-100"
+          className="p-1 rounded-md hover:bg-red-100 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           onClick={() => onSupprimer(piece)}
           aria-label={`Supprimer ${piece.file_name}`}
           title="Supprimer"
@@ -186,7 +195,7 @@ export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
             {estImage ? (
               echecImage ? (
-                <p className="px-3 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                <p className="px-3 py-6 text-center text-xs text-gray-600 dark:text-gray-400">
                   Aperçu indisponible. Le fichier reste téléchargeable.
                 </p>
               ) : (

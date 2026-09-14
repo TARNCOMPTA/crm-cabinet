@@ -175,7 +175,7 @@ export function Exonerations() {
                   {stats.total}
                 </p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Total</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Total</p>
             </CardContent>
           </Card>
           <Card className="border-green-200 dark:border-green-800">
@@ -184,7 +184,7 @@ export function Exonerations() {
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 <p className="text-2xl font-bold text-green-600">{stats.active100}</p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Taux plein (100%)</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Taux plein (100%)</p>
             </CardContent>
           </Card>
           <Card className="border-amber-200 dark:border-amber-800">
@@ -193,16 +193,16 @@ export function Exonerations() {
                 <TrendingDown className="w-5 h-5 text-amber-500" />
                 <p className="text-2xl font-bold text-amber-600">{stats.degressif}</p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">En degressif</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">En degressif</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="py-4 text-center">
               <div className="flex items-center justify-center gap-1.5">
                 <Clock className="w-5 h-5 text-gray-400" />
-                <p className="text-2xl font-bold text-gray-500">{stats.expired}</p>
+                <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.expired}</p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Expirees</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Expirees</p>
             </CardContent>
           </Card>
         </div>
@@ -268,24 +268,24 @@ export function Exonerations() {
                         {item.client.nom_entreprise}
                       </span>
                       {item.client.siren && (
-                        <span className="text-xs text-gray-400 hidden sm:inline">
+                        <span className="text-xs text-gray-600 dark:text-gray-400 hidden sm:inline">
                           {item.client.siren}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
                         {getTypeLabel(item.type_exoneration)}
                       </span>
                       <span className="text-gray-300 dark:text-gray-600">|</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
                         Depuis le{' '}
                         {new Date(item.date_debut).toLocaleDateString('fr-FR')}
                       </span>
                     </div>
                   </div>
 
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <Clock className="w-3.5 h-3.5" />
                     {remaining}
                   </div>
@@ -348,7 +348,7 @@ export function Exonerations() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
               Aucune exoneration
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
               Ajoutez vos premieres exonerations fiscales pour suivre leur evolution degressive sur 8 ans.
             </p>
             <Button onClick={() => { setEditingItem(null); setShowForm(true); }}>

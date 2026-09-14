@@ -210,7 +210,7 @@ export function DashboardLayout() {
             {visibleNavSections.map((section, sIdx) => (
               <div key={sIdx} className={sIdx > 0 ? 'mt-5' : ''}>
                 {section.label && (
-                  <div className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <div className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                     {section.label}
                   </div>
                 )}
@@ -245,7 +245,7 @@ export function DashboardLayout() {
               <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
                 {profile?.prenom} {profile?.nom}
               </p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">{profile?.email}</p>
+              <p className="text-xs text-gray-600 dark:text-slate-300">{profile?.email}</p>
               <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-teal-100 text-teal-800 dark:bg-cyan-400/10 dark:text-cyan-200 dark:ring-1 dark:ring-cyan-400/20">
                 {profile?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
               </span>
@@ -282,7 +282,7 @@ export function DashboardLayout() {
               bundle, figee a la construction : c'est le code que CE navigateur
               execute, ce qu'aucune requete au serveur ne saurait dire.
             */}
-            <p className="mt-2 px-3 text-[11px] text-gray-400 dark:text-slate-500 font-mono">
+            <p className="mt-2 px-3 text-[11px] text-gray-600 dark:text-slate-300 font-mono">
               v{VERSION_FRONT}
             </p>
           </div>

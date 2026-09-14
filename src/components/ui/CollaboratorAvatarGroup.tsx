@@ -24,7 +24,7 @@ export const CollaboratorAvatarGroup = memo(function CollaboratorAvatarGroup({
 }: CollaboratorAvatarGroupProps) {
   if (!collaborators || collaborators.length === 0) {
     return (
-      <span className="text-sm text-gray-500 italic">
+      <span className="text-sm text-gray-600 dark:text-gray-400 italic">
         {emptyText}
       </span>
     );

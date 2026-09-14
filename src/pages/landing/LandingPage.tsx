@@ -97,7 +97,7 @@ export function LandingPage() {
                 CRM Cabinet
               </span>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Connectez-vous pour accéder à votre espace.
             </p>
           </div>
@@ -114,7 +114,7 @@ export function LandingPage() {
                 {enCours ? 'Connexion...' : 'Se connecter'}
               </button>
 
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                 Empreinte, visage ou code de votre appareil.
               </p>
 
@@ -145,7 +145,7 @@ export function LandingPage() {
                   autoComplete="one-time-code"
                   required
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
                   Fourni par l&apos;administrateur de l&apos;instance. Valable une seule fois.
                 </p>
               </div>
@@ -171,7 +171,7 @@ export function LandingPage() {
                   setAfficherCode(false);
                   setErreur(null);
                 }}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                className="w-full text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
               >
                 Retour à la connexion
               </button>

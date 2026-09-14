@@ -331,7 +331,7 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                 {showCompanyResults && companySearch.trim() && (
                   <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl">
                     {companyResults.length === 0 ? (
-                      <p className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500">
+                      <p className="px-3 py-3 text-sm text-gray-600 dark:text-gray-400">
                         Aucune societe trouvee
                       </p>
                     ) : (
@@ -355,12 +355,12 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                             </span>
                           )}
                           {company.siren && (
-                            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
                               SIREN {company.siren}
                             </span>
                           )}
                           {company.city && (
-                            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">
                               — {company.city}
                             </span>
                           )}
@@ -385,7 +385,7 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                             {entry.company.name}
                           </span>
                           {entry.company.siren && (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
                               {entry.company.siren}
                             </span>
                           )}
@@ -411,7 +411,7 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
               )}
             </>
           ) : (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Aucune societe disponible. Ajoutez d'abord une societe depuis l'onglet Societes ou creez un client.
             </p>
           )}

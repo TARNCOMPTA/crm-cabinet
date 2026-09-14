@@ -220,7 +220,7 @@ export function DashboardKPIStrip({ data, userId, loading }: DashboardKPIStripPr
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 truncate">
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                         {kpi.label}
                       </p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">

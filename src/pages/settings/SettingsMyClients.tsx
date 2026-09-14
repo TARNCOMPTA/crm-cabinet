@@ -493,7 +493,7 @@ export function SettingsMyClients() {
         <h2 className="text-2xl font-semibold text-gray-900 mb-1">
           Mes Clients
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Modifiez les informations et affectations clients. Les changements ne sont enregistres qu'au clic sur Enregistrer.
         </p>
       </div>
@@ -515,7 +515,7 @@ export function SettingsMyClients() {
         <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Total</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total</p>
               <p className="text-3xl font-semibold text-gray-900">{filteredClients.length}</p>
             </div>
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -542,7 +542,7 @@ export function SettingsMyClients() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Actifs</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Actifs</p>
               <p className="text-3xl font-semibold text-emerald-600">{activeClientsCount}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -569,7 +569,7 @@ export function SettingsMyClients() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Assignes</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Assignes</p>
               <p className="text-3xl font-semibold text-teal-600">{assignedClientsCount}</p>
             </div>
             <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
@@ -596,7 +596,7 @@ export function SettingsMyClients() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Prospects</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Prospects</p>
               <p className="text-3xl font-semibold text-blue-600">{prospectClientsCount}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -614,7 +614,7 @@ export function SettingsMyClients() {
                 <span className="text-xs text-teal-600 font-medium">Ordre personnalise actif</span>
                 <button
                   onClick={resetOrder}
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" />
                   Reinitialiser l'ordre
@@ -676,7 +676,7 @@ export function SettingsMyClients() {
                   value={filterFormeJuridique}
                   onChange={e => setFilterFormeJuridique(e.target.value)}
                   className={`h-10 border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm ${
-                    availableLegalForms.length === 0 ? 'text-gray-400' : ''
+                    availableLegalForms.length === 0 ? 'text-gray-600 dark:text-gray-400' : ''
                   }`}
                 >
                   <option value="all">
@@ -696,7 +696,7 @@ export function SettingsMyClients() {
                   value={filterCodeApe}
                   onChange={e => setFilterCodeApe(e.target.value)}
                   className={`h-10 border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm ${
-                    availableCodeApes.length === 0 ? 'text-gray-400' : ''
+                    availableCodeApes.length === 0 ? 'text-gray-600 dark:text-gray-400' : ''
                   }`}
                 >
                   <option value="all">
@@ -716,7 +716,7 @@ export function SettingsMyClients() {
                   value={filterSoftware}
                   onChange={e => setFilterSoftware(e.target.value)}
                   className={`h-10 border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-sm ${
-                    availableSoftware.length === 0 ? 'text-gray-400' : ''
+                    availableSoftware.length === 0 ? 'text-gray-600 dark:text-gray-400' : ''
                   }`}
                 >
                   <option value="all">
@@ -754,7 +754,7 @@ export function SettingsMyClients() {
         {filteredClients.length === 0 ? (
           <div className="text-center py-16">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm font-medium">Aucun client trouve</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Aucun client trouve</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -774,43 +774,43 @@ export function SettingsMyClients() {
                       className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
                     />
                   </th>
-                  <th className="sticky left-[48px] z-20 bg-gray-50 text-center py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide min-w-[72px]">
+                  <th className="sticky left-[48px] z-20 bg-gray-50 text-center py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide min-w-[72px]">
                     Assigne
                   </th>
-                  <th className="sticky left-[120px] z-20 bg-gray-50 text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide min-w-[180px] max-w-[220px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                  <th className="sticky left-[120px] z-20 bg-gray-50 text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide min-w-[180px] max-w-[220px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)]">
                     Entreprise
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     N&#176; Dossier
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     SIREN
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     <div className="flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5" />
                       <span>Code APE</span>
                     </div>
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     <div className="flex items-center gap-1.5">
                       <Scale className="w-3.5 h-3.5" />
                       <span>Forme juridique</span>
                     </div>
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     Statut
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     Regime fiscal
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>Date cloture</span>
                     </div>
                   </th>
-                  <th className="text-left py-4 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="text-left py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">
                     <div className="flex items-center gap-1.5">
                       <Package className="w-3.5 h-3.5" />
                       <span>Logiciels</span>
@@ -887,7 +887,7 @@ export function SettingsMyClients() {
                             effectiveStatus === 'actif'
                               ? 'text-emerald-700'
                               : effectiveStatus === 'inactif'
-                                ? 'text-gray-500'
+                                ? 'text-gray-600 dark:text-gray-400'
                                 : effectiveStatus === 'prospect'
                                   ? 'text-blue-700'
                                   : 'text-gray-700'

@@ -143,7 +143,7 @@ export function Dashboard() {
           Bonjour {profile?.prenom} !
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 mt-1">
-          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+          <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
             {todayStr}
           </p>
           {!loading && summary && (

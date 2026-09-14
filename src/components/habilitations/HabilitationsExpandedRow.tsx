@@ -58,14 +58,14 @@ export function HabilitationsExpandedRow({ isWithout, completeness, services }: 
 
       {!isWithout && extraServiceNames.length > 0 && (
         <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg">
-          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">
+          <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1">
             Services hors referentiel
           </p>
           <div className="flex flex-wrap gap-1">
             {extraServiceNames.map((name) => (
               <span
                 key={name}
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
               >
                 {name}
               </span>

@@ -102,7 +102,7 @@ export function SettingsMiseAJour() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Version et mise à jour
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Ce que cette instance exécute, et ce qui est publié.
         </p>
       </div>
@@ -110,13 +110,13 @@ export function SettingsMiseAJour() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardContent className="py-5">
-            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <p className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-400">
               Cette instance
             </p>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1 font-mono">
               {etat?.locale ?? '—'}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Interface chargée : <span className="font-mono">{VERSION_FRONT}</span>
             </p>
           </CardContent>
@@ -124,7 +124,7 @@ export function SettingsMiseAJour() {
 
         <Card>
           <CardContent className="py-5">
-            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <p className="text-xs uppercase tracking-wider text-gray-600 dark:text-gray-400">
               Publiée
             </p>
             <div className="flex items-center gap-2 mt-1">

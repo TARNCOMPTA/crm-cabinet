@@ -160,7 +160,7 @@ export function CompanyDetailModal({
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
             {infoRows.map((row) => (
               <div key={row.label} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{row.label}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{row.label}</span>
                 <div className="flex items-center gap-2">
                   {row.href ? (
                     <a
@@ -263,7 +263,7 @@ export function CompanyDetailModal({
             )}
 
             {sortedLinks.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
                 Aucun contact rattache
               </p>
             ) : (
@@ -291,7 +291,7 @@ export function CompanyDetailModal({
                         </div>
                         <div className="flex items-center gap-3 mt-0.5">
                           {link.role_in_company && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
                               {link.role_in_company}
                             </span>
                           )}

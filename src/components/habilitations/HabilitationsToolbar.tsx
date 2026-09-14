@@ -61,7 +61,7 @@ export function HabilitationsToolbar({
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
           />
         </div>
-        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
           {displayCount}/{totalCount}
         </span>
       </div>
@@ -146,7 +146,7 @@ export function HabilitationsToolbar({
           </span>
           <button
             onClick={onResetOrder}
-            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
             <RotateCcw className="w-3 h-3" />
             Reinitialiser

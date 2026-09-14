@@ -203,7 +203,7 @@ export function DashboardSearch() {
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
             <span className="text-[10px]">Ctrl</span>
             <span>K</span>
           </kbd>
@@ -215,7 +215,7 @@ export function DashboardSearch() {
           {totalCount === 0 && !loading && (
             <div className="px-6 py-8 text-center">
               <Search className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Aucun resultat pour "{query}"
               </p>
             </div>
@@ -233,10 +233,10 @@ export function DashboardSearch() {
                   <div key={cat}>
                     <div className="px-4 py-2 flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-sm">
                       <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         {meta.label}
                       </span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
                         ({items.length})
                       </span>
                     </div>
@@ -261,12 +261,12 @@ export function DashboardSearch() {
                               {item.label}
                             </p>
                             {item.sublabel && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-0.5">
                                 {item.sublabel}
                               </p>
                             )}
                           </div>
-                          <span className="flex-shrink-0 text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                          <span className="flex-shrink-0 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                             {meta.label}
                           </span>
                         </button>
@@ -280,10 +280,10 @@ export function DashboardSearch() {
 
           {totalCount > 0 && (
             <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
                 {totalCount} resultat{totalCount > 1 ? 's' : ''}
               </span>
-              <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                 <span className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] border border-gray-200 dark:border-gray-700">
                     ↑↓

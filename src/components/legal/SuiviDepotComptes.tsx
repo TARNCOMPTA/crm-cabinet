@@ -202,7 +202,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
     <div>
       <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Suivi du depot des comptes
-        <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+        <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-400">
           Exercice {exerciceYear}
         </span>
       </h2>
@@ -303,7 +303,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
       {sorted.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-12 text-center">
           <Search className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {hasActiveFilters
               ? 'Aucun resultat pour les filtres appliques'
               : 'Aucun client actif'
@@ -349,7 +349,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
                           {row.client.nom_entreprise}
                         </div>
                         {row.client.forme_juridique && (
-                          <div className={`text-xs truncate max-w-[200px] ${isExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                          <div className={`text-xs truncate max-w-[200px] ${isExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
                             {row.client.forme_juridique}
                           </div>
                         )}
@@ -365,7 +365,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
                           {row.derniereCloture ? formatDateFR(row.derniereCloture) : '-'}
                         </span>
                         {row.note && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{row.note}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{row.note}</div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">

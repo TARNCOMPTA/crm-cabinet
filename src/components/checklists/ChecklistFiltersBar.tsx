@@ -46,12 +46,12 @@ export function ChecklistFiltersBar({
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150 ${
               viewMode === key
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
             {label}
             <span className={`ml-1.5 text-[11px] ${
-              viewMode === key ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400 dark:text-gray-500'
+              viewMode === key ? 'text-teal-600 dark:text-teal-400' : 'text-gray-600 dark:text-gray-400'
             }`}>
               {counts[key]}
             </span>

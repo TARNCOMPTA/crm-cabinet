@@ -65,7 +65,7 @@ export function ContactsDirectory() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Annuaire
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {companies.length} societe{companies.length !== 1 ? 's' : ''} &middot; {contacts.length} contact{contacts.length !== 1 ? 's' : ''}
           </p>
         </div>

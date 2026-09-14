@@ -24,10 +24,12 @@
  * ignorerait les modifications faites dans l'interface.
  */
 
+import { access } from 'node:fs/promises';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { config } from './config.js';
 import { requeteUne } from './db.js';
 import { obtenirJeton, oublierJeton, type IdentitéAzure } from './oauth-microsoft.js';
+import { cheminSur } from './stockage-chemin.js';
 
 /**
  * Comment on prouve au serveur qu'on a le droit d'envoyer.
@@ -187,10 +189,100 @@ async function obtenirTransport(): Promise<{ transport: Transporter; reglages: R
   return { transport, reglages };
 }
 
+/**
+ * Une piece a joindre, telle qu'elle est stockee dans `email_queue.pieces_jointes`.
+ *
+ * ⚠️ C'EST UNE REFERENCE, PAS UN CONTENU. Le fichier vit sous STORAGE_DIR ; la
+ * file ne porte que de quoi le retrouver. Recopier les octets dans chaque ligne
+ * ferait, pour une piece de 3 Mo et trois cents destinataires, neuf cents
+ * megaoctets en base — puis dans chaque sauvegarde.
+ */
+export interface PieceJointe {
+  nom: string;
+  bucket: string;
+  chemin: string;
+  type?: string | null;
+  taille?: number | null;
+}
+
 export interface Courrier {
   destinataire: string;
   sujet: string;
   html: string;
+  /** Vide ou absent pour l'immense majorite des courriels du produit. */
+  pieces?: PieceJointe[];
+}
+
+/**
+ * Nom de piece jointe reduit a ce qui tient sans risque dans un en-tete MIME.
+ *
+ * Le nom vient d'un televersement, donc d'un humain, donc de n'importe quoi. Un
+ * retour chariot y couperait l'en-tete `Content-Disposition` et laisserait
+ * ecrire les suivants : c'est l'injection d'en-tete, la meme classe de faille
+ * que `nettoyerSujet` ferme sur le sujet. Les guillemets, eux, refermeraient la
+ * valeur de `filename` en avance.
+ */
+export function nettoyerNomPiece(nom: string): string {
+  const base = nom.split(/[\\/]/).pop() ?? 'piece';
+  const propre = [...base]
+    .map((c) => {
+      const code = c.codePointAt(0) ?? 0;
+      return code < 32 || code === 127 || c === '"' || c === '\\' ? '_' : c;
+    })
+    .join('')
+    .trim();
+  return propre || 'piece';
+}
+
+/** Ce que `resoudrePieces` rend : soit la liste prete, soit la raison du refus. */
+export type ResolutionPieces =
+  | { ok: true; attachments: Array<{ filename: string; path: string; contentType?: string }> }
+  | { ok: false; raison: string };
+
+/**
+ * Traduit les references de la file en pieces jointes nodemailer.
+ *
+ * ⚠️ CHAQUE CHEMIN EST REVALIDE ICI, alors qu'il l'a deja ete au depot. Ce n'est
+ * pas une ceinture de plus : la validation du depot portait sur une AUTRE valeur,
+ * des jours plus tot, dans un autre processus. Ce qu'on lit maintenant vient
+ * d'une colonne `jsonb`, et rien dans PostgreSQL n'empeche d'y ecrire
+ * « ../../../etc/passwd ». Sans ce controle, une ligne de file trafiquee ferait
+ * expedier un fichier du serveur a toute la clientele du cabinet.
+ *
+ * ⚠️ UN REFUS FAIT ECHOUER L'ENVOI, IL NE LE MUTILE PAS. La tentation serait
+ * d'ignorer la piece fautive et d'envoyer quand meme. Le courriel dit « veuillez
+ * trouver ci-joint » : parti sans sa piece, il est FAUX, et le destinataire n'a
+ * aucun moyen de le savoir. Un echec visible se rattrape ; un mail faux deja lu,
+ * non.
+ *
+ * Fonction pure : aucun acces disque, aucun reseau. Elle ne dit pas si le
+ * fichier existe — seulement si le chemin a le droit d'etre ouvert.
+ */
+export function resoudrePieces(racine: string, pieces: PieceJointe[]): ResolutionPieces {
+  const attachments: Array<{ filename: string; path: string; contentType?: string }> = [];
+
+  for (const piece of pieces) {
+    if (!piece || typeof piece.chemin !== 'string' || typeof piece.bucket !== 'string') {
+      return { ok: false, raison: 'Piece jointe mal formee dans la file.' };
+    }
+    const absolu = cheminSur(racine, piece.bucket, piece.chemin);
+    if (!absolu) {
+      // Le nom est repris tel quel dans le message : c'est ce que
+      // l'administrateur verra dans l'ecran des campagnes. Le chemin refuse,
+      // lui, ne sort pas d'ici.
+      return {
+        ok: false,
+        raison: `Piece jointe hors perimetre de stockage : ${nettoyerNomPiece(piece.nom ?? '')}`,
+      };
+    }
+    attachments.push({
+      filename: nettoyerNomPiece(piece.nom ?? piece.chemin),
+      path: absolu,
+      ...(piece.type ? { contentType: piece.type } : {}),
+    });
+  }
+
+  return { ok: true, attachments };
 }
 
 export type ResultatEnvoi =
@@ -261,12 +353,50 @@ export async function envoyer(courrier: Courrier): Promise<ResultatEnvoi> {
     };
   }
 
+  /*
+   * Les pieces jointes, AVANT d'ouvrir la connexion au relais.
+   *
+   * ⚠️ `definitif: true` SUR TOUS CES REFUS, et c'est le point. Un chemin hors
+   * perimetre ou un fichier efface ne se repareront pas au troisieme essai :
+   * insister ferait trois tentatives inutiles, puis le meme abandon, en ayant
+   * retarde les quarante-neuf courriels suivants du lot.
+   *
+   * ⚠️ `authentification: false` : ces refus n'ARRETENT PAS le lot. Ils ne
+   * concernent qu'un courriel ; les autres, y compris ceux qui portent d'autres
+   * pieces, doivent continuer de partir.
+   */
+  const pieces = courrier.pieces ?? [];
+  let attachments: Array<{ filename: string; path: string; contentType?: string }> = [];
+  if (pieces.length > 0) {
+    const resolution = resoudrePieces(config.storage.racine, pieces);
+    if (!resolution.ok) {
+      return { ok: false, raison: resolution.raison, definitif: true, authentification: false };
+    }
+    // L'existence se verifie ici, et non dans `resoudrePieces` qui reste pure.
+    // Sans ce controle, nodemailer echouerait au milieu du flux, avec une erreur
+    // sans code SMTP — donc classee « temporaire » et rejouee trois fois.
+    for (const a of resolution.attachments) {
+      try {
+        await access(a.path);
+      } catch {
+        return {
+          ok: false,
+          raison: `Piece jointe introuvable dans le stockage : ${a.filename}`,
+          definitif: true,
+          authentification: false,
+        };
+      }
+    }
+    attachments = resolution.attachments;
+  }
+
   try {
     await t.transport.sendMail({
       from: t.reglages.from,
       to: courrier.destinataire,
       subject: courrier.sujet,
       html: courrier.html,
+      ...(attachments.length > 0 ? { attachments } : {}),
     });
     return { ok: true };
   } catch (e) {

@@ -94,7 +94,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Raccourcis clavier
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Gagnez du temps avec ces combinaisons
               </p>
             </div>
@@ -111,7 +111,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
         <div className="overflow-y-auto px-6 py-5 space-y-6">
           {SHORTCUT_GROUPS.map((group) => (
             <div key={group.title}>
-              <h3 className="text-[11px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-2">
+              <h3 className="text-[11px] uppercase tracking-wider font-semibold text-gray-600 dark:text-gray-400 mb-2">
                 {group.title}
               </h3>
               <div className="space-y-1">
@@ -127,7 +127,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
                       {shortcut.keys.map((key, keyIdx) => (
                         <span key={keyIdx} className="inline-flex items-center">
                           {keyIdx > 0 && (
-                            <span className="mx-1 text-xs text-gray-400">+</span>
+                            <span className="mx-1 text-xs text-gray-600 dark:text-gray-400">+</span>
                           )}
                           <KeyCap>{key}</KeyCap>
                         </span>
@@ -140,7 +140,7 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
           ))}
         </div>
 
-        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-950/40 text-xs text-gray-500 dark:text-gray-400">
+        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-950/40 text-xs text-gray-600 dark:text-gray-400">
           Appuyez sur <KeyCap>?</KeyCap> a tout moment pour rouvrir ce panneau.
         </div>
       </div>

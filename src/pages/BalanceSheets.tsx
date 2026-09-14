@@ -218,7 +218,7 @@ export function BalanceSheets() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Suivi des Bilans</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Suivez l'avancement des bilans par regime fiscal
           </p>
         </div>
@@ -345,7 +345,7 @@ export function BalanceSheets() {
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-gray-200 dark:border-gray-700 border-t-teal-600 dark:border-t-teal-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">Chargement...</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Chargement...</span>
           </div>
         </div>
       ) : columns.length === 0 ? (

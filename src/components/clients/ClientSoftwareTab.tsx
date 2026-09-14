@@ -198,7 +198,7 @@ export function ClientSoftwareTab({ clientId }: Props) {
           <CardContent className="py-12">
             <div className="text-center">
               <Package className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-3 text-sm text-gray-500">Aucun logiciel assigne a ce client</p>
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">Aucun logiciel assigne a ce client</p>
               {getUnassignedSoftware().length > 0 && (
                 <Button
                   variant="outline"
@@ -239,7 +239,7 @@ export function ClientSoftwareTab({ clientId }: Props) {
                 </div>
 
                 {(assignment.start_date || assignment.end_date) && (
-                  <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>
                       {formatDate(assignment.start_date) || '...'}
@@ -250,7 +250,7 @@ export function ClientSoftwareTab({ clientId }: Props) {
                 )}
 
                 {assignment.notes && (
-                  <p className="mt-2 text-xs text-gray-500 line-clamp-2">{assignment.notes}</p>
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{assignment.notes}</p>
                 )}
               </CardContent>
             </Card>

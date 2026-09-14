@@ -75,7 +75,7 @@ export function TaxAuthorizations() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Import du fichier</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Fichier CSV ou Excel des habilitations usager (impots.gouv.fr)
               </p>
             </div>
@@ -142,13 +142,13 @@ export function TaxAuthorizations() {
                   <Users className="w-5 h-5 text-gray-400" />
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCabinetClients}</p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Clients du cabinet</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Clients du cabinet</p>
               </CardContent>
             </Card>
             <Card className="dark:bg-gray-900 dark:border-gray-700">
               <CardContent className="py-4 text-center">
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Habilitations totales</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Habilitations totales</p>
               </CardContent>
             </Card>
             <Card className={`dark:bg-gray-900 dark:border-gray-700 ${stats.noHabilitations > 0 ? 'border-red-200 bg-red-50/30 dark:border-red-800 dark:bg-red-900/10' : ''}`}>
@@ -159,13 +159,13 @@ export function TaxAuthorizations() {
                     {stats.noHabilitations}
                   </p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sans habilitation</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Sans habilitation</p>
               </CardContent>
             </Card>
             <Card className="dark:bg-gray-900 dark:border-gray-700">
               <CardContent className="py-4 text-center">
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.incomplete}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Incomplets</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Incomplets</p>
               </CardContent>
             </Card>
             <Card className={`dark:bg-gray-900 dark:border-gray-700 ${stats.applicableCount > 0 && stats.complete === stats.applicableCount ? 'border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-900/10' : ''}`}>
@@ -176,14 +176,14 @@ export function TaxAuthorizations() {
                     {stats.complete}/{stats.applicableCount}
                   </p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Dossiers complets</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Dossiers complets</p>
               </CardContent>
             </Card>
             {stats.nonConcerne > 0 && (
               <Card className="border-slate-200 bg-slate-50/30 dark:border-slate-700 dark:bg-slate-900/20">
                 <CardContent className="py-4 text-center">
                   <p className="text-2xl font-bold text-slate-500 dark:text-slate-400">{stats.nonConcerne}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Non concernes</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Non concernes</p>
                 </CardContent>
               </Card>
             )}
@@ -206,7 +206,7 @@ export function TaxAuthorizations() {
                   style={{ width: `${globalPercentage}%` }}
                 />
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-gray-600 dark:text-gray-400">
                 <span><span className="font-semibold text-green-600 dark:text-green-400">{stats.complete}</span> complets</span>
                 <span><span className="font-semibold text-amber-600 dark:text-amber-400">{stats.incomplete}</span> incomplets</span>
                 <span><span className="font-semibold text-red-600 dark:text-red-400">{stats.noHabilitations}</span> sans habilitation</span>
@@ -221,7 +221,7 @@ export function TaxAuthorizations() {
       )}
 
       {hasData && lastImportDate && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
           <Clock className="w-3.5 h-3.5" />
           <span>
             Dernier import le{' '}
@@ -269,7 +269,7 @@ export function TaxAuthorizations() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
               Aucune habilitation importee
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
               Importez le fichier CSV de vos habilitations usager depuis impots.gouv.fr pour visualiser les services ouverts pour chaque client.
             </p>
           </CardContent>

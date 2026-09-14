@@ -183,13 +183,20 @@ export function SearchableSelect({
                   {selectedOption.label}
                 </span>
                 {selectedOption.subtitle && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
                     {selectedOption.subtitle}
                   </span>
                 )}
               </div>
             ) : (
-              <span className="text-gray-400 dark:text-gray-500">
+              // Le libelle indicatif est du TEXTE QU'ON LIT, pas une
+              // decoration : la norme ne l'exempte pas, et il sortait a 2:1.
+              // Les deux autres `text-gray-400` de ce fichier habillent des
+              // icones et restent tels quels. Ce cas a echappe a la passe
+              // automatique parce que sa classe ne porte AUCUNE TAILLE — elle
+              // est heritee — et c'est la mesure dans le navigateur qui l'a
+              // trouve.
+              <span className="text-gray-600 dark:text-gray-400">
                 {placeholder}
               </span>
             )}
@@ -235,7 +242,7 @@ export function SearchableSelect({
             className="absolute z-50 mt-1.5 w-full max-h-56 overflow-auto rounded-xl border border-gray-200/80 dark:border-white/[0.08] bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl shadow-elevated dark:shadow-dark-card py-1"
           >
             {filtered.length === 0 ? (
-              <li className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+              <li className="px-3 py-3 text-sm text-gray-600 dark:text-gray-400 text-center">
                 Aucun resultat
               </li>
             ) : (
@@ -260,7 +267,7 @@ export function SearchableSelect({
                         className={`text-xs ${
                           idx === highlightedIndex
                             ? 'text-teal-600 dark:text-teal-400'
-                            : 'text-gray-500 dark:text-gray-400'
+                            : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
                         {highlightMatch(option.subtitle)}

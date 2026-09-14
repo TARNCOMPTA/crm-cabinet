@@ -255,7 +255,7 @@ export function ExonerationSimulator() {
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
             Aucune exoneration
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
             Ajoutez des exonérations dans le module "Exonérations Fiscales" pour visualiser le simulateur mensuel.
           </p>
         </CardContent>
@@ -332,7 +332,7 @@ export function ExonerationSimulator() {
         </div>
       )}
 
-      <div className="flex items-center gap-4 flex-wrap text-xs text-gray-500 dark:text-gray-400 pt-2">
+      <div className="flex items-center gap-4 flex-wrap text-xs text-gray-600 dark:text-gray-400 pt-2">
         <span className="font-medium">Legende :</span>
         {[100, 75, 50, 25].map((rate) => (
           <div key={rate} className="flex items-center gap-1.5">
@@ -383,13 +383,13 @@ function SimulatorCard({
               {item.client.nom_entreprise}
             </button>
             {item.client.siren && (
-              <span className="text-xs text-gray-400 hidden sm:inline">{item.client.siren}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 hidden sm:inline">{item.client.siren}</span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{item.type_exoneration}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{item.type_exoneration}</span>
             <span className="text-gray-300 dark:text-gray-600">|</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               {new Date(item.date_debut).toLocaleDateString('fr-FR')} - {new Date(item.date_fin).toLocaleDateString('fr-FR')}
             </span>
           </div>
@@ -485,7 +485,7 @@ function SimulatorCard({
                       if (!m) {
                         return (
                           <div key={idx} className="flex flex-col items-center">
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 mb-1">
+                            <span className="text-[10px] text-gray-600 dark:text-gray-400 mb-1">
                               {MONTH_LABELS[idx]}
                             </span>
                             <div className="w-full h-10 rounded-md bg-gray-50 dark:bg-gray-900/20 border border-dashed border-gray-200 dark:border-gray-700" />
@@ -496,7 +496,7 @@ function SimulatorCard({
                       return (
                         <div key={idx} className="flex flex-col items-center">
                           <span className={`text-[10px] mb-1 ${
-                            isNow ? 'font-bold text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-gray-400'
+                            isNow ? 'font-bold text-teal-600 dark:text-teal-400' : 'text-gray-600 dark:text-gray-400'
                           }`}>
                             {MONTH_LABELS[idx]}
                           </span>

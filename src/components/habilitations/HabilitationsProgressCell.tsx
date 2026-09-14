@@ -23,7 +23,7 @@ export function HabilitationsProgressCell({ isNonConcerne, isWithout, completene
       <div className="w-36">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold text-red-600 dark:text-red-400">0%</span>
-          <span className="text-xs text-gray-400">0/{completeness.total}</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">0/{completeness.total}</span>
         </div>
         <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full rounded-full bg-red-400" style={{ width: '0%' }} />
@@ -43,7 +43,7 @@ export function HabilitationsProgressCell({ isNonConcerne, isWithout, completene
     <div className="w-36">
       <div className="flex items-center justify-between mb-1">
         <span className={`text-xs font-semibold ${colors.text}`}>{percentage}%</span>
-        <span className="text-xs text-gray-400">{count}/{total}</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400">{count}/{total}</span>
       </div>
       <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
         <div

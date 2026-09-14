@@ -361,7 +361,7 @@ export function OpportunityCardDetailModal({ card, columns, isOpen, onClose, onU
                         >
                           {att.file_name}
                         </button>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {formatFileSize(att.file_size)} &middot; {new Date(att.created_at).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
@@ -414,14 +414,14 @@ export function OpportunityCardDetailModal({ card, columns, isOpen, onClose, onU
                 }}
               />
               {isUploading ? (
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
                   Upload en cours...
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <Upload className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Glissez vos fichiers ici ou{' '}
                     <button
                       type="button"
@@ -431,7 +431,7 @@ export function OpportunityCardDetailModal({ card, columns, isOpen, onClose, onU
                       parcourir
                     </button>
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">PDF, images, Word, Excel - max 10 Mo</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">PDF, images, Word, Excel - max 10 Mo</p>
                 </div>
               )}
             </div>

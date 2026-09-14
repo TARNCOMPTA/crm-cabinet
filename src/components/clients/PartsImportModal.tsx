@@ -332,7 +332,7 @@ export function PartsImportModal({
               <option value="manual">Saisis ou verifies par le cabinet</option>
               <option value="statuts">Deduits des statuts deposes (a confirmer)</option>
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
               « Deduits des statuts » marque chaque ligne : elle datera du depot et s’affichera
               comme restant a confirmer.
             </p>
@@ -340,7 +340,7 @@ export function PartsImportModal({
 
           <div className="max-h-72 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-600 dark:text-gray-400">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Ligne</th>
                   <th className="px-3 py-2 text-left font-medium">Associe</th>
@@ -405,7 +405,7 @@ export function PartsImportModal({
             {posees} ligne(s) enregistree(s)
           </p>
           {enErreur.length > 0 && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               {enErreur.length} ligne(s) refusee(s) n’ont pas ete importees.
             </p>
           )}

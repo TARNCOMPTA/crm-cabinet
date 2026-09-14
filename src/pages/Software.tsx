@@ -361,7 +361,7 @@ export function Software() {
                 </span>
               )}
             </button>
-            <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
               {filteredClients.length} client{filteredClients.length > 1 ? 's' : ''}
             </span>
           </div>
@@ -450,7 +450,7 @@ export function Software() {
                 <div className="flex justify-end">
                   <button
                     onClick={clearAllFilters}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                    className="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                   >
                     Réinitialiser les filtres
                   </button>
@@ -475,16 +475,16 @@ export function Software() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         Client
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         SIRET
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         Logiciels
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -510,7 +510,7 @@ export function Software() {
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
                             {client.client_software.length === 0 ? (
-                              <span className="text-sm text-gray-400 italic">
+                              <span className="text-sm text-gray-600 dark:text-gray-400 italic">
                                 Aucun logiciel
                               </span>
                             ) : (
@@ -546,7 +546,7 @@ export function Software() {
                     <h3 className="mt-2 text-sm font-medium text-gray-900">
                       Aucun client trouvé
                     </h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                       {searchTerm || softwareFilter || categoryFilter
                         ? 'Aucun résultat ne correspond à votre recherche'
                         : 'Aucun client actif dans votre cabinet'}
@@ -682,7 +682,7 @@ export function Software() {
                           </Badge>
                         </div>
                         {(cs.start_date || cs.end_date) && (
-                          <div className="flex items-center text-xs text-gray-500 mb-1">
+                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mb-1">
                             <Calendar className="w-3 h-3 mr-1" />
                             {cs.start_date && (
                               <span>

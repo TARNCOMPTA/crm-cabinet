@@ -31,7 +31,7 @@ function BatchProgressBar({ progress, lastCompleted }: {
 
   return (
     <div className="mt-2">
-      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+      <div className="flex items-center justify-between text-[10px] text-gray-600 dark:text-gray-400 mb-1">
         <span>
           {cycleComplete ? 'Cycle complet' : `${offset}/${total} clients traites`}
           {progress.batch_size && !cycleComplete && ` (lots de ${progress.batch_size})`}
@@ -126,7 +126,7 @@ function SyncConfigForm({ settings, onSave, saving }: {
         </div>
       </div>
 
-      <p className="text-[10px] text-gray-400 dark:text-gray-500">
+      <p className="text-[10px] text-gray-600 dark:text-gray-400">
         Les lots sont traites toutes les heures automatiquement. Un cycle complet se termine quand tous les clients ont ete synchronises.
       </p>
 
@@ -147,7 +147,7 @@ function SyncLogHistory({ logs }: { logs: LegalSyncLogEntry[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (logs.length === 0) {
-    return <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Aucun historique</p>;
+    return <p className="text-xs text-gray-600 dark:text-gray-400 text-center py-2">Aucun historique</p>;
   }
 
   return (
@@ -165,7 +165,7 @@ function SyncLogHistory({ logs }: { logs: LegalSyncLogEntry[] }) {
                   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
                 })}
               </span>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
                 {log.clients_processed}/{log.total_clients} clients
               </span>
             </div>
@@ -178,7 +178,7 @@ function SyncLogHistory({ logs }: { logs: LegalSyncLogEntry[] }) {
                 <div className="grid grid-cols-3 gap-2 pt-2">
                   {Object.entries(log.phases_completed).map(([key, status]) => (
                     <div key={key} className="text-center">
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{PHASE_LABELS[key] || key}</p>
+                      <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate">{PHASE_LABELS[key] || key}</p>
                       <SyncStatusBadge status={status as string} />
                     </div>
                   ))}
@@ -193,12 +193,12 @@ function SyncLogHistory({ logs }: { logs: LegalSyncLogEntry[] }) {
                     </p>
                   ))}
                   {log.error_details.length > 5 && (
-                    <p className="text-[10px] text-gray-400 pl-2">+{log.error_details.length - 5} autres erreurs</p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400 pl-2">+{log.error_details.length - 5} autres erreurs</p>
                   )}
                 </div>
               )}
               {log.completed_at && (
-                <p className="text-[10px] text-gray-400">
+                <p className="text-[10px] text-gray-600 dark:text-gray-400">
                   Duree : {Math.round((new Date(log.completed_at).getTime() - new Date(log.started_at).getTime()) / 1000)}s
                 </p>
               )}
@@ -282,7 +282,7 @@ export function SyncSettingsPanel() {
           className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
             activeTab === 'full'
               ? 'text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 border-b-2 border-teal-600 dark:border-teal-400'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
           }`}
         >
           <div className="flex items-center justify-center gap-1.5">
@@ -295,7 +295,7 @@ export function SyncSettingsPanel() {
           className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
             activeTab === 'inpi'
               ? 'text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 border-b-2 border-teal-600 dark:border-teal-400'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
           }`}
         >
           <div className="flex items-center justify-center gap-1.5">
@@ -308,7 +308,7 @@ export function SyncSettingsPanel() {
           className={`flex-1 px-4 py-2.5 text-xs font-medium transition-colors ${
             activeTab === 'acts'
               ? 'text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 border-b-2 border-teal-600 dark:border-teal-400'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
           }`}
         >
           <div className="flex items-center justify-center gap-1.5">
@@ -339,20 +339,20 @@ export function SyncSettingsPanel() {
                     <Check className="w-3 h-3" /> Active
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                     Desactivee
                   </span>
                 )}
               </div>
 
               {activeTab === 'full' && (
-                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">
                   INPI actes + dirigeants, BODACC depots, alertes juridiques
                 </p>
               )}
 
               {currentSettings?.is_enabled && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                   {FREQUENCY_LABELS[currentSettings.frequency] || currentSettings.frequency} | {currentSettings.batch_size || 50} clients/lot/heure
                   {currentSettings.last_sync_at && (
                     <> | {new Date(currentSettings.last_sync_at).toLocaleDateString('fr-FR', {
@@ -440,7 +440,7 @@ export function SyncSettingsPanel() {
           <div className="mt-3">
             <button
               onClick={() => { setShowHistory(!showHistory); if (!showHistory && syncLogs.length === 0) loadAll(); }}
-              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               {showHistory ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               Historique des synchronisations

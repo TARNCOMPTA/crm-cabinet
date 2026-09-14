@@ -304,7 +304,7 @@ export function SettingsMonCabinet() {
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center max-w-[140px]">
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center max-w-[140px]">
                 JPG, PNG, WebP ou SVG. 2 Mo max.
               </p>
             </div>
@@ -316,7 +316,7 @@ export function SettingsMonCabinet() {
                 </div>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Logo du cabinet</h3>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Ce logo sera utilise dans la generation de documents et l'identite visuelle de votre espace.
                 Privilegiez un format carre ou horizontal pour un rendu optimal.
               </p>

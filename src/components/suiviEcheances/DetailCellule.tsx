@@ -71,7 +71,7 @@ export function DetailCellule({
   return (
     <Modal isOpen={ouvert} onClose={onFermer} title={societe.societe} size="lg">
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <Badge variant="gray">{libelleType}</Badge>
           <span>{moisCourt(mois)}</span>
           {societe.siren && <span className="font-mono text-xs">SIREN {societe.siren}</span>}
@@ -115,7 +115,7 @@ export function DetailCellule({
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Aucune télétransmission connue pour ce mois. Cela peut vouloir dire qu’il n’y en a
               pas eu — ou que la période n’a pas encore été analysée.
             </p>

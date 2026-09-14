@@ -107,7 +107,7 @@ export function BilanDAS2Panel({ cardId, onSaved }: Props) {
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-4">
         <div className="flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-          <span className="text-sm text-gray-500">Chargement DAS2...</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">Chargement DAS2...</span>
         </div>
       </div>
     );
@@ -152,17 +152,17 @@ export function BilanDAS2Panel({ cardId, onSaved }: Props) {
                     {entry.company_name}
                   </p>
                   <div className="mt-1 space-y-0.5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
                       SIRET: {entry.company_siret || entry.company_siren}
                     </p>
                     {(entry.address_line || entry.address_city) && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <MapPin className="w-3 h-3 shrink-0" />
                         <span className="truncate">{formatAddress(entry)}</span>
                       </div>
                     )}
                     {entry.code_ape && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         APE: {entry.code_ape}{entry.libelle_ape ? ` - ${entry.libelle_ape}` : ''}
                       </p>
                     )}
@@ -238,17 +238,17 @@ export function BilanDAS2Panel({ cardId, onSaved }: Props) {
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {company.denomination}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
                   SIRET: {company.siret || company.siren}
                 </p>
                 {company.adresse && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                     <MapPin className="w-3 h-3 shrink-0" />
                     <span>{[company.adresse.ligne1, company.adresse.complement, company.adresse.codePostal, company.adresse.ville].filter(Boolean).join(', ')}</span>
                   </div>
                 )}
                 {company.codeAPE && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
                     APE: {company.codeAPE}{company.libelleAPE ? ` - ${company.libelleAPE}` : ''}
                   </p>
                 )}
@@ -273,7 +273,7 @@ export function BilanDAS2Panel({ cardId, onSaved }: Props) {
       )}
 
       {entries.length === 0 && !showSearch && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+        <p className="text-xs text-gray-600 dark:text-gray-400 italic">
           Aucune entite DAS2 enregistree. Cliquez sur "Ajouter" pour rechercher.
         </p>
       )}

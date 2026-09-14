@@ -131,13 +131,13 @@ export const CompanyTableView = memo(function CompanyTableView({
                         {primaryContact.first_name} {primaryContact.last_name}
                       </span>
                       {contactCount > 1 && (
-                        <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs text-gray-400">
+                        <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs text-gray-600 dark:text-gray-400">
                           <Users className="w-3 h-3" />+{contactCount - 1}
                         </span>
                       )}
                     </div>
                   ) : contactCount > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                       <Users className="w-3 h-3" />{contactCount}
                     </span>
                   ) : (

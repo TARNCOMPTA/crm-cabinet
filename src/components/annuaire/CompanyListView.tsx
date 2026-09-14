@@ -37,7 +37,7 @@ export const CompanyListView = memo(function CompanyListView({
           onChange={onSelectAll}
           className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
         />
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {companies.length} societe{companies.length > 1 ? 's' : ''}
         </span>
       </div>
@@ -88,7 +88,7 @@ export const CompanyListView = memo(function CompanyListView({
                 </div>
 
                 {company.city && (
-                  <div className="hidden md:flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 w-28 truncate">
+                  <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 w-28 truncate">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
                     <span className="truncate">{company.city}</span>
                   </div>
@@ -104,7 +104,7 @@ export const CompanyListView = memo(function CompanyListView({
                       <span className="truncate">{company.phone}</span>
                     </a>
                   ) : (
-                    <span className="text-xs text-gray-400">-</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">-</span>
                   )}
                 </div>
 
@@ -118,14 +118,14 @@ export const CompanyListView = memo(function CompanyListView({
                       <span className="truncate">{company.email}</span>
                     </a>
                   ) : (
-                    <span className="text-xs text-gray-400">-</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">-</span>
                   )}
                 </div>
 
                 {contactCount > 0 ? (
                   <button
                     onClick={(e) => toggleExpand(e, company.id)}
-                    className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 hover:text-teal-600 dark:hover:text-teal-400 transition-colors rounded-md px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 hover:text-teal-600 dark:hover:text-teal-400 transition-colors rounded-md px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <User className="w-3 h-3" />
                     <span>{contactCount}</span>
@@ -176,7 +176,7 @@ export const CompanyListView = memo(function CompanyListView({
                           )}
 
                           {cc.role_in_company && (
-                            <span className="hidden sm:inline text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                            <span className="hidden sm:inline text-[11px] text-gray-600 dark:text-gray-400 truncate">
                               {cc.role_in_company}
                             </span>
                           )}
@@ -185,7 +185,7 @@ export const CompanyListView = memo(function CompanyListView({
                             {contact.phone && (
                               <a
                                 href={`tel:${contact.phone}`}
-                                className="hidden md:inline-flex items-center gap-1 text-xs text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                                className="hidden md:inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
                               >
                                 <Phone className="w-3 h-3" />
                                 <span className="hidden lg:inline truncate max-w-[100px]">{contact.phone}</span>
@@ -194,7 +194,7 @@ export const CompanyListView = memo(function CompanyListView({
                             {contact.email && (
                               <a
                                 href={`mailto:${contact.email}`}
-                                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                                className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
                               >
                                 <Mail className="w-3 h-3" />
                                 <span className="hidden lg:inline truncate max-w-[140px]">{contact.email}</span>

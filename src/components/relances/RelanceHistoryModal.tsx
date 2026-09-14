@@ -156,7 +156,7 @@ export function RelanceHistoryModal({ isOpen, onClose, invoice, onRelanceAdded }
               {invoice.numero_facture}
             </p>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-500">
+          <p className="text-xs text-gray-600 dark:text-gray-500">
             {invoice.nombre_relances} relance{invoice.nombre_relances > 1 ? 's' : ''} effectuee{invoice.nombre_relances > 1 ? 's' : ''}
           </p>
         </div>
@@ -252,12 +252,12 @@ export function RelanceHistoryModal({ isOpen, onClose, invoice, onRelanceAdded }
                             <Badge variant={getTypeBadgeVariant(entry.type_relance)}>
                               {TYPE_OPTIONS.find((t) => t.value === entry.type_relance)?.label || entry.type_relance}
                             </Badge>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
                               {formatDateTime(entry.date_relance)}
                             </span>
                           </div>
                           {entry.profiles && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-600 dark:text-gray-400">
                               <User className="w-3 h-3" />
                               {entry.profiles.prenom} {entry.profiles.nom}
                             </div>

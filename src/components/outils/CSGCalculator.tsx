@@ -63,7 +63,7 @@ export function CSGCalculator() {
       <Card>
         <CardContent className="py-6">
           <div className="mb-5">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold">
                 N-1
               </span>
@@ -104,7 +104,7 @@ export function CSGCalculator() {
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-800 pt-5">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 flex items-center justify-center text-xs font-bold">
                 N
               </span>
@@ -290,7 +290,7 @@ export function CSGCalculator() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
               Calcul CSG Deductible / Non Deductible
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
               Renseignez les montants de CSG de l'annee N-1 et de l'annee N pour calculer la repartition entre CSG deductible et CSG non deductible, en tenant compte de la regularisation.
             </p>
           </CardContent>

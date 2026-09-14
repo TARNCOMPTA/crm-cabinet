@@ -284,7 +284,7 @@ export function ClientDetail() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-900 dark:text-gray-100 font-medium">Impossible de charger cette fiche</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Le dossier existe peut-etre toujours : c'est la lecture qui a echoue.
         </p>
         <div className="flex gap-2 justify-center mt-4">
@@ -541,8 +541,8 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Collaborateur</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Collaborateur</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Role</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -557,7 +557,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{collab.user?.prenom} {collab.user?.nom}</p>
-                            {collab.user?.job_role && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{collab.user.job_role}</p>}
+                            {collab.user?.job_role && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{collab.user.job_role}</p>}
                           </div>
                         </div>
                       </td>
@@ -565,7 +565,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
                         {resolved ? (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColorClasses(resolved.color)}`}>{resolved.label}</span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 italic">{collab.role}</span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 italic">{collab.role}</span>
                         )}
                       </td>
                     </tr>
@@ -575,7 +575,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Aucun collaborateur affecte</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Aucun collaborateur affecte</p>
         )}
       </CardContent>
     </Card>
@@ -606,7 +606,7 @@ function SyncHistoryCard({ syncHistory }: { syncHistory: INPISyncHistory[] }) {
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Aucune synchronisation</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Aucune synchronisation</p>
           )}
         </div>
       </CardContent>

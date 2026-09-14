@@ -60,7 +60,7 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
         {companies.length === 0 ? (
           <div className="text-center py-8">
             <Building className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucune entreprise recente</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucune entreprise recente</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -80,13 +80,13 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
                   {company.city && (
                     <div className="flex items-center gap-1 mt-0.5">
                       <MapPin className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
+                      <span className="text-xs text-gray-600 dark:text-gray-400 truncate capitalize">
                         {company.city.toLowerCase()}
                       </span>
                     </div>
                   )}
                 </div>
-                <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0 whitespace-nowrap">
+                <span className="text-[11px] text-gray-600 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
                   {formatDateFR(company.dateCreation)}
                 </span>
               </button>

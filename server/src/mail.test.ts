@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 process.env.DATABASE_URL ??= 'postgres://test-sans-connexion-reelle/test';
 process.env.SESSION_SECRET ??= 'secret-de-test-jamais-utilise-pour-signer-32c';
 
-const { estRefusAuthentification } = await import('./mail.js');
+const { estRefusAuthentification, resoudrePieces, nettoyerNomPiece } = await import('./mail.js');
 
 /**
  * Ce que cette garde protege : la boite du cabinet.
@@ -54,5 +54,120 @@ describe('estRefusAuthentification', () => {
     expect(estRefusAuthentification(new Error('boom'))).toBe(false);
     expect(estRefusAuthentification(null)).toBe(false);
     expect(estRefusAuthentification(undefined)).toBe(false);
+  });
+});
+
+
+/**
+ * La traduction des references de la file en pieces jointes.
+ *
+ * Ce qui se joue ici n'est pas un confort d'affichage : `resoudrePieces` est la
+ * derniere barriere avant qu'un fichier du serveur ne parte par courriel vers
+ * toute la clientele du cabinet. Chaque refus est donc eprouve pour lui-meme.
+ */
+describe('resoudrePieces', () => {
+  const RACINE = '/var/crm/storage';
+  const bonne = {
+    nom: 'lettre-de-mission.pdf',
+    bucket: 'campagne-attachments',
+    chemin: '2026/09/ab12.pdf',
+    type: 'application/pdf',
+    taille: 1024,
+  };
+
+  it('traduit une piece valide en attachement nodemailer', () => {
+    const r = resoudrePieces(RACINE, [bonne]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.attachments).toHaveLength(1);
+    expect(r.attachments[0].filename).toBe('lettre-de-mission.pdf');
+    expect(r.attachments[0].path).toBe('/var/crm/storage/campagne-attachments/2026/09/ab12.pdf');
+    expect(r.attachments[0].contentType).toBe('application/pdf');
+  });
+
+  it('rend une liste vide sans rien refuser quand il n y a aucune piece', () => {
+    const r = resoudrePieces(RACINE, []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.attachments).toEqual([]);
+  });
+
+  /*
+    LE cas. Une colonne `jsonb` est de la donnee : la validation faite au depot
+    portait sur une autre valeur, des jours plus tot. Si celle-ci remonte hors
+    du bucket, le fichier pointe partirait en piece jointe a chaque destinataire.
+  */
+  it('REFUSE un chemin qui remonte hors du bucket', () => {
+    const r = resoudrePieces(RACINE, [{ ...bonne, chemin: '../../../etc/passwd' }]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.raison).toContain('hors perimetre');
+  });
+
+  it('REFUSE un chemin absolu, qui ne contient pourtant aucun « .. »', () => {
+    const r = resoudrePieces(RACINE, [{ ...bonne, chemin: '/etc/shadow' }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it('REFUSE un bucket etranger au stockage', () => {
+    const r = resoudrePieces(RACINE, [{ ...bonne, bucket: 'inconnu' }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it('REFUSE une entree mal formee plutot que de la contourner', () => {
+    const r = resoudrePieces(RACINE, [{ nom: 'x' } as never]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.raison).toContain('mal formee');
+  });
+
+  /*
+    ⚠️ UN SEUL REFUS FAIT ECHOUER L'ENSEMBLE, et c'est voulu. Envoyer le courriel
+    avec la seule piece valide donnerait un message qui annonce deux documents et
+    n'en porte qu'un — faux, et invisible pour le destinataire.
+  */
+  it('refuse TOUT le courriel des qu une seule piece est refusee', () => {
+    const r = resoudrePieces(RACINE, [bonne, { ...bonne, chemin: '../../etc/passwd' }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it('ne laisse pas le nom de la piece refusee divulguer le chemin tente', () => {
+    const r = resoudrePieces(RACINE, [
+      { ...bonne, nom: 'innocent.pdf', chemin: '../../../etc/passwd' },
+    ]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.raison).toContain('innocent.pdf');
+    expect(r.raison).not.toContain('etc/passwd');
+  });
+});
+
+/**
+ * Le nom d'une piece jointe atterrit dans un en-tete MIME. Un retour chariot y
+ * couperait l'en-tete et laisserait ecrire les suivants : meme classe de faille
+ * que l'injection d'en-tete SMTP que `nettoyerSujet` ferme sur le sujet.
+ */
+describe('nettoyerNomPiece', () => {
+  it('laisse un nom ordinaire intact', () => {
+    expect(nettoyerNomPiece('lettre de mission 2026.pdf')).toBe('lettre de mission 2026.pdf');
+  });
+
+  it('neutralise un retour chariot, donc l injection d en-tete', () => {
+    const sale = 'facture.pdf\r\nContent-Type: text/html';
+    expect(nettoyerNomPiece(sale)).not.toContain('\r');
+    expect(nettoyerNomPiece(sale)).not.toContain('\n');
+  });
+
+  it('neutralise le guillemet, qui refermerait filename en avance', () => {
+    expect(nettoyerNomPiece('a".exe')).toBe('a_.exe');
+  });
+
+  it('ne garde que le dernier segment d un chemin', () => {
+    expect(nettoyerNomPiece('2026/09/note.pdf')).toBe('note.pdf');
+  });
+
+  it('rend un nom utilisable meme quand il ne reste rien', () => {
+    expect(nettoyerNomPiece('   ')).toBe('piece');
+    expect(nettoyerNomPiece('')).toBe('piece');
   });
 });

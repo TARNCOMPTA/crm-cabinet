@@ -337,7 +337,7 @@ export function ClientCollaboratorAssignModal({
                 Remplacer
               </button>
             </div>
-            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">
               {mode === 'add'
                 ? 'Les collaborateurs seront ajoutes sans modifier les affectations existantes'
                 : 'Les affectations existantes seront supprimees et remplacees'}
@@ -360,7 +360,7 @@ export function ClientCollaboratorAssignModal({
                     .map((c) => `${c.user?.prenom || ''} ${c.user?.nom || ''}`.trim() || 'Utilisateur')
                     .join(', ')}
                 </p>
-                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400">
                   « Ajouter » ne les modifie pas. Pour en retirer un, passez par
                   « Remplacer ».
                 </p>

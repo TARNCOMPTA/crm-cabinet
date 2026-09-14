@@ -17,7 +17,7 @@ export function SortButton({ label, field, activeField, direction, onSort }: Sor
       className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all select-none ${
         isActive
           ? 'bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-700'
-          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+          : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
       }`}
     >
       {label}
@@ -44,7 +44,7 @@ interface SortSelectProps {
 export function SortSelect({ options, activeField, direction, onSort }: SortSelectProps) {
   return (
     <div className="inline-flex items-center gap-1.5">
-      <span className="text-xs text-gray-500 dark:text-gray-400">Trier par</span>
+      <span className="text-xs text-gray-600 dark:text-gray-400">Trier par</span>
       <select
         value={activeField}
         onChange={(e) => onSort(e.target.value)}

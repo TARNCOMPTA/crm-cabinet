@@ -271,6 +271,106 @@ suite('schema appliqué à PostgreSQL', () => {
     expect(fautives, `fonctions referencant un schema absent : ${fautives.join(', ')}`).toEqual([]);
   });
 
+  it('porte le contrat de l increment 020 : les pieces jointes, sans toucher a l existant', async () => {
+    /*
+      Ce que ce cas protege n'est pas la presence des deux colonnes — ce serait
+      un test qui recopie le schema — mais leurs DEUX proprietes vitales.
+
+      1. Le defaut. Les lignes d'`email_queue` inserees par le reste du produit
+         — notifications, rappels — ne mentionnent pas les pieces jointes. Sans
+         `DEFAULT '[]'` elles arriveraient a NULL, et l'ouvrier d'envoi ferait
+         `NULL.length`. Un `NOT NULL` sans defaut, lui, casserait purement et
+         simplement tous les inserts existants. Les deux ensemble, et seulement
+         les deux, laissent le reste du produit intact.
+
+      2. L'independance des deux colonnes. `email_queue` porte ce qui PART,
+         `mailing_campagnes` ce qui RESTE apres la purge a 30 jours. Quelqu'un
+         pourrait un jour croire l'une redondante et la faire deriver de
+         l'autre. On prouve donc qu'elles se renseignent separement et peuvent
+         differer — ce qui est justement l'etat normal apres une purge.
+    */
+    for (const table of ['email_queue', 'mailing_campagnes']) {
+      const { rows: col } = await client.query(
+        `SELECT data_type, is_nullable, column_default
+           FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1
+            AND column_name = 'pieces_jointes'`,
+        [table]
+      );
+      expect(col, `colonne absente sur ${table}`).toHaveLength(1);
+      expect(col[0].data_type, table).toBe('jsonb');
+      expect(col[0].is_nullable, table).toBe('NO');
+      expect(col[0].column_default, table).toContain('[]');
+    }
+
+    // Le defaut s'applique vraiment : un insert qui ignore la colonne — c'est
+    // le cas de tout le reste du produit — donne un tableau vide, pas NULL.
+    await client.query(
+      `INSERT INTO profiles (id, email) VALUES
+       ('00000000-0000-4000-8000-0000000f0020', 'zz-pieces@example.test')`
+    );
+    await client.query(
+      `INSERT INTO email_queue (id, user_id, to_email, subject, html_body)
+       VALUES ('00000000-0000-4000-8000-0000000e0020',
+               '00000000-0000-4000-8000-0000000f0020',
+               'zz@example.test', 'ZZ sujet', '<p>zz</p>')`
+    );
+    const { rows: defaut } = await client.query(
+      `SELECT pieces_jointes FROM email_queue
+        WHERE id = '00000000-0000-4000-8000-0000000e0020'`
+    );
+    expect(defaut[0].pieces_jointes).toEqual([]);
+
+    // Et la colonne accepte la forme que mail.ts relira.
+    await client.query(
+      `UPDATE email_queue
+          SET pieces_jointes = $1::jsonb
+        WHERE id = '00000000-0000-4000-8000-0000000e0020'`,
+      [
+        JSON.stringify([
+          {
+            nom: 'lettre-de-mission.pdf',
+            bucket: 'campagne-attachments',
+            chemin: '2026/09/zz.pdf',
+            type: 'application/pdf',
+            taille: 184320,
+          },
+        ]),
+      ]
+    );
+    const { rows: pose } = await client.query(
+      `SELECT pieces_jointes -> 0 ->> 'chemin' AS chemin,
+              jsonb_array_length(pieces_jointes) AS n
+         FROM email_queue WHERE id = '00000000-0000-4000-8000-0000000e0020'`
+    );
+    expect(pose[0].chemin).toBe('2026/09/zz.pdf');
+    expect(Number(pose[0].n)).toBe(1);
+
+    // Les deux colonnes sont independantes : la campagne garde sa trace meme
+    // quand la ligne de file, elle, a ete purgee.
+    await client.query(
+      `INSERT INTO mailing_campagnes (id, sujet, corps, pieces_jointes)
+       VALUES ('00000000-0000-4000-8000-0000000c0020', 'ZZ campagne', 'ZZ corps',
+               $1::jsonb)`,
+      [JSON.stringify([{ nom: 'garde.pdf', bucket: 'campagne-attachments', chemin: 'a.pdf' }])]
+    );
+    await client.query(
+      `DELETE FROM email_queue WHERE id = '00000000-0000-4000-8000-0000000e0020'`
+    );
+    const { rows: survivant } = await client.query(
+      `SELECT pieces_jointes -> 0 ->> 'nom' AS nom
+         FROM mailing_campagnes WHERE id = '00000000-0000-4000-8000-0000000c0020'`
+    );
+    expect(survivant[0].nom).toBe('garde.pdf');
+
+    await client.query(
+      `DELETE FROM mailing_campagnes WHERE id = '00000000-0000-4000-8000-0000000c0020'`
+    );
+    await client.query(
+      `DELETE FROM profiles WHERE id = '00000000-0000-4000-8000-0000000f0020'`
+    );
+  });
+
   it('porte le contrat de l increment 019 : l adresse de facturation, DISTINCTE du SIRET', async () => {
     /*
       Ce que ce cas protege n'est pas la presence de la colonne — ce serait un

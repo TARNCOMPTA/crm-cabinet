@@ -69,7 +69,7 @@ export const FieldCell = memo(function FieldCell({
                 ) : null;
               })}
               {effectiveSoftware.length > 1 && (
-                <span className="text-xs text-gray-500">+{effectiveSoftware.length - 1}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">+{effectiveSoftware.length - 1}</span>
               )}
             </>
           ) : (

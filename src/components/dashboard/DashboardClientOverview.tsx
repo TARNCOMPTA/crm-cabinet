@@ -65,7 +65,7 @@ export function DashboardClientOverview({
       </CardHeader>
       <CardContent className="space-y-5">
         <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
             Par statut
           </p>
           {total > 0 ? (
@@ -104,13 +104,13 @@ export function DashboardClientOverview({
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-400 dark:text-gray-500">Aucun client</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucun client</p>
           )}
         </div>
 
         {regimeFiscalCounts.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
               Par regime fiscal
             </p>
             <div className="space-y-1.5">
@@ -136,13 +136,13 @@ export function DashboardClientOverview({
 
         {formeJuridiqueCounts.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
               Top formes juridiques
             </p>
             <div className="space-y-1">
               {formeJuridiqueCounts.map((f, i) => (
                 <div key={f.forme} className="flex items-center gap-2 py-1">
-                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 w-4 text-right">
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 w-4 text-right">
                     {i + 1}.
                   </span>
                   <span className="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate">

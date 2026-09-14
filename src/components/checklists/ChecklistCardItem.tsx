@@ -80,7 +80,7 @@ export function ChecklistCardItem({
         onClick={() => onOpenDetail(item.id)}
         className={`flex-1 text-left text-sm truncate transition-colors ${
           item.is_checked
-            ? 'line-through text-gray-400 dark:text-gray-500'
+            ? 'line-through text-gray-600 dark:text-gray-400'
             : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
         }`}
       >
@@ -89,13 +89,13 @@ export function ChecklistCardItem({
 
       <div className="flex items-center gap-1 flex-shrink-0">
         {hasComments && (
-          <span className="flex items-center gap-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+          <span className="flex items-center gap-0.5 text-[10px] text-gray-600 dark:text-gray-400">
             <MessageSquare className="w-3 h-3" />
             {metaCounts!.comments}
           </span>
         )}
         {hasAttachments && (
-          <span className="flex items-center gap-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+          <span className="flex items-center gap-0.5 text-[10px] text-gray-600 dark:text-gray-400">
             <Paperclip className="w-3 h-3" />
             {metaCounts!.attachments}
           </span>

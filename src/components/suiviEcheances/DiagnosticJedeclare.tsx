@@ -62,7 +62,7 @@ function Ligne({
         )}
       </div>
       {mesure && (
-        <span className="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+        <span className="shrink-0 text-xs tabular-nums text-gray-600 dark:text-gray-400">
           {mesure}
         </span>
       )}
@@ -104,7 +104,7 @@ export function DiagnosticJedeclare({ onFermer }: { onFermer: () => void }) {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Diagnostic jedeclare
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Chaque compte de flux est interrogé séparément. Lister ne marque rien.
             </p>
           </div>
@@ -177,7 +177,7 @@ export function DiagnosticJedeclare({ onFermer }: { onFermer: () => void }) {
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Sans mention « marquage autorisé », un compte est en mode prudent : seuls ses
               accusés déjà récupérés par un autre logiciel sont lus. Un compte que personne ne
               relève n'en a jamais, et reste donc absent du suivi.
@@ -204,7 +204,7 @@ export function DiagnosticJedeclare({ onFermer }: { onFermer: () => void }) {
                   detail={resultat.gestion.detail}
                 />
               ) : (
-                <p className="py-2 text-xs text-gray-500 dark:text-gray-400">
+                <p className="py-2 text-xs text-gray-600 dark:text-gray-400">
                   Gestion non testée : aucun{' '}
                   <code className="font-mono">JEDECLARE_ID_COMPTE</code> renseigné. Cet
                   identifiant ne sert qu'à lire la liste des dossiers, pas les comptes rendus.

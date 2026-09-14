@@ -299,7 +299,7 @@ export function WebDirectory() {
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
                     {category.description && (
-                      <p className="text-sm text-gray-500">{category.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
                     )}
                   </div>
                 </div>
@@ -358,7 +358,7 @@ export function WebDirectory() {
               {links.length === 0 && editMode && (
                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
                   <LinkIcon className="mx-auto h-8 w-8 text-gray-300" />
-                  <p className="mt-2 text-sm text-gray-500">Aucun lien dans cette catégorie</p>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Aucun lien dans cette catégorie</p>
                 </div>
               )}
 
@@ -371,9 +371,9 @@ export function WebDirectory() {
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-gray-900 truncate">{link.title}</h3>
                             {link.description && (
-                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{link.description}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-1">{link.description}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">{extractDomain(link.url)}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{extractDomain(link.url)}</p>
                           </div>
                           <div className="flex items-center gap-0.5 ml-2 flex-shrink-0">
                             <button
@@ -422,9 +422,9 @@ export function WebDirectory() {
                               {link.title}
                             </h3>
                             {link.description && (
-                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{link.description}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">{link.description}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-1.5">{extractDomain(link.url)}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">{extractDomain(link.url)}</p>
                           </div>
                           <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-teal-500 transition-colors flex-shrink-0 ml-3 mt-0.5" />
                         </div>

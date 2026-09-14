@@ -111,7 +111,7 @@ export function FileUploadZone({ onFileSelected, isImporting, onImportComplete }
               <p className="text-sm font-medium text-gray-700">
                 Glissez-déposez votre fichier ici
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 ou cliquez pour parcourir — Format CSV ou Excel
               </p>
             </div>
@@ -124,7 +124,7 @@ export function FileUploadZone({ onFileSelected, isImporting, onImportComplete }
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
               {(selectedFile.size / 1024).toFixed(1)} Ko
             </p>
           </div>

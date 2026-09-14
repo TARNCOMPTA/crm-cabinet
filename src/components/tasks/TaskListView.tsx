@@ -55,7 +55,7 @@ export function TaskListView({
                         </div>
                       )}
                       {(checklistCounts[task.id] || attachmentCounts[task.id]) && (
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 dark:text-slate-500">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-slate-500">
                           {checklistCounts[task.id] && checklistCounts[task.id].total > 0 && (
                             <span className={`flex items-center gap-1 ${checklistCounts[task.id].checked === checklistCounts[task.id].total ? 'text-teal-600 dark:text-teal-400' : ''}`}>
                               <ClipboardList className="w-3 h-3" />
@@ -76,7 +76,7 @@ export function TaskListView({
                     {task.clients ? (
                       <span className="text-sm text-gray-900 dark:text-slate-200">{task.clients.nom_entreprise}</span>
                     ) : (
-                      <span className="text-sm text-gray-500 dark:text-slate-500">-</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -93,7 +93,7 @@ export function TaskListView({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-500 dark:text-slate-500">-</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -110,7 +110,7 @@ export function TaskListView({
                         {task.task_categories.nom}
                       </Badge>
                     ) : (
-                      <span className="text-sm text-gray-500 dark:text-slate-500">-</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -128,7 +128,7 @@ export function TaskListView({
                         {new Date(task.date_echeance).toLocaleDateString('fr-FR')}
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-500 dark:text-slate-500">-</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-3 px-4">

@@ -152,7 +152,7 @@ export function DashboardMeetingNoteModal({ isOpen, onClose, onCreated }: Dashbo
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedClient.nom_entreprise}</p>
                   {selectedClient.siren && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">SIREN: {selectedClient.siren}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">SIREN: {selectedClient.siren}</p>
                   )}
                 </div>
               </div>
@@ -187,7 +187,7 @@ export function DashboardMeetingNoteModal({ isOpen, onClose, onCreated }: Dashbo
               {showDropdown && (
                 <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
                   {filteredClients.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       Aucun client trouve
                     </div>
                   ) : (
@@ -204,7 +204,7 @@ export function DashboardMeetingNoteModal({ isOpen, onClose, onCreated }: Dashbo
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{client.nom_entreprise}</p>
                           {client.siren && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{client.siren}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{client.siren}</p>
                           )}
                         </div>
                       </button>

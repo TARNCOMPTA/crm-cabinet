@@ -51,7 +51,7 @@ function LigneDepot({ depot, principal }: { depot: DepotStatuts; principal?: boo
       >
         {depot.libelle}
       </span>
-      <span className="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+      <span className="shrink-0 text-xs tabular-nums text-gray-600 dark:text-gray-400">
         {formaterDate(depot.date)}
       </span>
     </div>
@@ -146,7 +146,7 @@ export function ClientStatutsCard({ client }: ClientStatutsCardProps) {
           <p className="text-sm text-orange-600 dark:text-orange-400">
             Le registre n a pas pu etre consulte : {etat.message}
           </p>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
             Cette societe a peut-etre des statuts deposes — on ne sait pas.
           </p>
           <Button variant="outline" size="sm" className="mt-3" onClick={charger}>
@@ -233,7 +233,7 @@ export function ClientStatutsCard({ client }: ClientStatutsCardProps) {
           </p>
         )}
 
-        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">
           Registre national des entreprises{releveLe ? ` — releve du ${formaterDate(releveLe)}` : ''}
         </p>
       </CardContent>

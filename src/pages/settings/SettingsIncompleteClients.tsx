@@ -720,7 +720,7 @@ export function SettingsIncompleteClients() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-1">Donnees manquantes</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Identifiez et completez les informations manquantes de vos clients.
           </p>
         </div>
@@ -752,7 +752,7 @@ export function SettingsIncompleteClients() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-1">Donnees manquantes</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Identifiez et completez les informations manquantes de vos clients.
           </p>
         </div>
@@ -785,7 +785,7 @@ export function SettingsIncompleteClients() {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-1">Donnees manquantes</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Identifiez et completez les informations manquantes de vos clients.
           </p>
         </div>
@@ -807,7 +807,7 @@ export function SettingsIncompleteClients() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-1">Donnees manquantes</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Identifiez et completez les informations manquantes directement depuis ce tableau.
           </p>
         </div>
@@ -904,7 +904,7 @@ export function SettingsIncompleteClients() {
         {filteredClients.length === 0 ? (
           <div className="text-center py-16">
             <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm font-medium">Aucun client ne correspond aux filtres</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Aucun client ne correspond aux filtres</p>
           </div>
         ) : (
           <>
@@ -921,7 +921,7 @@ export function SettingsIncompleteClients() {
                         className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                       />
                     </th>
-                    <th className="sticky left-[44px] z-20 bg-gray-50 text-left py-3.5 px-4 font-medium text-gray-500 text-xs uppercase tracking-wide min-w-[200px] max-w-[240px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                    <th className="sticky left-[44px] z-20 bg-gray-50 text-left py-3.5 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide min-w-[200px] max-w-[240px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)]">
                       <button
                         type="button"
                         onClick={() => toggleSort('name')}
@@ -933,7 +933,7 @@ export function SettingsIncompleteClients() {
                           : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                       </button>
                     </th>
-                    <th className="text-left py-3.5 px-3 font-medium text-gray-500 text-xs uppercase tracking-wide whitespace-nowrap">
+                    <th className="text-left py-3.5 px-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => toggleSort('completeness')}
@@ -945,7 +945,7 @@ export function SettingsIncompleteClients() {
                           : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                       </button>
                     </th>
-                    <th className="text-left py-3.5 px-3 font-medium text-gray-500 text-xs uppercase tracking-wide whitespace-nowrap">
+                    <th className="text-left py-3.5 px-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => toggleSort('criticality')}
@@ -961,7 +961,7 @@ export function SettingsIncompleteClients() {
                     {TRACKED_FIELDS.map(field => (
                       <th
                         key={field.key}
-                        className="text-left py-3.5 px-3 font-medium text-gray-500 text-xs uppercase tracking-wide whitespace-nowrap"
+                        className="text-left py-3.5 px-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide whitespace-nowrap"
                       >
                         {field.shortLabel}
                       </th>
@@ -1010,7 +1010,7 @@ export function SettingsIncompleteClients() {
                           title={client.nom_entreprise || '-'}
                         >
                           <div className="text-sm">{client.nom_entreprise || '-'}</div>
-                          <div className="text-xs text-gray-400 font-normal mt-0.5">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 font-normal mt-0.5">
                             {client.statut === 'actif' && <span className="text-emerald-600">Actif</span>}
                             {client.statut === 'inactif' && <span className="text-gray-500">Inactif</span>}
                             {client.statut === 'prospect' && <span className="text-blue-600">Prospect</span>}
@@ -1087,7 +1087,7 @@ export function SettingsIncompleteClients() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/50">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {(safePage - 1) * PAGE_SIZE + 1}-{Math.min(safePage * PAGE_SIZE, filteredClients.length)} sur {filteredClients.length}
                 </span>
                 <div className="flex items-center gap-1">

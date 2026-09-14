@@ -163,7 +163,7 @@ export default function DeleteClientModal({
             placeholder={clientName}
             disabled={isLoading}
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             Tapez exactement : <span className="font-mono font-semibold">{clientName}</span>
           </p>
         </div>

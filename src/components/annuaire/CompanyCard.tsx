@@ -60,7 +60,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
                 )}
               </div>
               {company.legal_form && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
                   {company.legal_form}
                 </p>
               )}
@@ -77,7 +77,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
         </div>
 
         {company.siren && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+          <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">
             SIREN {company.siren}
           </p>
         )}
@@ -140,7 +140,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
                 {primaryContact.first_name} {primaryContact.last_name}
               </span>
               {primaryLink.role_in_company && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
                   - {primaryLink.role_in_company}
                 </span>
               )}
@@ -160,7 +160,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
         )}
 
         {contactCount > 0 && (
-          <div className="space-y-1 text-xs text-gray-400 dark:text-gray-500">
+          <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{contactCount} contact{contactCount > 1 ? 's' : ''}</span>
@@ -195,7 +195,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
         )}
 
         {clientData?._numeroDossier && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+          <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
             <span>Dossier {clientData._numeroDossier}</span>
           </div>
         )}

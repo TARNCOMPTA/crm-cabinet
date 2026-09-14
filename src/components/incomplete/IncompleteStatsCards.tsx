@@ -67,8 +67,8 @@ export function IncompleteStatsCards({
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1">{card.label}</p>
-                <p className={`text-2xl font-semibold ${count > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{card.label}</p>
+                <p className={`text-2xl font-semibold ${count > 0 ? 'text-gray-900' : 'text-gray-600 dark:text-gray-400'}`}>
                   {count}
                 </p>
               </div>

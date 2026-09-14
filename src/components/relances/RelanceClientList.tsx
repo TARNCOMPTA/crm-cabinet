@@ -213,7 +213,7 @@ export function RelanceClientList({
                     <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                   {group.clientDossier && <span>N{group.clientDossier}</span>}
                   {group.clientSiren && <span>SIREN {group.clientSiren}</span>}
                 </div>
@@ -223,7 +223,7 @@ export function RelanceClientList({
                 <span className="text-sm font-bold text-red-600 dark:text-red-400">
                   {formatCurrency(group.totalImpaye)}
                 </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   {group.countImpaye} impayee{group.countImpaye > 1 ? 's' : ''}
                 </p>
               </div>
@@ -234,7 +234,7 @@ export function RelanceClientList({
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
+                      <tr className="bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">
                         <th className="px-4 py-2.5 text-left font-medium">Date</th>
                         <th className="px-4 py-2.5 text-left font-medium">N facture</th>
                         <th className="px-4 py-2.5 text-right font-medium">Montant</th>
@@ -285,7 +285,7 @@ export function RelanceClientList({
                                   <div className="text-xs text-gray-700 dark:text-gray-300 font-medium">
                                     {formatCurrency(inv.montant_regle)}
                                   </div>
-                                  <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  <div className="text-[10px] text-gray-600 dark:text-gray-400">
                                     {formatDate(inv.date_reglement)}
                                   </div>
                                   {inv.mode_reglement && (

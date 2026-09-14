@@ -282,7 +282,7 @@ export function NotificationCenter() {
 
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="py-10 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="py-10 px-4 text-center text-sm text-gray-600 dark:text-gray-400">
                 Chargement...
               </div>
             ) : notifications.length === 0 ? (
@@ -291,7 +291,7 @@ export function NotificationCenter() {
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Aucune notification
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   Vous serez prevenu des nouveautes ici.
                 </p>
               </div>
@@ -335,7 +335,7 @@ function NotificationSection({
 }) {
   return (
     <div>
-      <div className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500">
+      <div className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider font-semibold text-gray-600 dark:text-gray-400">
         {title}
       </div>
       <ul>
@@ -363,7 +363,7 @@ function NotificationSection({
                     <p className={`flex-1 text-sm ${isRead ? 'font-medium text-gray-700 dark:text-gray-300' : 'font-semibold text-gray-900 dark:text-gray-100'}`}>
                       {n.title}
                     </p>
-                    <span className="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    <span className="text-[11px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
@@ -371,7 +371,7 @@ function NotificationSection({
                     {n.message}
                   </p>
                   {g.count > 1 && (
-                    <span className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
+                    <span className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
                       <Layers className="w-3 h-3" />
                       {g.count} fois
                     </span>

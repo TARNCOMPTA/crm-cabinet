@@ -205,13 +205,13 @@ function KanbanCard({
               {attachmentsCount}
             </span>
           )}
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
             {declaration.annee}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 mt-1.5">
         {isClient ? (
           <>
             <Building2 className="w-3 h-3" />
@@ -250,7 +250,7 @@ function KanbanCard({
       )}
 
       {declaration.commentaire && (
-        <div className="mt-2 flex items-start gap-1 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <div className="mt-2 flex items-start gap-1 text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
           <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
           <span className="line-clamp-2">{declaration.commentaire}</span>
         </div>
@@ -279,7 +279,7 @@ function KanbanCardOverlay({ declaration }: { declaration: RevenueDeclaration })
       <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">
         {declaration.person_name}
       </h4>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{declaration.annee}</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">{declaration.annee}</p>
     </div>
   );
 }

@@ -99,13 +99,13 @@ export function SettingsSecurite() {
               <h3 className="font-semibold text-gray-900 dark:text-white">
                 Connexion sans mot de passe
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                 Vous vous connectez avec l&apos;empreinte, le visage ou le code de vos
                 appareils. Rien n&apos;est à retenir, et il n&apos;y a aucun mot de passe à
                 intercepter.
               </p>
               {profile?.email && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Compte : {profile.email}
                 </p>
               )}
@@ -125,9 +125,9 @@ export function SettingsSecurite() {
 
           <div className="space-y-2">
             {chargement ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Chargement...</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Chargement...</p>
             ) : passkeys.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Aucun appareil enrôlé.
               </p>
             ) : (
@@ -141,7 +141,7 @@ export function SettingsSecurite() {
                     <p className="font-medium text-gray-900 dark:text-white truncate">
                       {pk.libelle || 'Appareil sans nom'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       Enrôlé le {formaterDate(pk.created_at)} · dernière utilisation :{' '}
                       {formaterDate(pk.last_used_at)}
                     </p>

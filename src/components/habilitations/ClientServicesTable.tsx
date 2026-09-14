@@ -241,7 +241,7 @@ export function ClientServicesTable({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Couverture des services</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
             {data.length} client{data.length > 1 ? 's' : ''} du cabinet
             {hasImportData && ` dont ${data.filter((c) => c.hasHabilitations).length} avec des services ouverts`}
           </p>
@@ -287,9 +287,9 @@ export function ClientServicesTable({
                   <SortableTh label="Entreprise" field="entreprise" activeField={sortField} direction={sortDirection} onSort={handleSort} className="text-xs uppercase tracking-wider py-3" />
                   <SortableTh label="SIREN" field="siren" activeField={sortField} direction={sortDirection} onSort={handleSort} className="text-xs uppercase tracking-wider py-3" />
                   <SortableTh label="Completude" field="completude" activeField={sortField} direction={sortDirection} onSort={handleSort} className="text-xs uppercase tracking-wider py-3" />
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Services</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Services</th>
                   <SortableTh label="Avancement" field="avancement" activeField={sortField} direction={sortDirection} onSort={handleSort} className="text-xs uppercase tracking-wider py-3" />
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Commentaire</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Commentaire</th>
                   <th className="text-right py-3 px-3" />
                 </tr>
               </thead>
@@ -337,13 +337,13 @@ export function ClientServicesTable({
                                     {resolvedNames.get(client.siren) || client.clientName}
                                   </span>
                                   {resolvedNames.has(client.siren) && (
-                                    <p className="text-[10px] font-mono text-gray-400 mt-0.5">SIREN {client.siren}</p>
+                                    <p className="text-[10px] font-mono text-gray-600 dark:text-gray-400 mt-0.5">SIREN {client.siren}</p>
                                   )}
                                 </>
                               ) : (
                                 <Link
                                   to={`/clients/${client.clientId}`}
-                                  className={`text-sm font-medium transition-colors ${isNC ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400'}`}
+                                  className={`text-sm font-medium transition-colors ${isNC ? 'text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400'}`}
                                 >
                                   {client.clientName}
                                 </Link>
@@ -357,11 +357,11 @@ export function ClientServicesTable({
                         <td className="py-3 px-4">
                           {client.siren ? (
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-sm font-mono ${isNC ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{client.siren}</span>
+                              <span className={`text-sm font-mono ${isNC ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300'}`}>{client.siren}</span>
                               <CopyButton value={client.siren} label="SIREN" />
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">Non renseigne</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400 italic">Non renseigne</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
@@ -503,7 +503,7 @@ export function ClientServicesTable({
 
           {displayData.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Aucun client trouve</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Aucun client trouve</p>
             </div>
           )}
         </div>

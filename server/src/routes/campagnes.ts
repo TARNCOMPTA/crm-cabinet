@@ -70,6 +70,7 @@ import {
   verifierSignatureDesinscription,
   VARIABLES,
   type ClientDestinataire,
+  validerPieces,
 } from '../campagnes/gabarit.js';
 
 /**
@@ -302,7 +303,15 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
    * une partie des clients a reçu, l'écran n'en sait rien, et rejouer réenvoie aux
    * premiers. La transaction ferme cette porte.
    */
-  app.post<{ Body: { filtres?: Filtres; sujet?: string; corps?: string; retires?: string[] } }>(
+  app.post<{
+    Body: {
+      filtres?: Filtres;
+      sujet?: string;
+      corps?: string;
+      retires?: string[];
+      pieces?: unknown;
+    };
+  }>(
     '/api/campagnes',
     async (request, reply) => {
       const session = await exigerSession(request, reply);
@@ -316,6 +325,19 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
       if (!sujet || !corps) {
         return reply.code(400).send({ message: 'Un sujet et un corps sont obligatoires.' });
       }
+
+      /*
+       * Les pièces jointes, contrôlées AVANT de calculer les destinataires : un
+       * refus doit coûter une requête, pas la résolution de tout un portefeuille.
+       */
+      const validation = validerPieces(request.body?.pieces, {
+        nombreMax: config.campagnes.piecesMax,
+        octetsMax: config.campagnes.piecesOctetsMax,
+      });
+      if (!validation.ok) {
+        return reply.code(400).send({ message: validation.message });
+      }
+      const pieces = validation.pieces;
 
       const clients = await clientsVises(filtres);
       const { retenus, exclus } = resoudreDestinataires(
@@ -332,8 +354,9 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
       const campagneId = await transaction(async (client) => {
         const { rows } = await client.query<{ id: string }>(
           `INSERT INTO mailing_campagnes
-             (sujet, corps, filtres, cree_par, envoye_le, nb_destinataires, nb_exclus)
-           VALUES ($1, $2, $3, $4, now(), $5, $6) RETURNING id`,
+             (sujet, corps, filtres, cree_par, envoye_le, nb_destinataires, nb_exclus,
+              pieces_jointes)
+           VALUES ($1, $2, $3, $4, now(), $5, $6, $7::jsonb) RETURNING id`,
           [
             sujet,
             corps,
@@ -343,6 +366,8 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
             session.sub,
             retenus.length,
             exclus.length,
+            // La trace, qui survivra a la purge d'`email_queue` a 30 jours.
+            JSON.stringify(pieces),
           ]
         );
         const id = rows[0]!.id;
@@ -362,9 +387,14 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
           const sujetFinal = nettoyerSujet(substituer(sujet, c));
 
           const { rows: file } = await client.query<{ id: string }>(
-            `INSERT INTO email_queue (user_id, to_email, subject, html_body, status)
-             VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-            [session.sub, c.email, sujetFinal, html]
+            `INSERT INTO email_queue
+               (user_id, to_email, subject, html_body, status, pieces_jointes)
+             VALUES ($1, $2, $3, $4, 'pending', $5::jsonb) RETURNING id`,
+            // Les pieces sont RECOPIEES sur chaque ligne, et non lues par
+            // jointure a l'envoi : l'ouvrier lit la file seule, sous verrou, par
+            // lots de cinquante. C'est aussi ce qui fige l'envoi — modifier la
+            // campagne ensuite ne doit pas changer ce qui est deja en file.
+            [session.sub, c.email, sujetFinal, html, JSON.stringify(pieces)]
           );
           await client.query(
             `INSERT INTO mailing_destinataires (campagne_id, client_id, email, email_queue_id)
@@ -406,8 +436,10 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
       envoyes: string;
       erreurs: string;
       en_attente: string;
+      pieces_jointes: Array<{ nom: string; taille?: number | null }>;
     }>(
       `SELECT c.id, c.sujet, c.envoye_le, c.nb_destinataires, c.nb_exclus,
+              c.pieces_jointes,
               nullif(trim(concat_ws(' ', p.prenom, p.nom)), '') AS auteur,
               count(q.id) FILTER (WHERE q.status = 'sent')::text    AS envoyes,
               count(q.id) FILTER (WHERE q.status = 'error')::text   AS erreurs,
@@ -418,7 +450,8 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
          -- Jointure sans cle etrangere : la file est purgee au bout de 30 jours,
          -- les compteurs retombent alors a zero et seul nb_destinataires subsiste.
          LEFT JOIN email_queue q ON q.id = d.email_queue_id
-        GROUP BY c.id, c.sujet, c.envoye_le, c.nb_destinataires, c.nb_exclus, p.prenom, p.nom
+        GROUP BY c.id, c.sujet, c.envoye_le, c.nb_destinataires, c.nb_exclus,
+                 c.pieces_jointes, p.prenom, p.nom
         ORDER BY c.created_at DESC
         LIMIT 50`
     );
@@ -434,6 +467,9 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
         envoyes: Number(l.envoyes),
         erreurs: Number(l.erreurs),
         enAttente: Number(l.en_attente),
+        // La trace des pieces, lue sur la campagne et non sur la file : celle-ci
+        // est purgee a 30 jours, l'historique doit survivre a la purge.
+        pieces: (l.pieces_jointes ?? []).map((p) => ({ nom: p.nom, taille: p.taille ?? null })),
       })),
     };
   });

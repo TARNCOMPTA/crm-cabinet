@@ -295,7 +295,7 @@ export function SettingsTaskTemplates() {
                             {template.task_categories.nom}
                           </Badge>
                         ) : (
-                          <span className="text-sm text-gray-500">Aucune</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Aucune</span>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -307,7 +307,7 @@ export function SettingsTaskTemplates() {
                         {template.estimated_hours ? (
                           <span className="text-sm text-gray-900">{template.estimated_hours}h</span>
                         ) : (
-                          <span className="text-sm text-gray-500">-</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">-</span>
                         )}
                       </td>
                       <td className="py-3 px-4">

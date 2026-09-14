@@ -135,7 +135,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-400 py-3">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 py-3">
         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-500" />
         Chargement...
       </div>
@@ -151,7 +151,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
             Checklists
           </span>
           {checklists.length > 0 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               ({checklists.length})
             </span>
           )}
@@ -188,14 +188,14 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
                 className="w-full text-left px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-md transition-colors flex items-center justify-between"
               >
                 <span className="truncate">{t.title}</span>
-                <span className="text-xs text-gray-400 ml-2 shrink-0">{t.items.length} items</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400 ml-2 shrink-0">{t.items.length} items</span>
               </button>
             ))}
           </div>
           <button
             type="button"
             onClick={() => setShowTemplates(false)}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             Annuler
           </button>
@@ -203,7 +203,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
       )}
 
       {showTemplates && templates.length === 0 && (
-        <p className="text-xs text-gray-400 italic py-1">Aucun template disponible.</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 italic py-1">Aucun template disponible.</p>
       )}
 
       {showCreateForm && (
@@ -228,7 +228,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
           <button
             type="button"
             onClick={() => { setShowCreateForm(false); setNewTitle(''); }}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             Annuler
           </button>
@@ -236,7 +236,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
       )}
 
       {checklists.length === 0 && !showCreateForm && !showTemplates && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 italic py-1">
+        <p className="text-xs text-gray-600 dark:text-gray-400 italic py-1">
           Aucune checklist. Cliquez + pour en creer une.
         </p>
       )}
@@ -257,7 +257,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
               </span>
               <div className="flex items-center gap-2">
                 {total > 0 && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
                     {checked}/{total}
                   </span>
                 )}
@@ -300,7 +300,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
                   <span
                     className={`text-sm flex-1 ${
                       item.is_checked
-                        ? 'line-through text-gray-400 dark:text-gray-500'
+                        ? 'line-through text-gray-600 dark:text-gray-400'
                         : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >

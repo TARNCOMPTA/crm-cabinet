@@ -283,7 +283,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Amortissements Reputes Differes (ARD)
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Suivi annuel LMNP reel BIC
             </p>
           </div>
@@ -332,7 +332,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                         <tr key={`section-${field.section}`} className="bg-gray-100/60 dark:bg-gray-800/30">
                           <td
                             colSpan={rows.length + 1}
-                            className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
+                            className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
                           >
                             {SECTION_HEADERS[field.section]}
                           </td>
@@ -442,7 +442,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                 <tr className="bg-gray-100/60 dark:bg-gray-800/30">
                   <td
                     colSpan={rows.length + 1}
-                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
                   >
                     Controle (optionnel)
                   </td>
@@ -472,7 +472,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                         key={`reg-${rows[ri].annee}`}
                         className={`px-2 py-2.5 text-right text-sm font-mono font-semibold border-b border-gray-200 dark:border-gray-700 ${
                           !r.hasA6
-                            ? 'text-gray-400'
+                            ? 'text-gray-600'
                             : r.regularisationStatus === 'ok'
                               ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20'
                               : r.regularisationStatus === 'insuffisant'
@@ -489,7 +489,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                 <tr className="bg-gray-100/60 dark:bg-gray-800/30">
                   <td
                     colSpan={rows.length + 1}
-                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"
                   >
                     Resultat fiscal & suivi des deficits
                   </td>

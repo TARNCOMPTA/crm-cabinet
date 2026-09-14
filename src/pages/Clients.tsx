@@ -447,7 +447,7 @@ export function Clients() {
           {useCustomOrder && isCustomOrder && (
             <button
               onClick={resetOrder}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               Reset

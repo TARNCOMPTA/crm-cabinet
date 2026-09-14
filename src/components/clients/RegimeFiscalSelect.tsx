@@ -31,7 +31,7 @@ export function RegimeFiscalSelect({ value, onChange, regimes, label = 'Regime f
         ))}
       </Select>
       {value && (
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
           {regimes.find(r => r.value === value)?.description}
         </p>
       )}

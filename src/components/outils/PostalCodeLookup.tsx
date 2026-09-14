@@ -162,7 +162,7 @@ export function PostalCodeLookup() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 text-teal-500 animate-spin" />
-          <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
+          <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">
             Recherche en cours...
           </span>
         </div>
@@ -184,7 +184,7 @@ export function PostalCodeLookup() {
             <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
               Aucun resultat
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Aucune commune ne correspond a votre recherche. Verifiez l'orthographe ou essayez un autre terme.
             </p>
           </CardContent>
@@ -194,7 +194,7 @@ export function PostalCodeLookup() {
       {!loading && results.length > 0 && (
         <>
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {results.length} commune{results.length > 1 ? 's' : ''} trouvee{results.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -222,7 +222,7 @@ export function PostalCodeLookup() {
                           <p className="font-semibold text-gray-900 dark:text-white">
                             {commune.nom}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
                             Code INSEE : {commune.code}
                           </p>
                         </div>
@@ -253,7 +253,7 @@ export function PostalCodeLookup() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                       {commune.population != null && (
                         <span className="flex items-center gap-1">
                           <Users className="w-3.5 h-3.5" />
@@ -315,7 +315,7 @@ export function PostalCodeLookup() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
               Recherche de Communes
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
               Saisissez un code postal, un nom de commune ou un numero de departement pour afficher les informations administratives et la localisation geographique.
             </p>
           </CardContent>

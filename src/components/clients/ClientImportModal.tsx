@@ -201,7 +201,7 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
         <p className="text-gray-700 font-medium mb-2">
           Glissez-déposez votre fichier Excel ici
         </p>
-        <p className="text-sm text-gray-500 mb-4">ou</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">ou</p>
         <label className="inline-block">
           <input
             type="file"
@@ -213,7 +213,7 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
             Parcourir les fichiers
           </span>
         </label>
-        <p className="text-xs text-gray-400 mt-4">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-4">
           Formats acceptés : .xlsx, .xls
         </p>
       </div>
@@ -373,11 +373,11 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ligne</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SIRET</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Ligne</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Statut</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">SIRET</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Nom</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">Message</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -481,13 +481,13 @@ export function ClientImportModal({ isOpen, onClose, onImportComplete }: ClientI
               style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
             />
           </div>
-          <div className="text-xs text-gray-500 text-right">
+          <div className="text-xs text-gray-600 dark:text-gray-400 text-right">
             {Math.round((importProgress.current / importProgress.total) * 100)}%
           </div>
         </div>
       )}
 
-      <p className="text-xs text-gray-500 text-center">
+      <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
         {isCancelling
           ? 'Annulation en cours, les clients déjà créés seront conservés...'
           : 'Veuillez patienter, cette opération peut prendre quelques instants...'}

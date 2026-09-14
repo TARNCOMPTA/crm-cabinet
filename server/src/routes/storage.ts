@@ -20,37 +20,25 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, extname, join, resolve, sep } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { config } from '../config.js';
 import { exigerSession } from '../gardes.js';
-
-/** Buckets connus. Un bucket inconnu est refusé plutôt que créé à la volée. */
-const BUCKETS = new Set([
-  'cabinet-logos',
-  'task-attachments',
-  'opportunity-attachments',
-  'checklist-item-attachments',
-  'bilan-checklist-attachments',
-  'revenue-declaration-attachments',
-  'tax-exemption-docs',
-]);
+import { BUCKETS, cheminSur as resoudreChemin } from '../stockage-chemin.js';
 
 /** Seul bucket lisible sans session : le logo apparaît sur la page de connexion. */
 const BUCKETS_PUBLICS = new Set(['cabinet-logos']);
 
 /**
- * Résout un chemin dans un bucket, en refusant toute sortie de la racine.
- * Renvoie null si le chemin est hors limites.
+ * Résout un chemin dans le bucket demandé, sous la racine de stockage.
+ *
+ * La règle elle-même vit dans `stockage-chemin.ts` : l'ouvrier d'envoi des
+ * courriels l'applique aussi, sur des chemins lus en base. Deux copies auraient
+ * divergé, et c'est la copie oubliée qui aurait laissé passer.
  */
 function cheminSur(bucket: string, chemin: string): string | null {
-  if (!BUCKETS.has(bucket)) return null;
-  const racine = resolve(config.storage.racine, bucket);
-  const absolu = resolve(racine, chemin);
-  // Le séparateur final évite qu'un bucket « photos » laisse acceder a « photos-prives ».
-  if (absolu !== racine && !absolu.startsWith(racine + sep)) return null;
-  return absolu;
+  return resoudreChemin(config.storage.racine, bucket, chemin);
 }
 
 /**

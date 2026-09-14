@@ -209,6 +209,24 @@ export const config = {
     tailleMaxOctets: entier('STORAGE_MAX_FILE_SIZE', 10 * 1024 * 1024),
   },
 
+  /**
+   * Les pièces jointes d'une campagne.
+   *
+   * ⚠️ CE PLAFOND N'EST PAS CELUI DU STOCKAGE, et il est bien plus bas. Une pièce
+   * déposée dans une fiche est lue par une personne ; une pièce de campagne est
+   * RECOPIÉE dans chaque message : cinq mégaoctets partant à trois cents clients,
+   * ce sont un et demi gigaoctets poussés dans SMTP, à la cadence de 25 courriels
+   * par minute. Et Microsoft 365 refuse tout message dépassant 35 Mo — l'encodage
+   * base64 gonflant de 33 %, le plafond utile est plus bas encore.
+   *
+   * Il est déclaré ICI et lu par l'écran via `/api/config` : dupliquer la valeur
+   * côté front laisserait un jour l'écran promettre ce que le serveur refuse.
+   */
+  campagnes: {
+    piecesMax: entier('CAMPAGNE_PIECES_MAX', 5),
+    piecesOctetsMax: entier('CAMPAGNE_PIECES_TAILLE_MAX', 10 * 1024 * 1024),
+  },
+
   smtp: {
     host: optionnel('SMTP_HOST'),
     port: entier('SMTP_PORT', 465),
@@ -367,5 +385,9 @@ export function configPublique() {
       jedeclare: config.jedeclare.configure,
     },
     storage: { tailleMaxOctets: config.storage.tailleMaxOctets },
+    campagnes: {
+      piecesMax: config.campagnes.piecesMax,
+      piecesOctetsMax: config.campagnes.piecesOctetsMax,
+    },
   };
 }

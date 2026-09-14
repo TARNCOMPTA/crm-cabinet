@@ -216,7 +216,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
-        <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Trier :</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400 mr-1">Trier :</span>
         <SortButton label="Nom" field="nom_entreprise" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="SIREN" field="siren" activeField={sortField} direction={sortDir} onSort={onSortChange} />
         <SortButton label="Nb actes" field="nombre_actes" activeField={sortField} direction={sortDir} onSort={onSortChange} />
@@ -227,7 +227,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-16 text-center">
           <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">Aucun client avec SIREN</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
             Ajoutez un SIREN ou SIRET a vos fiches clients pour synchroniser leurs actes juridiques.
           </p>
         </div>
@@ -278,10 +278,10 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                     <span className={`text-sm font-semibold truncate ${isExcluded ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
                       {client.nom_entreprise}
                     </span>
-                    <span className="text-xs font-mono text-gray-400 dark:text-gray-500">{siren}</span>
+                    <span className="text-xs font-mono text-gray-600 dark:text-gray-400">{siren}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <LegalFormDisplay value={client.forme_juridique} className={`text-xs ${isExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`} />
+                    <LegalFormDisplay value={client.forme_juridique} className={`text-xs ${isExcluded ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`} />
                   </div>
                 </div>
 
@@ -290,7 +290,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                     {acts.length} acte{acts.length !== 1 ? 's' : ''}
                   </Badge>
                   {client.last_legal_sync && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 hidden sm:block">
                       {new Date(client.last_legal_sync).toLocaleDateString('fr-FR', {
                         day: 'numeric',
                         month: 'short',
@@ -314,7 +314,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
               {isExpanded && (
                 <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 px-4 py-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                       Actes synchronises
                     </h4>
                     <Button
@@ -336,7 +336,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                   {acts.length === 0 ? (
                     <div className="text-center py-8">
                       <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Aucun acte synchronise</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Aucun acte synchronise</p>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -365,7 +365,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                                 </p>
                               )}
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
                                   {new Date(act.act_date).toLocaleDateString('fr-FR', {
                                     day: 'numeric',
                                     month: 'long',
@@ -373,7 +373,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                                   })}
                                 </span>
                                 {act.deposit_date && (
-                                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">
                                     Depot: {new Date(act.deposit_date).toLocaleDateString('fr-FR')}
                                   </span>
                                 )}
@@ -415,7 +415,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
 
                   {availableDocuments.has(client.id) && (
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                      <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-3">
                         Documents disponibles sur l'INPI
                       </h4>
                       <div className="space-y-2">
@@ -432,7 +432,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                                 {doc.description && doc.description !== doc.type && (
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{doc.type}</p>
                                 )}
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                                <span className="text-xs text-gray-600 dark:text-gray-400 mt-1 block">
                                   {doc.date ? new Date(doc.date).toLocaleDateString('fr-FR', {
                                     day: 'numeric',
                                     month: 'long',

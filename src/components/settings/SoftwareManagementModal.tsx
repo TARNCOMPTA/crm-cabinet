@@ -61,7 +61,7 @@ export function SoftwareManagementModal({
         <div className="space-y-5 max-h-96 overflow-y-auto pr-2">
           {Object.entries(categorizedSoftware).map(([category, software]) => (
             <div key={category} className="space-y-2.5">
-              <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider px-1">
+              <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider px-1">
                 {categoryLabels[category] || category}
               </h4>
               <div className="space-y-2">
@@ -87,7 +87,7 @@ export function SoftwareManagementModal({
                         <div className="text-left">
                           <div className="font-medium text-gray-900 text-sm">{s.name}</div>
                           {s.description && (
-                            <div className="text-xs text-gray-500 mt-0.5">{s.description}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{s.description}</div>
                           )}
                         </div>
                       </div>
@@ -103,7 +103,7 @@ export function SoftwareManagementModal({
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium">Aucun logiciel disponible</p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Ajoutez des logiciels dans les paramètres pour pouvoir les assigner
             </p>
           </div>

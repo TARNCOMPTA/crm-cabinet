@@ -628,6 +628,9 @@ CREATE TABLE "email_queue" (
   "error_message" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "sent_at" timestamp with time zone,
+  -- Repris de schema/increments/020-campagnes-pieces-jointes.sql, qui porte le
+  -- raisonnement complet. Reference les fichiers, jamais leur contenu.
+  "pieces_jointes" jsonb DEFAULT '[]'::jsonb NOT NULL,
   CONSTRAINT "email_queue_pkey" PRIMARY KEY (id),
   CONSTRAINT "email_queue_status_check" CHECK ((status = ANY (ARRAY['pending'::text, 'sent'::text, 'error'::text])))
 );
@@ -2791,6 +2794,9 @@ CREATE TABLE IF NOT EXISTS "mailing_campagnes" (
   "envoye_le"        timestamp with time zone,
   "nb_destinataires" integer DEFAULT 0 NOT NULL,
   "nb_exclus"        integer DEFAULT 0 NOT NULL,
+  -- Repris de schema/increments/020-campagnes-pieces-jointes.sql. La trace des
+  -- pieces survit ici a la purge d'email_queue, qui efface a 30 jours.
+  "pieces_jointes"   jsonb DEFAULT '[]'::jsonb NOT NULL,
   CONSTRAINT "mailing_campagnes_pkey" PRIMARY KEY (id),
   CONSTRAINT "mailing_campagnes_cree_par_fkey"
     FOREIGN KEY (cree_par) REFERENCES profiles(id) ON DELETE SET NULL

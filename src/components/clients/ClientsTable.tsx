@@ -206,7 +206,7 @@ export function ClientsTable({
                           <CopyButton value={client.nom_entreprise} label="Nom" />
                         </div>
                         {client.forme_juridique && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
                             <LegalFormDisplay value={client.forme_juridique} />
                           </div>
                         )}

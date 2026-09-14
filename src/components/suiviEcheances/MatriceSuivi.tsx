@@ -283,7 +283,7 @@ export function MatriceSuivi({
             {nbAvecProbleme} à regarder
           </button>
         )}
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {societes.length} société{societes.length > 1 ? 's' : ''}
           {societes.length !== table.societes.length && ` sur ${table.societes.length}`}
         </p>
@@ -311,12 +311,12 @@ export function MatriceSuivi({
                 width: largeur,
               }}
             >
-              <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-600 dark:text-gray-400">
                 Société
               </div>
               {table.estTva && (
                 <div
-                  className="sticky z-10 bg-gray-50 dark:bg-gray-800 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700"
+                  className="sticky z-10 bg-gray-50 dark:bg-gray-800 py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-600 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700"
                   style={{ left: L.societe }}
                   title="Jour du mois où la déclaration est due"
                 >
@@ -443,7 +443,7 @@ function Destinataires({ liste }: { liste: { nom: string; lignes: number }[] }) 
   const tete = liste.slice(0, 3);
   const reste = liste.length - tete.length;
   return (
-    <p className="text-xs text-gray-500 dark:text-gray-400">
+    <p className="text-xs text-gray-600 dark:text-gray-400">
       <span className="font-medium">Destinataire{liste.length > 1 ? 's' : ''} :</span>{' '}
       {tete.map((d) => `${d.nom} (${d.lignes})`).join(', ')}
       {reste > 0 && ` + ${reste} autre${reste > 1 ? 's' : ''}`}
@@ -459,7 +459,7 @@ function Legende({ etroit }: { etroit: boolean }) {
   ];
 
   const contenu = (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-600 dark:text-gray-400">
       <span className="font-medium text-gray-600 dark:text-gray-300">jedeclare</span>
       {JD.map(([couleur, libelle]) => (
         <span key={libelle} className="flex items-center gap-1.5">
@@ -507,13 +507,13 @@ function FragmentEnTete() {
   return (
     <>
       <div
-        className="py-1.5 text-center text-[10px] font-semibold uppercase text-gray-400 border-l border-gray-200 dark:border-gray-700"
+        className="py-1.5 text-center text-[10px] font-semibold uppercase text-gray-600 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700"
         title="Ce que jedeclare constate"
       >
         JD
       </div>
       <div
-        className="py-1.5 text-center text-[10px] font-semibold uppercase text-gray-400"
+        className="py-1.5 text-center text-[10px] font-semibold uppercase text-gray-600 dark:text-gray-400"
         title="Le suivi du cabinet"
       >
         Cab.
@@ -549,7 +549,7 @@ function CelluleSociete({ societe }: { societe: SocieteSuivie }) {
             {societe.societe}
           </span>
         )}
-        <span className="block truncate text-[10px] font-mono text-gray-400">
+        <span className="block truncate text-[10px] font-mono text-gray-600 dark:text-gray-400">
           {societe.siren || societe.dossier || '—'}
         </span>
       </div>

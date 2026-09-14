@@ -128,7 +128,7 @@ export function AdresseFacturationAnnuaire({
       <span className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-mono text-sm">{a.identifiant}</span>
         {a.nom && <span className="text-xs text-gray-600 dark:text-gray-400">{a.nom}</span>}
-        {a.ville && <span className="text-xs text-gray-500 dark:text-gray-500">{a.ville}</span>}
+        {a.ville && <span className="text-xs text-gray-600 dark:text-gray-500">{a.ville}</span>}
       </span>
     );
   }

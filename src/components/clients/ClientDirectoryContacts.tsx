@@ -177,7 +177,7 @@ export function ClientDirectoryContacts({
             <h2 className="text-lg font-semibold text-gray-900">
               Contacts annuaire
               {contacts.length > 0 && (
-                <span className="ml-1.5 text-sm font-normal text-gray-400">({contacts.length})</span>
+                <span className="ml-1.5 text-sm font-normal text-gray-600 dark:text-gray-400">({contacts.length})</span>
               )}
             </h2>
           </div>
@@ -195,7 +195,7 @@ export function ClientDirectoryContacts({
 
         {!companyId ? (
           <div className="text-center py-4">
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               Aucune societe correspondante dans l'annuaire
             </p>
             <Button
@@ -266,7 +266,7 @@ export function ClientDirectoryContacts({
             )}
 
             {contacts.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
                 Aucun contact rattache
               </p>
             ) : (
@@ -291,7 +291,7 @@ export function ClientDirectoryContacts({
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {contact.roleInCompany && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
                             {contact.roleInCompany}
                           </span>
                         )}

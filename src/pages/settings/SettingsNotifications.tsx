@@ -205,7 +205,7 @@ export function SettingsNotifications() {
               </div>
               <div>
                 <p className="font-medium text-gray-900 dark:text-gray-100">Emails instantanes</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Recevoir un email pour chaque notification
                 </p>
               </div>
@@ -249,11 +249,11 @@ export function SettingsNotifications() {
                     >
                       <div className="flex-1 min-w-0 mr-8">
                         <p className="font-medium text-gray-900 dark:text-gray-100">{nt.label}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{nt.description}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{nt.description}</p>
                       </div>
                       <div className="flex items-center gap-8 shrink-0">
                         <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Email</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Email</span>
                           <Toggle
                             enabled={pref.email_enabled}
                             onChange={(v) => handleToggle(nt.type as NotificationType, 'email_enabled', v)}
@@ -261,7 +261,7 @@ export function SettingsNotifications() {
                           />
                         </div>
                         <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Digest</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">Digest</span>
                           <Toggle
                             enabled={pref.digest_enabled}
                             onChange={(v) => handleToggle(nt.type as NotificationType, 'digest_enabled', v)}
@@ -286,7 +286,7 @@ export function SettingsNotifications() {
             </div>
             <div>
               <p className="font-medium text-gray-900 dark:text-gray-100">Resume par email (Digest)</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Recevez un email recapitulatif au lieu de notifications individuelles
               </p>
             </div>
@@ -323,7 +323,7 @@ export function SettingsNotifications() {
             })}
           </div>
           {digest?.is_active && digest.last_sent_at && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">
               Dernier envoi : {new Date(digest.last_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </p>
           )}

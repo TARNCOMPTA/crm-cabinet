@@ -44,7 +44,7 @@ export function ExpandableTextarea({
         <button
           type="button"
           onClick={() => setFullscreen(true)}
-          className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
           title="Agrandir"
         >
           <Maximize2 className="w-3.5 h-3.5" />
@@ -60,7 +60,7 @@ export function ExpandableTextarea({
         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-700 resize-y overflow-auto ${maxHeightClass} whitespace-pre-wrap font-mono text-sm`}
       />
       {charCount > 0 && (
-        <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500">
+        <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
           <span>{lineCount} ligne{lineCount > 1 ? 's' : ''} - {charCount} caractere{charCount > 1 ? 's' : ''}</span>
         </div>
       )}
@@ -82,7 +82,7 @@ export function ExpandableTextarea({
               style={{ height: '70vh' }}
             />
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-gray-600 dark:text-gray-400">
                 {lineCount} ligne{lineCount > 1 ? 's' : ''} - {charCount} caractere{charCount > 1 ? 's' : ''}
               </span>
               <Button onClick={() => setFullscreen(false)}>

@@ -23,6 +23,7 @@ import {
   getAttachmentSignedUrl,
 } from '../../lib/checklistService';
 import type { ChecklistItem, ChecklistItemComment, ChecklistItemAttachment } from '../../types/database';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface Props {
   item: ChecklistItem | null;
@@ -50,6 +51,18 @@ export function ChecklistItemDrawer({
   const [uploading, setUploading] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState('');
+  /**
+   * La piece dont la suppression est DEMANDEE.
+   *
+   * ⚠️ ELLE PARTAIT SUR UN SEUL CLIC, et `deleteItemAttachment` retire le
+   * fichier du STOCKAGE : rien a repecher ensuite. Le bouton etait de surcroit
+   * invisible jusqu'au survol, colle a celui de telechargement — l'action
+   * irreversible etait la moins visible des deux et apparaissait sous le
+   * pointeur. Les deux defauts sont corriges ensemble, parce qu'ils ne font
+   * qu'un : c'est la conjonction qui produit le clic manque.
+   */
+  const [pieceASupprimer, setPieceASupprimer] = useState<ChecklistItemAttachment | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -194,7 +207,7 @@ export function ChecklistItemDrawer({
                 <h3
                   className={`text-base font-medium ${
                     item.is_checked
-                      ? 'line-through text-gray-400 dark:text-gray-500'
+                      ? 'line-through text-gray-600 dark:text-gray-400'
                       : 'text-gray-900 dark:text-white'
                   }`}
                 >
@@ -213,7 +226,7 @@ export function ChecklistItemDrawer({
                 )}
               </div>
             )}
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Cree le {formatDate(item.created_at)}
             </p>
           </div>
@@ -234,7 +247,7 @@ export function ChecklistItemDrawer({
                 Commentaires
               </h4>
               {comments.length > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">
                   {comments.length}
                 </span>
               )}
@@ -245,7 +258,7 @@ export function ChecklistItemDrawer({
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
             ) : comments.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
                 Aucun commentaire pour le moment
               </p>
             ) : (
@@ -264,7 +277,7 @@ export function ChecklistItemDrawer({
                             ? `${comment.author.prenom} ${comment.author.nom}`
                             : 'Moi'}
                         </span>
-                        <span className="text-[11px] text-gray-400">
+                        <span className="text-[11px] text-gray-600 dark:text-gray-400">
                           {formatDate(comment.created_at)}
                         </span>
                       </div>
@@ -322,7 +335,7 @@ export function ChecklistItemDrawer({
                 Pieces jointes
               </h4>
               {attachments.length > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">
                   {attachments.length}
                 </span>
               )}
@@ -333,7 +346,7 @@ export function ChecklistItemDrawer({
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
             ) : attachments.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
                 Aucune piece jointe
               </p>
             ) : (
@@ -348,7 +361,7 @@ export function ChecklistItemDrawer({
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                         {att.file_name}
                       </p>
-                      <p className="text-xs text-gray-400">{formatFileSize(att.file_size)}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{formatFileSize(att.file_size)}</p>
                     </div>
                     <button
                       onClick={() => handleDownload(att)}
@@ -359,8 +372,9 @@ export function ChecklistItemDrawer({
                     </button>
                     {isOwner && (
                       <button
-                        onClick={() => handleDeleteAttachment(att)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 transition-opacity"
+                        onClick={() => setPieceASupprimer(att)}
+                        aria-label={`Supprimer ${att.file_name}`}
+                        className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 transition-colors"
                         title="Supprimer"
                       >
                         <X className="w-4 h-4" />
@@ -403,6 +417,26 @@ export function ChecklistItemDrawer({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={pieceASupprimer !== null}
+        onClose={() => setPieceASupprimer(null)}
+        onConfirm={() => {
+          const piece = pieceASupprimer;
+          if (!piece) return;
+          setPieceASupprimer(null);
+          void handleDeleteAttachment(piece);
+        }}
+        title="Supprimer cette piece jointe ?"
+        message={
+          pieceASupprimer
+            ? `« ${pieceASupprimer.file_name} » sera retiree du point de checklist ET du ` +
+              'stockage. Cette suppression est definitive : le fichier ne pourra pas etre recupere.'
+            : ''
+        }
+        confirmText="Supprimer definitivement"
+        variant="danger"
+      />
     </>
   );
 }

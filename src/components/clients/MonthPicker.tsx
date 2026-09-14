@@ -95,7 +95,7 @@ export function MonthPicker({ value, onChange, label = 'Mois de clôture', requi
         ))}
       </Select>
       {value && (
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
           Clôture le dernier jour de {MOIS_CLOTURE.find(m => m.value === month)?.label.toLowerCase()}
         </p>
       )}

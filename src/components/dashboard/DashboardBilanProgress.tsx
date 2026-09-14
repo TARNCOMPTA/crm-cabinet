@@ -69,7 +69,7 @@ export function DashboardBilanProgress({ data, loading }: DashboardBilanProgress
         {data.length === 0 ? (
           <div className="text-center py-8">
             <BarChart3 className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun bilan en cours</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aucun bilan en cours</p>
             <button
               onClick={() => navigate('/balance-sheets')}
               className="mt-2 text-xs font-medium text-teal-600 dark:text-teal-400 hover:underline"
@@ -88,7 +88,7 @@ export function DashboardBilanProgress({ data, loading }: DashboardBilanProgress
                     <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                       {regime.regime_fiscal}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {doneCount}/{regime.total} termines
                     </span>
                   </div>
@@ -123,7 +123,7 @@ export function DashboardBilanProgress({ data, loading }: DashboardBilanProgress
                       return (
                         <div key={col.id} className="flex items-center gap-1">
                           <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                          <span className="text-[11px] text-gray-600 dark:text-gray-400">
                             {col.name} ({col.count})
                           </span>
                         </div>

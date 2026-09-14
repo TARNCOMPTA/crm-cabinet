@@ -25,7 +25,7 @@ export function OpportunityColumn({ column, count, totalAmount, children }: Prop
           <Badge variant="default" className="text-xs">{count}</Badge>
         </div>
         {totalAmount > 0 && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-[18px]">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 ml-[18px]">
             {formatEuros(totalAmount)}
           </p>
         )}

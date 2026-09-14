@@ -7,6 +7,45 @@ signale un changement qui demande une action de votre part.
 
 ## À venir
 
+### Une campagne peut porter des pièces jointes
+
+Le cabinet pouvait écrire à une liste de clients, jamais leur **joindre** quelque
+chose. Une lettre de mission, une plaquette tarifaire, un modèle de tableau à
+remplir : tout cela repartait par un courriel individuel, hors de l'outil et sans
+trace — c'est-à-dire le problème même que les campagnes existaient pour résoudre.
+
+- **Jusqu'à cinq pièces par campagne, dix mégaoctets au total** (incrément 020).
+  Le plafond est bas à dessein, et il porte sur le **total** : cinq mégaoctets
+  partant à trois cents clients sont un et demi gigaoctets poussés dans SMTP, et
+  Microsoft 365 refuse tout message dépassant 35 Mo. Les deux valeurs se règlent
+  par `CAMPAGNE_PIECES_MAX` et `CAMPAGNE_PIECES_TAILLE_MAX` ; l'écran les lit sur
+  le serveur plutôt que de les recopier, pour qu'il ne promette jamais ce que le
+  serveur refusera.
+- **La base porte une référence, jamais le fichier.** Le contenu reste sur le
+  disque, sous le bucket `campagne-attachments` ; `email_queue` et
+  `mailing_campagnes` n'en gardent que le nom, le chemin, le type et la taille.
+- **L'historique survit à la purge.** La file d'envoi est vidée au bout de
+  30 jours ; la liste des pièces est donc écrite aussi sur la campagne, qui reste.
+  « Qu'est-ce que je leur ai envoyé, au juste ? » a une réponse six mois plus tard.
+- **Le chemin est revérifié au moment de l'envoi**, et pas seulement au dépôt. Une
+  colonne `jsonb` est de la donnée : rien n'empêcherait d'y écrire un chemin qui
+  remonte hors du stockage, et l'ouvrier d'envoi joindrait alors un fichier du
+  serveur à un courriel partant vers toute la clientèle. La règle de résolution
+  vit désormais dans un module unique (`stockage-chemin.ts`), partagé par la route
+  de stockage et par l'envoi de courriel — deux copies auraient divergé.
+- **Une pièce refusée fait échouer le courriel, elle ne le mutile pas.** Un message
+  qui annonce un document et part sans lui est faux, et le destinataire n'a aucun
+  moyen de le savoir. L'échec, lui, se voit et se rattrape.
+- **Retirer une pièce demande confirmation** : le fichier part aussi du stockage.
+- **Les pièces déposées puis abandonnées sont ramassées.** Le fichier est monté
+  avant l'envoi, pour que cinq mégaoctets et la campagne n'échouent pas ensemble
+  sur une coupure réseau ; quitter la page sans envoyer laissait donc un fichier
+  que plus rien ne référençait. Une purge hebdomadaire (`purge-pieces-campagnes`,
+  le dimanche à 3 h) supprime ce qu'aucune campagne ne cite et qui a plus de sept
+  jours. Une pièce référencée reste, quel que soit son âge : l'historique la
+  nomme, et l'effacer le rendrait mensonger.
+
+
 ### Performance, mesurée avant d'être corrigée
 
 Un audit dans un vrai navigateur, sur huit écrans, avec le nombre de requêtes

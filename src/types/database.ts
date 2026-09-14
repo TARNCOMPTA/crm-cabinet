@@ -1698,6 +1698,7 @@ export interface Database {
           error_message: string | null
           created_at: string
           sent_at: string | null
+          pieces_jointes: Json
         }
         Insert: {
           id?: string
@@ -1711,6 +1712,7 @@ export interface Database {
           error_message?: string | null
           created_at?: string
           sent_at?: string | null
+          pieces_jointes?: Json
         }
         Update: {
           id?: string
@@ -1724,6 +1726,7 @@ export interface Database {
           error_message?: string | null
           created_at?: string
           sent_at?: string | null
+          pieces_jointes?: Json
         }
         Relationships: [
           {
@@ -2311,6 +2314,7 @@ export interface Database {
           envoye_le: string | null
           nb_destinataires: number
           nb_exclus: number
+          pieces_jointes: Json
         }
         Insert: {
           id?: string
@@ -2322,6 +2326,7 @@ export interface Database {
           envoye_le?: string | null
           nb_destinataires?: number
           nb_exclus?: number
+          pieces_jointes?: Json
         }
         Update: {
           id?: string
@@ -2333,6 +2338,7 @@ export interface Database {
           envoye_le?: string | null
           nb_destinataires?: number
           nb_exclus?: number
+          pieces_jointes?: Json
         }
         Relationships: [
           {
