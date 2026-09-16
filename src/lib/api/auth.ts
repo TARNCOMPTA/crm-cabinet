@@ -171,8 +171,9 @@ export const auth = {
     return r;
   },
 
-  async signOut(): Promise<{ error: null }> {
-    await appeler('/api/auth/deconnexion', { method: 'POST' });
+  async signOut(): Promise<{ error: ErreurApi | null }> {
+    const { error } = await appeler('/api/auth/deconnexion', { method: 'POST' });
+    if (error) return { error };
     notifier('SIGNED_OUT', null);
     return { error: null };
   },

@@ -15,7 +15,9 @@ import { BilanCard, BilanCardOverlay } from './BilanCard';
 import { BilanCardDetailModal } from './BilanCardDetailModal';
 import { moveCard, toggleChecklistItem, updateCardNotes } from '../../lib/bilanService';
 import { useAuth } from '../../contexts/AuthContext';
-import { createNotification } from '../../lib/notificationService';
+import { useToast } from '../../contexts/ToastContext';
+import { createNotification, courrielPrevu, messagePrevenu } from '../../lib/notificationService';
+import { nomAffichable } from '../../lib/nomAffichable';
 import type {
   BilanColumn as BilanColumnType,
   BilanCardWithDetails,
@@ -31,6 +33,7 @@ interface Props {
 
 export function BilanBoard({ columns, cards, sortAlpha, onCardsChanged, das2Enabled }: Props) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<BilanCardWithDetails | null>(null);
   const [localCards, setLocalCards] = useState<BilanCardWithDetails[]>(cards);
@@ -73,20 +76,31 @@ export function BilanBoard({ columns, cards, sortAlpha, onCardsChanged, das2Enab
         if (card.assignee_id && card.assignee_id !== user?.id) {
           const colName = columns.find((c) => c.id === newColumnId)?.name || '';
           const clientName = card.clients?.nom_entreprise || 'Client';
-          createNotification(
+          /*
+           * ⚠️ ATTENDUE, ET SON VERDICT LU. L'appel partait sans `await` et sans
+           * regarder ce qu'il rendait : un refus d'ecriture passait inapercu, et
+           * le collegue n'etait jamais prevenu sans que personne ne le sache.
+           */
+          const posee = await createNotification(
             card.assignee_id,
             'bilan_moved',
             'Bilan deplace',
             `Le bilan de "${clientName}" a ete deplace vers "${colName}"`,
             '/bilans'
           );
+          if (posee) {
+            const courriel = await courrielPrevu(card.assignee_id, 'bilan_moved');
+            showToast(messagePrevenu(nomAffichable(card.assignee), courriel), 'success');
+          } else {
+            showToast("Bilan deplace, mais le responsable n'a pas pu etre prevenu.", 'error');
+          }
         }
         onCardsChanged();
       } catch {
         setLocalCards(cards);
       }
     },
-    [columns, localCards, cards, onCardsChanged, user]
+    [columns, localCards, cards, onCardsChanged, user, showToast]
   );
 
   const handleChecklistToggle = useCallback(
@@ -226,3 +240,4 @@ export function BilanBoard({ columns, cards, sortAlpha, onCardsChanged, das2Enab
     </>
   );
 }
+

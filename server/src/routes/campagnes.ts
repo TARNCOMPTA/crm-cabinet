@@ -205,6 +205,9 @@ function pageHtml(titre: string, corps: string): string {
 }
 
 export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
+  if (!app.hasContentTypeParser('application/x-www-form-urlencoded')) {
+    app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, _body, done) => done(null, {}));
+  }
   /**
    * Les codes NAF présents dans le portefeuille, avec leur effectif.
    *
@@ -436,19 +439,21 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
       envoyes: string;
       erreurs: string;
       en_attente: string;
+      inconnus: string;
       pieces_jointes: Array<{ nom: string; taille?: number | null }>;
     }>(
       `SELECT c.id, c.sujet, c.envoye_le, c.nb_destinataires, c.nb_exclus,
               c.pieces_jointes,
               nullif(trim(concat_ws(' ', p.prenom, p.nom)), '') AS auteur,
-              count(q.id) FILTER (WHERE q.status = 'sent')::text    AS envoyes,
-              count(q.id) FILTER (WHERE q.status = 'error')::text   AS erreurs,
-              count(q.id) FILTER (WHERE q.status = 'pending')::text AS en_attente
+              count(d.id) FILTER (WHERE coalesce(q.status, d.statut_envoi) = 'sent')::text    AS envoyes,
+              count(d.id) FILTER (WHERE coalesce(q.status, d.statut_envoi) = 'error')::text   AS erreurs,
+              count(d.id) FILTER (WHERE coalesce(q.status, d.statut_envoi) = 'pending')::text AS en_attente,
+              count(d.id) FILTER (WHERE coalesce(q.status, d.statut_envoi) IS NULL)::text AS inconnus
          FROM mailing_campagnes c
          LEFT JOIN profiles p ON p.id = c.cree_par
          LEFT JOIN mailing_destinataires d ON d.campagne_id = c.id
          -- Jointure sans cle etrangere : la file est purgee au bout de 30 jours,
-         -- les compteurs retombent alors a zero et seul nb_destinataires subsiste.
+         -- le résultat conservé sur le destinataire prend alors le relais.
          LEFT JOIN email_queue q ON q.id = d.email_queue_id
         GROUP BY c.id, c.sujet, c.envoye_le, c.nb_destinataires, c.nb_exclus,
                  c.pieces_jointes, p.prenom, p.nom
@@ -467,6 +472,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
         envoyes: Number(l.envoyes),
         erreurs: Number(l.erreurs),
         enAttente: Number(l.en_attente),
+        inconnus: Number(l.inconnus),
         // La trace des pieces, lue sur la campagne et non sur la file : celle-ci
         // est purgee a 30 jours, l'historique doit survivre a la purge.
         pieces: (l.pieces_jointes ?? []).map((p) => ({ nom: p.nom, taille: p.taille ?? null })),
@@ -477,14 +483,15 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
   /**
    * La désinscription, publique et sans session.
    *
-   * IDEMPOTENTE : un client qui reclique, ou un antivirus qui préouvre le lien,
-   * doit voir la même page de confirmation, pas une erreur. Et aucun message ne
+   * GET affiche une confirmation sans rien modifier : les scanners de liens
+   * ne désinscrivent personne. POST applique la décision de façon idempotente. Et aucun message ne
    * distingue « signature fausse » de « client inconnu » — cela n'aiderait que
    * celui qui essaie des identifiants.
    */
-  app.get<{ Querystring: { c?: string; s?: string } }>(
-    '/desinscription',
-    async (request, reply) => {
+  app.route<{ Querystring: { c?: string; s?: string } }>({
+    method: ['GET', 'POST'],
+    url: '/desinscription',
+    handler: async (request, reply) => {
       const { c: clientId = '', s: signature = '' } = request.query;
       const envoyer = (corps: string, code = 200): FastifyReply =>
         reply.code(code).type('text/html; charset=utf-8').send(pageHtml('Desinscription', corps));
@@ -496,6 +503,19 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
               logiciel de messagerie.</p>
            <p>Repondez simplement a notre courriel : nous vous retirerons de la liste.</p>`,
           400
+        );
+      }
+
+      reply.header('cache-control', 'no-store');
+      reply.header('referrer-policy', 'no-referrer');
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        const action = `/desinscription?c=${encodeURIComponent(clientId)}&s=${encodeURIComponent(signature)}`;
+        return envoyer(
+          `<h1>Confirmer la désinscription</h1>
+           <p>Souhaites-tu ne plus recevoir les informations groupées du cabinet ?</p>
+           <form method="post" action="${echapperHtml(action)}">
+             <button type="submit">Confirmer ma désinscription</button>
+           </form>`
         );
       }
 
@@ -518,6 +538,6 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
          <p>Les courriels concernant directement votre dossier — echeances, demandes de
             pieces — continueront de vous parvenir : ils font partie de notre mission.</p>`
       );
-    }
-  );
+    },
+  });
 }

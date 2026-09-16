@@ -7,6 +7,62 @@ signale un changement qui demande une action de votre part.
 
 ## À venir
 
+### Fiabilité de l’authentification, des suppressions et des campagnes
+
+- Les codes d’enrôlement sont liés côté serveur au parcours du navigateur et
+  consommés dans la transaction qui enregistre la passkey. Une omission ou un
+  remplacement du code dans la dernière requête ne permet plus sa réutilisation.
+- La suppression définitive d’un client et sa journalisation sont réalisées
+  dans une seule transaction, réservée aux administrateurs. Un échec restaure
+  toutes les données ; les statistiques sont calculées côté serveur.
+- Un échec réseau ou serveur à la déconnexion conserve l’état connecté et
+  affiche un message invitant à réessayer.
+- Les liens signés de pièces jointes encodent les caractères spéciaux des noms.
+- La désinscription d’une campagne demande une confirmation explicite par POST ;
+  ouvrir ou précharger le lien ne modifie plus le client.
+- L’incrément 021 conserve les résultats des campagnes après la purge des emails.
+  Les résultats déjà purgés avant cette mise à jour sont indiqués indisponibles,
+  sans inventer un succès ou un échec.
+
+
+### Le connecteur peut modifier une fiche client
+
+Demande du cabinet. Jusqu'ici le connecteur MCP savait tout lire et n'écrivait
+que deux choses : la répartition des parts, et l'adresse de facturation
+électronique. Dicter une coordonnée ou un SIRET à un modèle obligeait ensuite à
+rouvrir la fiche pour le recopier.
+
+L'outil `set_client_fiche` écrit **trente colonnes** — identité, adresse,
+coordonnées, suivi du cabinet — exactement celles que la fiche laisse modifier à
+la main.
+
+- **Le droit d'écriture reste celui qui existe déjà** : la case cochée par accès
+  OAuth, ou clé par clé. Rien de nouveau à accorder, et un accès en lecture est
+  refusé avec le chemin exact pour changer cela.
+- **Le refus d'écrasement est CHAMP PAR CHAMP**, pas global. C'est la différence
+  qui compte : un refus global forcerait à choisir entre tout écrire et ne rien
+  écrire, et un modèle voulant compléter un téléphone manquant rappellerait
+  l'outil avec `remplacer: true` en écrasant la ville du même geste. Les champs
+  vides passent ; ceux qui portent une valeur sont rendus un par un, avec
+  l'ancienne et la nouvelle, à montrer avant de confirmer.
+- **Tout ou rien.** Un seul champ refusé, et aucun n'est écrit : sinon il
+  faudrait deviner lesquels sont passés.
+- **Une liste blanche, jamais une liste noire.** La table porte soixante-trois
+  colonnes et en gagnera d'autres ; une liste de ce qui est interdit laisserait
+  chaque colonne future ouverte par défaut. Un test de parité la tient avec
+  l'écran et tombe, en le nommant, si la fiche gagne un champ que le connecteur
+  ignore.
+- **Ce que la base recompose n'est pas écrivable** — `siren`, `adresse`,
+  `tva_intracom` — mais le refus dit quoi écrire à la place, et la réponse rend
+  ces valeurs telles que les déclencheurs les ont établies après l'écriture.
+- **Rien n'est deviné.** « 10 000 EUR » n'est pas lu comme 10000 ; « 12/03/2026 »
+  n'est pas convertie. Les deux sont refusées avec le format attendu : un montant
+  mal lu s'écrirait 10 dans le capital d'une société réelle, et une date
+  américaine ferait le 3 décembre pour le 12 mars.
+- **Chaque écriture est imputée** dans `audit_logs`, au nom de l'utilisateur de
+  l'accès, avec l'avant et l'après de chaque champ.
+
+
 ### Une campagne peut porter des pièces jointes
 
 Le cabinet pouvait écrire à une liste de clients, jamais leur **joindre** quelque
@@ -890,3 +946,4 @@ par une que la plupart des défauts ci-dessus sont apparus.
   mono-cabinet
 - Écrans de mot de passe, `public/_headers` et `public/_redirects` (conventions
   Netlify, sans effet derrière Caddy), `src/lib/adminRpc.ts` (aucun appelant)
+

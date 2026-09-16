@@ -20,8 +20,9 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { exigerSession } from '../gardes.js';
+import { exigerSession, exigerAdmin } from '../gardes.js';
 import { requete } from '../db.js';
+import { supprimerClient } from '../clients/suppression.js';
 import {
   construireRequeteListe,
   estChampTri,
@@ -88,6 +89,19 @@ const texte = (v: unknown, defaut: string): string =>
 const vrai = (v: unknown): boolean => v === '1' || v === 'true';
 
 export function enregistrerRoutesClients(app: FastifyInstance): void {
+  app.delete<{ Params: { id: string } }>('/api/clients/:id', {
+    schema: { params: { type: 'object', required: ['id'], properties: {
+      id: { type: 'string', format: 'uuid' },
+    } } },
+  }, async (request, reply) => {
+    const session = await exigerAdmin(request, reply);
+    if (!session) return;
+    if (!(await supprimerClient(request.params.id, session.sub))) {
+      return reply.code(404).send({ message: 'Client introuvable.' });
+    }
+    return { ok: true };
+  });
+
   app.get<{
     Querystring: Record<string, string | undefined>;
   }>('/api/clients/liste', async (request, reply) => {

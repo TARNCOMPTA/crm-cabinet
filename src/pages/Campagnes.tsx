@@ -81,6 +81,7 @@ interface Campagne {
   envoyes: number;
   erreurs: number;
   enAttente: number;
+  inconnus: number;
   /**
    * ⚠️ OPTIONNEL, ET CE N'EST PAS UN OUBLI. Le service worker de la PWA peut
    * servir une reponse mise en cache AVANT cette mise a jour, donc depourvue du
@@ -821,6 +822,9 @@ export function Campagnes() {
                       </td>
                       <td className="py-2 text-xs">
                         <span className="text-green-700 dark:text-green-400">{c.envoyes} envoye(s)</span>
+                        {c.inconnus > 0 && (
+                          <span className="text-gray-500 dark:text-gray-400"> — {c.inconnus} résultat(s) ancien(s) indisponible(s)</span>
+                        )}
                         {c.enAttente > 0 && (
                           <span className="text-gray-500 dark:text-gray-400"> — {c.enAttente} en attente</span>
                         )}

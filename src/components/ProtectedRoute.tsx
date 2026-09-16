@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading, profileMissing, signOut } = useAuth();
+  const { user, loading, profileMissing, signOut, signOutError } = useAuth();
 
   if (loading) {
     return (
@@ -33,6 +33,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Votre compte ne dispose pas d'un profil valide. Veuillez contacter un administrateur ou vous reconnecter.
           </p>
+          {signOutError && <p role="alert">{signOutError}</p>}
           <button
             onClick={() => signOut()}
             className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"

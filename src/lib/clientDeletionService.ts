@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Json } from '../types/database';
+import { appelerFonction } from './api/fonctions';
 
 export interface DeletionStats {
   habilitations: number;
@@ -49,6 +49,8 @@ export async function getClientDeletionStats(clientId: string): Promise<Deletion
     supabase.from('client_software').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
     supabase.from('client_associes').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
   ]);
+
+  for (const result of counts) if (result.error) throw result.error;
 
   stats.habilitations = counts[0].count || 0;
   stats.legal_acts = counts[1].count || 0;
@@ -124,46 +126,11 @@ export async function restoreClient(clientId: string, userId: string): Promise<v
     });
 }
 
-export async function deleteClientPermanently(clientId: string, userId: string, stats: DeletionStats): Promise<void> {
-  await verifyClientOwnership(clientId);
-
-  await supabase
-    .from('audit_logs')
-    .insert({
-      user_id: userId,
-      action: 'delete_client',
-      entity_type: 'client',
-      entity_id: clientId,
-      details: {
-        deleted_at: new Date().toISOString(),
-        stats,
-      } as unknown as Json
-    });
-
-  // Le module support a disparu du produit : plus de tables support_tickets,
-  // ticket_messages ni ticket_attachments, donc plus rien a supprimer en
-  // cascade ici.
-
-  await supabase.from('client_associes').delete().eq('client_id', clientId);
-  await supabase.from('legal_documents').delete().eq('client_id', clientId);
-  await supabase.from('officer_companies').delete().eq('client_id', clientId);
-  await supabase.from('legal_acts').delete().eq('client_id', clientId);
-  await supabase.from('client_software').delete().eq('client_id', clientId);
-  await supabase.from('habilitations').delete().eq('client_id', clientId);
-  await supabase.from('inpi_sync_history').delete().eq('client_id', clientId);
-  await supabase.from('client_collaborators').delete().eq('client_id', clientId);
-  await supabase.from('tax_exemptions').delete().eq('client_id', clientId);
-  await supabase.from('tax_authorizations').delete().eq('client_id', clientId);
-  await supabase.from('balance_sheets').delete().eq('client_id', clientId);
-  await supabase.from('general_assemblies').delete().eq('client_id', clientId);
-  await supabase.from('tasks').delete().eq('client_id', clientId);
-
-  const { error: deleteError } = await supabase
-    .from('clients')
-    .delete()
-    .eq('id', clientId);
-
-  if (deleteError) throw deleteError;
+export async function deleteClientPermanently(clientId: string, _userId: string, _stats: DeletionStats): Promise<void> {
+  // L'identité et les statistiques sont relues par le serveur ; le navigateur
+  // ne peut ni attribuer l'opération à autrui ni valider une suppression partielle.
+  const result = await appelerFonction(`clients/${encodeURIComponent(clientId)}`, undefined, { methode: 'DELETE' });
+  if (!result.ok) throw new Error(result.message ?? 'Suppression impossible.');
 }
 
 export interface ClientDeletionPermissions {

@@ -450,6 +450,14 @@ jobs:
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/schema_test
 
+      - name: Dependances serveur pour les tests transactionnels
+        working-directory: server
+        run: npm ci
+      - name: Suppressions, enrolement et historique des campagnes
+        run: npx vitest run server/src/auth/corrections-base.test.ts --reporter=dot
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/schema_test
+
   # ---------------------------------------------------------------------------
   # L'application, pilotee dans un vrai navigateur.
   #

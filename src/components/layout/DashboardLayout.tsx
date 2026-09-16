@@ -107,7 +107,7 @@ export function DashboardLayout() {
       return next;
     });
   };
-  const { signOut, profile } = useAuth();
+  const { signOut, signOutError, profile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { getPreference } = useUserPreferences();
   const hiddenNavItems = getPreference('navigation.hiddenItems', []) as string[];
@@ -250,6 +250,7 @@ export function DashboardLayout() {
                 {profile?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
               </span>
             </div>
+            {signOutError && <p role="alert" className="text-sm text-red-600 dark:text-red-400 mb-2">{signOutError}</p>}
             <div className="flex gap-1">
               <Button
                 variant="ghost"

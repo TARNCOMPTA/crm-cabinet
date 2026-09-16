@@ -12,6 +12,7 @@
 
 import { createHash, randomInt } from 'node:crypto';
 import { requete, requeteUne } from '../db.js';
+import type { PoolClient } from 'pg';
 
 /** Sans I, O, 0 ni 1 : ces caractères se confondent à la lecture. */
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -76,11 +77,14 @@ export async function profilPourCode(code: string): Promise<ProfilEnrolable | nu
   );
 }
 
-export async function consommerCode(code: string): Promise<void> {
-  await requete(
-    'UPDATE enrolment_codes SET used_at = now() WHERE code_hash = $1',
-    [hacher(code)]
+/** Appelé dans la transaction qui enregistre la passkey. */
+export async function consommerCode(code: string, userId: string, client: PoolClient): Promise<boolean> {
+  const { rowCount } = await client.query(
+    `UPDATE enrolment_codes SET used_at = now()
+      WHERE code_hash = $1 AND user_id = $2 AND used_at IS NULL AND expires_at > now()`,
+    [hacher(code), userId]
   );
+  return rowCount === 1;
 }
 
 /** Purge des codes expirés ou consommés, appelée par l'ordonnanceur. */

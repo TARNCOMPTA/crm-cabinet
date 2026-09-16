@@ -160,7 +160,7 @@ export async function enregistrerRoutesStorage(app: FastifyInstance): Promise<vo
       const signature = signer(bucket, chemin, expire);
 
       return {
-        url: `/api/storage/${bucket}/${chemin}?expire=${expire}&signature=${signature}`,
+        url: `/api/storage/${bucket}/${chemin.split('/').map(encodeURIComponent).join('/')}?expire=${expire}&signature=${signature}`,
         expire,
       };
     }

@@ -24,7 +24,8 @@ import type {
   RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import { config } from '../config.js';
-import { requete, requeteUne } from '../db.js';
+import { requete, requeteUne, transaction } from '../db.js';
+import { consommerCode } from './enrolement.js';
 
 export interface Passkey {
   id: string;
@@ -75,7 +76,7 @@ export async function optionsEnrolement(profil: {
   email: string;
   prenom: string | null;
   nom: string | null;
-}) {
+}, cleDefi: string) {
   const existantes = await requete<Pick<Passkey, 'credential_id' | 'transports'>>(
     'SELECT credential_id, transports FROM passkeys WHERE user_id = $1',
     [profil.id]
@@ -99,16 +100,18 @@ export async function optionsEnrolement(profil: {
     },
   });
 
-  poserDefi(`enrolement:${profil.id}`, options.challenge);
+  poserDefi(`enrolement:${cleDefi}`, options.challenge);
   return options;
 }
 
 export async function verifierEnrolement(
   userId: string,
   reponse: RegistrationResponseJSON,
-  libelle: string | null
+  libelle: string | null,
+  cleDefi: string,
+  code?: string
 ): Promise<boolean> {
-  const defi = consommerDefi(`enrolement:${userId}`);
+  const defi = consommerDefi(`enrolement:${cleDefi}`);
   if (!defi) return false;
 
   const verif = await verifyRegistrationResponse({
@@ -121,20 +124,24 @@ export async function verifierEnrolement(
   if (!verif.verified || !verif.registrationInfo) return false;
 
   const { credential } = verif.registrationInfo;
-  await requete(
-    `INSERT INTO passkeys (user_id, credential_id, public_key, compteur, transports, libelle)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT (credential_id) DO NOTHING`,
-    [
-      userId,
-      credential.id,
-      Buffer.from(credential.publicKey).toString('base64url'),
-      credential.counter,
-      credential.transports ? JSON.stringify(credential.transports) : null,
-      libelle,
-    ]
-  );
-  return true;
+  return transaction(async (client) => {
+    // Le compte et le code peuvent avoir été révoqués depuis les options.
+    const { rows } = await client.query(
+      'SELECT id FROM profiles WHERE id = $1 AND is_active FOR UPDATE', [userId]
+    );
+    if (!rows.length) return false;
+    if (code && !(await consommerCode(code, userId, client))) return false;
+
+    // Une collision est une erreur : elle annule aussi la consommation du code.
+    await client.query(
+      `INSERT INTO passkeys (user_id, credential_id, public_key, compteur, transports, libelle)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [userId, credential.id, Buffer.from(credential.publicKey).toString('base64url'),
+       credential.counter, credential.transports ? JSON.stringify(credential.transports) : null,
+       libelle]
+    );
+    return true;
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -78,3 +78,28 @@ describe('session', () => {
     expect(appels[0].init?.credentials).toBe('same-origin');
   });
 });
+
+describe('déconnexion confirmée par le serveur', () => {
+  it.each(['réseau', 'serveur'])('ne notifie pas SIGNED_OUT en cas d’échec %s', async (panne) => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      if (panne === 'réseau') throw new Error('hors ligne');
+      return repondre({ message: 'indisponible' }, false, 503);
+    }));
+    const listener = vi.fn();
+    const { data } = auth.onAuthStateChange(listener);
+    try {
+      expect((await auth.signOut()).error).not.toBeNull();
+      expect(listener).not.toHaveBeenCalled();
+    } finally { data.subscription.unsubscribe(); }
+  });
+
+  it('notifie la déconnexion après une réponse réussie', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => repondre({ ok: true })));
+    const listener = vi.fn();
+    const { data } = auth.onAuthStateChange(listener);
+    try {
+      expect((await auth.signOut()).error).toBeNull();
+      expect(listener).toHaveBeenCalledWith('SIGNED_OUT', null);
+    } finally { data.subscription.unsubscribe(); }
+  });
+});

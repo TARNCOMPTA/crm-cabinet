@@ -37,6 +37,7 @@ interface AuthContextType {
     libelle?: string;
   }) => Promise<{ error: { message: string } | null }>;
   signOut: () => Promise<void>;
+  signOutError: string | null;
   updateShowMyDossiers: (value: boolean) => Promise<void>;
 }
 
@@ -59,6 +60,7 @@ const PROFILE_COLUMNS = '*';
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   const chargerProfil = useCallback(async (id: string) => {
     const { data } = await supabase
@@ -119,7 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    setSignOutError(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setSignOutError('Déconnexion non confirmée. Vérifie ta connexion et réessaie.');
+      return;
+    }
     setProfile(null);
   }, []);
 
@@ -160,9 +167,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       connexionParPasskey,
       enrolerPasskey,
       signOut,
+      signOutError,
       updateShowMyDossiers,
     }),
-    [profile, loading, isAdmin, connexionParPasskey, enrolerPasskey, signOut, updateShowMyDossiers]
+    [profile, loading, isAdmin, connexionParPasskey, enrolerPasskey, signOut, signOutError, updateShowMyDossiers]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

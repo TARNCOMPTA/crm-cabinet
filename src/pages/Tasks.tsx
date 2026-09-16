@@ -42,7 +42,8 @@ import {
 import { loadTaskChecklistCounts } from '../lib/checklistService';
 import { Database } from '../types/database';
 import { supabase } from '../lib/supabase';
-import { createNotification } from '../lib/notificationService';
+import { createNotification, courrielPrevu, messagePrevenu } from '../lib/notificationService';
+import { nomAffichable } from '../lib/nomAffichable';
 
 type TaskCategory = Database['public']['Tables']['task_categories']['Row'];
 
@@ -295,12 +296,33 @@ export function Tasks() {
       });
 
       showToast('Tache créée', 'success');
+      /*
+       * Qui a été prévenu, et comment.
+       *
+       * ⚠️ LA NOTIFICATION EST POSÉE PAR LA BASE, pas par cet écran : le
+       * déclencheur `notify_task_assigned` la crée à l'insertion. On ne la
+       * refait donc pas ici — ce serait un doublon. On se contente d'annoncer
+       * ce qu'elle a fait, en reprenant SES DEUX CONDITIONS, les seules :
+       * un responsable désigné, et qui ne soit pas l'auteur.
+       *
+       * ⚠️ DEUX CAS OÙ PERSONNE N'EST PRÉVENU, ET RIEN NE LE DISAIT. Une tâche
+       * créée sans responsable — c'est le défaut du formulaire, « Non assigné » —
+       * et une tâche qu'on s'assigne à soi par le bouton « Me l'assigner ».
+       * Les deux se lisent comme une panne de messagerie quand on teste l'envoi,
+       * et le silence de l'écran entretenait la confusion.
+       */
+      const destinataire = formData.assignee_id;
+      if (destinataire && destinataire !== profile.id) {
+        const qui = users.find((u) => u.id === destinataire);
+        const courriel = await courrielPrevu(destinataire, 'task_assigned');
+        showToast(messagePrevenu(nomAffichable(qui), courriel), 'success');
+      }
       setShowModal(false);
       loadData();
     } catch {
       showToast('Erreur lors de la création', 'error');
     }
-  }, [profile, formData, selectedTemplateId, showToast]);
+  }, [profile, formData, selectedTemplateId, showToast, users]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -328,13 +350,22 @@ export function Tasks() {
       const task = tasks.find((t) => t.id === taskId);
       if (task?.assignee_id && task.assignee_id !== profile?.id) {
         const statusLabel = columns.find((c) => c.id === newStatus)?.title || newStatus;
-        createNotification(
+        // Attendue et son verdict lu : l'appel partait sans `await`, un refus
+        // d'ecriture ne se voyait nulle part.
+        const posee = await createNotification(
           task.assignee_id,
           'task_status_changed',
           'Statut de tache modifie',
           `La tache "${task.titre}" est passee en "${statusLabel}"`,
           '/tasks'
         );
+        if (posee) {
+          const qui = users.find((u) => u.id === task.assignee_id);
+          const courriel = await courrielPrevu(task.assignee_id, 'task_status_changed');
+          showToast(messagePrevenu(nomAffichable(qui), courriel), 'success');
+        } else {
+          showToast("Statut modifie, mais le responsable n'a pas pu etre prevenu.", 'error');
+        }
       }
     } catch {
       showToast('Erreur lors du changement de statut', 'error');
@@ -342,7 +373,7 @@ export function Tasks() {
     }
 
     setActiveId(null);
-  }, [tasks, profile, showToast]);
+  }, [tasks, profile, showToast, users]);
 
   const handleTaskClick = useCallback((task: TaskWithRelations) => {
     setSelectedTask(task);
@@ -592,3 +623,4 @@ export function Tasks() {
     </div>
   );
 }
+

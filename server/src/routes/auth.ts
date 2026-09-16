@@ -25,13 +25,19 @@ import {
   listerPasskeys,
   supprimerPasskey,
 } from '../auth/passkeys.js';
-import { consommerCode, profilPourCode } from '../auth/enrolement.js';
+import { profilPourCode } from '../auth/enrolement.js';
 import { effacerCookie, lireSession, poserCookie, signerJeton } from '../auth/session.js';
 import { exigerSession } from '../gardes.js';
 import { requeteUne } from '../db.js';
 import { acquitter, souscontrole } from '../limiteur.js';
 
 const COOKIE_DEFI = 'crm_defi';
+// Le cookie ne porte qu'un identifiant opaque. L'identité et le code restent
+// côté serveur, liés au défi de CE navigateur, pendant deux minutes.
+const enrolements = new Map<string, { userId: string; code?: string; expire: number }>();
+setInterval(() => {
+  for (const [cle, e] of enrolements) if (e.expire < Date.now()) enrolements.delete(cle);
+}, 60_000).unref();
 
 /**
  * Dix tentatives de connexion par quart d'heure et par adresse.
@@ -137,34 +143,49 @@ export function enregistrerRoutesAuth(app: FastifyInstance): void {
       // et elle, par construction, n'acquitte jamais.
       if (!session) acquitter(`enrolement:${request.ip}`);
 
-      const cle = cleDefi(request, reply);
-      reply.setCookie('crm_enrolement', profil.id, {
+      const precedente = request.cookies['crm_enrolement'];
+      if (precedente) enrolements.delete(precedente);
+      const cle = randomUUID();
+      enrolements.set(cle, {
+        userId: profil.id,
+        code: session ? undefined : request.body.code,
+        expire: Date.now() + 120_000,
+      });
+      reply.setCookie('crm_enrolement', cle, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 300,
       });
-      void cle;
-      return optionsEnrolement(profil);
+      return optionsEnrolement(profil, cle);
     }
   );
 
   app.post<{ Body: { reponse: RegistrationResponseJSON; libelle?: string; code?: string } }>(
     '/api/auth/enrolement/verifier',
     async (request, reply) => {
-      const userId = request.cookies['crm_enrolement'];
-      if (!userId) return reply.code(400).send({ message: 'Enrolement non commence.' });
-
+      const cle = request.cookies['crm_enrolement'];
+      const enrolement = cle ? enrolements.get(cle) : undefined;
+      if (cle) enrolements.delete(cle);
+      if (!cle || !enrolement || enrolement.expire < Date.now()) {
+        return reply.code(400).send({ message: 'Enrolement absent ou expire.' });
+      }
+      const { userId, code } = enrolement;
+      if (!code) {
+        const session = await exigerSession(request, reply);
+        if (!session) return;
+        if (session.sub !== userId) return reply.code(403).send({ message: 'Compte different.' });
+      }
       const ok = await verifierEnrolement(
         userId,
         request.body.reponse,
-        request.body.libelle ?? null
+        request.body.libelle ?? null,
+        cle,
+        code
       );
       if (!ok) return reply.code(400).send({ message: 'Enrolement refuse.' });
 
-      // Le code n'est brûlé qu'ici : un enrôlement interrompu ne le consomme pas.
-      if (request.body.code) await consommerCode(request.body.code);
       reply.clearCookie('crm_enrolement', { path: '/' });
       reply.clearCookie(COOKIE_DEFI, { path: '/' });
 

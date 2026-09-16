@@ -2,7 +2,7 @@
  * Outils exposés au connecteur MCP.
  * ---------------------------------------------------------------------------
  * Les treize outils de l'Edge Function `mcp-connector`, en SQL direct, plus
- * trois qui n'en viennent pas :
+ * cinq qui n'en viennent pas :
  *
  *   · `get_client_statuts`, le seul a sortir de la base pour interroger le
  *     registre — il rend le TEXTE du document depose au greffe ;
@@ -10,7 +10,10 @@
  *     CABINET. Les deux repondent a la meme question et ne se remplacent pas :
  *     les statuts temoignent d'une date, la repartition dit l'etat courant.
  *     C'est la seconde qui fait autorite.
- *   · `set_client_repartition`, LE SEUL QUI ECRIVE.
+ *   · et LES TROIS QUI ECRIVENT : `set_client_repartition`,
+ *     `set_client_facturation_electronique`, et `set_client_fiche` — le dernier
+ *     etant le seul a toucher plusieurs colonnes a la fois, d'ou son refus
+ *     d'ecrasement CHAMP PAR CHAMP plutot que global.
  *
  * ⚠️ CE FICHIER A LONGTEMPS DIT « TOUS SONT EN LECTURE SEULE », et ce n'est plus
  * vrai. Il ajoutait : « si une écriture devient nécessaire un jour, ce sera une
@@ -45,6 +48,14 @@ import { requete, requeteUne, transaction } from '../db.js';
 // ⚠️ Jumelle de `src/lib/facturationElectronique.ts` — le serveur ne peut pas
 // importer du front. Les deux sont tenues par `tests/facturation-jumelles.test.ts`.
 import { normaliserAdresseFacturation } from '../facturation-electronique.js';
+import {
+  CHAMPS_ECRIVABLES,
+  CHAMPS_PAR_COLONNE,
+  REFUS_EXPLIQUES,
+  dejaRenseigne,
+  lireValeur,
+  type ValeurChamp,
+} from './champs-fiche.js';
 import { construireSuivi } from '../jedeclare/suivi.js';
 import {
   estHorsPortefeuille,
@@ -1104,6 +1115,286 @@ async function ecrireAdresseFacturation(
   };
 }
 
+
+/**
+ * ECRIRE DANS LA FICHE CLIENT.
+ * ---------------------------------------------------------------------------
+ * Le TROISIEME outil de ce connecteur qui modifie quelque chose, et le premier
+ * qui touche plusieurs colonnes a la fois. Memes gardes que les deux autres :
+ * droit d'ecriture explicite, imputation dans `audit_logs`, refus d'ecraser
+ * sans confirmation — mais ici CHAMP PAR CHAMP.
+ *
+ * ⚠️ LE REFUS D'ECRASEMENT EST PAR CHAMP, ET C'EST LA DIFFERENCE QUI COMPTE.
+ * Un refus global ferait choisir entre tout ecrire et ne rien ecrire : le
+ * modele, voulant completer un telephone manquant sur une fiche qui porte deja
+ * une ville, rappellerait l'outil avec `remplacer: true` et ecraserait la ville
+ * du meme geste. Les champs vides passent donc toujours ; seuls ceux qui
+ * portent deja une valeur exigent la confirmation, et la reponse les nomme un
+ * par un avec l'ancienne et la nouvelle valeur.
+ *
+ * ⚠️ TOUT OU RIEN. L'ecriture se fait en une transaction : une fiche a moitie
+ * modifiee, dont l'adresse aurait change mais pas le code postal, serait pire
+ * que la fiche d'avant. Et si un seul champ est refuse, AUCUN n'est ecrit —
+ * sans quoi le modele devrait deviner lesquels sont passes.
+ *
+ * ⚠️ LES COLONNES RECOMPOSEES PAR LA BASE NE SONT PAS ECRITES, elles sont
+ * RELUES. Ecrire `siret` fait recalculer `siren` par un declencheur ; ecrire
+ * `adresse_ligne1` fait recomposer `adresse`. La reponse rend donc ces valeurs
+ * telles que la base les a etablies APRES l'ecriture, pour que le modele
+ * rapporte ce qui est, et non ce qu'il a demande.
+ */
+async function ecrireFicheClient(
+  args: Record<string, unknown>,
+  contexte: ContexteAppel | undefined
+) {
+  if (!contexte?.peutEcrire) {
+    return {
+      erreur: 'Ecriture non autorisee pour cet acces.',
+      comment_faire:
+        'Cet acces est en LECTURE. Ouvrez Parametres → Connecteur MCP dans le CRM : la liste ' +
+        '« Autorisations » y indique, pour chaque connecteur, s il est en lecture seule, et un ' +
+        "bouton y accorde l'ecriture. Meme chose cle par cle pour un acces par cle statique " +
+        "(Claude Code, Cursor). C'est a l'utilisateur de faire ce geste, pas a vous.",
+    };
+  }
+  if (!contexte.userId) {
+    return {
+      erreur: "Ecriture impossible : cet acces n'est rattache a aucun utilisateur.",
+      comment_faire:
+        "Une ecriture doit pouvoir etre imputee a quelqu'un. Utilisez un acces OAuth, ou une " +
+        'cle MCP creee depuis Parametres → Connecteur MCP.',
+    };
+  }
+
+  const clientId = String(args.client_id ?? '');
+  if (!clientId) return { erreur: 'client_id requis.' };
+
+  const champs = args.champs;
+  if (typeof champs !== 'object' || champs === null || Array.isArray(champs)) {
+    return {
+      erreur: 'champs doit etre un objet { colonne: valeur }.',
+      champs_acceptes: CHAMPS_ECRIVABLES.map((c) => c.colonne),
+    };
+  }
+  const demandes = Object.entries(champs as Record<string, unknown>);
+  if (demandes.length === 0) return { erreur: 'Aucun champ a ecrire.' };
+
+  // ---- 1. La fiche telle qu'elle est ------------------------------------
+  /*
+   * ⚠️ `SELECT *` ET NON LA LISTE DES COLONNES ECRIVABLES, ET CE N'EST PAS DE LA
+   * PARESSE. Une liste interpolee ne peut pas etre analysee par PostgreSQL, et
+   * `tests/mcp-sql.test.ts` fait PREPARER chaque requete du connecteur pour
+   * verifier tables, colonnes et types. Une requete a trous echapperait a ce
+   * controle — c'est exactement ce que ce test refuse. Une ligne de plus lue
+   * sur une fiche unique ne coute rien ; perdre la verification en couterait.
+   */
+  const avant = await requeteUne<Record<string, unknown>>(
+    'SELECT * FROM clients WHERE id = $1',
+    [clientId]
+  );
+  if (!avant) return { erreur: 'Client introuvable.' };
+
+  // ---- 2. Lecture et controle, AVANT toute ecriture ----------------------
+  const aEcrire: Array<{ colonne: string; libelle: string; valeur: ValeurChamp }> = [];
+  const conflits: Array<{ champ: string; libelle: string; actuelle: unknown; proposee: ValeurChamp }> = [];
+  const refus: string[] = [];
+
+  for (const [nom, brute] of demandes) {
+    const champ = CHAMPS_PAR_COLONNE.get(nom);
+    if (!champ) {
+      // Un refus qui explique : « colonne inconnue » sur `siren` ferait chercher
+      // une faute de frappe la ou il faut ecrire `siret`.
+      const raison = REFUS_EXPLIQUES[nom];
+      refus.push(raison ? `${nom} : ${raison}` : `${nom} : champ non modifiable par le connecteur.`);
+      continue;
+    }
+
+    const lu = lireValeur(champ, brute);
+    if (!lu.ok) {
+      refus.push(lu.raison);
+      continue;
+    }
+
+    const actuelle = avant[nom];
+    // Ecrire la meme valeur n'est pas un ecrasement : inutile de le signaler,
+    // et inutile de l'ecrire.
+    if (actuelle === lu.valeur) continue;
+
+    if (dejaRenseigne(actuelle) && args.remplacer !== true) {
+      conflits.push({ champ: nom, libelle: champ.libelle, actuelle, proposee: lu.valeur });
+      continue;
+    }
+    aEcrire.push({ colonne: nom, libelle: champ.libelle, valeur: lu.valeur });
+  }
+
+  if (refus.length > 0) {
+    return {
+      erreur: 'Certains champs ne peuvent pas etre ecrits.',
+      refus,
+      champs_acceptes: CHAMPS_ECRIVABLES.map((c) => c.colonne),
+      comment_faire:
+        'RIEN N A ETE ECRIT. Corrigez ou retirez les champs refuses, puis rappelez cet outil.',
+    };
+  }
+
+  if (conflits.length > 0) {
+    return {
+      erreur: 'Des champs portent deja une valeur.',
+      conflits,
+      comment_faire:
+        "MONTREZ CHAQUE COUPLE ANCIENNE / NOUVELLE VALEUR A L'UTILISATEUR et demandez-lui ce " +
+        "qui vaut. Ne rappelez cet outil avec `remplacer: true` que s'il confirme — et sachez " +
+        "que `remplacer` vaut pour TOUS les champs de l'appel : n'y laissez que ceux qu'il a " +
+        'confirmes. La valeur en place a ete saisie par le cabinet ; elle est probablement ' +
+        'juste. RIEN N A ETE ECRIT pour l instant.',
+    };
+  }
+
+  if (aEcrire.length === 0) {
+    return {
+      ecrit: false,
+      client: { id: avant.id, nom: avant.nom_entreprise },
+      message: 'La fiche portait deja ces valeurs, rien a changer.',
+    };
+  }
+
+  // ---- 3. L'ecriture, en une transaction ---------------------------------
+  /*
+   * ⚠️ TRENTE COLONNES ECRITES EN TOUTES LETTRES, PLUTOT QU'UN `SET` CONSTRUIT
+   * PAR CONCATENATION. C'est long, et c'est le prix d'une requete que
+   * PostgreSQL peut ANALYSER : `tests/mcp-sql.test.ts` fait preparer chaque
+   * requete du connecteur, ce qui verifie l'existence de chaque colonne et la
+   * justesse de chaque conversion. Un `SET` interpole y echapperait — et c'est
+   * precisement le controle qui a rattrape cinq outils demandant des colonnes
+   * anglaises a des tables francaises.
+   *
+   * Le `jsonb` distingue les trois cas que ce connecteur doit distinguer :
+   * champ absent de l'objet (ne pas toucher), present a `null` (effacer),
+   * present avec une valeur (ecrire). Un parametre par colonne ne saurait pas
+   * separer les deux premiers.
+   */
+  const aEcrireJson: Record<string, ValeurChamp> = {};
+  for (const c of aEcrire) aEcrireJson[c.colonne] = c.valeur;
+
+  await transaction(async (cx) => {
+    await cx.query(
+      `UPDATE clients SET
+         "type_personne" = CASE WHEN jsonb_exists($2, 'type_personne')
+                        THEN ($2 ->> 'type_personne') ELSE "type_personne" END,
+         "civilite" = CASE WHEN jsonb_exists($2, 'civilite')
+                        THEN ($2 ->> 'civilite') ELSE "civilite" END,
+         "nom" = CASE WHEN jsonb_exists($2, 'nom')
+                        THEN ($2 ->> 'nom') ELSE "nom" END,
+         "prenom" = CASE WHEN jsonb_exists($2, 'prenom')
+                        THEN ($2 ->> 'prenom') ELSE "prenom" END,
+         "nom_entreprise" = CASE WHEN jsonb_exists($2, 'nom_entreprise')
+                        THEN ($2 ->> 'nom_entreprise') ELSE "nom_entreprise" END,
+         "nom_commercial" = CASE WHEN jsonb_exists($2, 'nom_commercial')
+                        THEN ($2 ->> 'nom_commercial') ELSE "nom_commercial" END,
+         "siret" = CASE WHEN jsonb_exists($2, 'siret')
+                        THEN ($2 ->> 'siret') ELSE "siret" END,
+         "forme_juridique" = CASE WHEN jsonb_exists($2, 'forme_juridique')
+                        THEN ($2 ->> 'forme_juridique') ELSE "forme_juridique" END,
+         "code_ape" = CASE WHEN jsonb_exists($2, 'code_ape')
+                        THEN ($2 ->> 'code_ape') ELSE "code_ape" END,
+         "capital_social" = CASE WHEN jsonb_exists($2, 'capital_social')
+                        THEN ($2 ->> 'capital_social')::numeric ELSE "capital_social" END,
+         "date_creation_entreprise" = CASE WHEN jsonb_exists($2, 'date_creation_entreprise')
+                        THEN ($2 ->> 'date_creation_entreprise')::date ELSE "date_creation_entreprise" END,
+         "description_activite" = CASE WHEN jsonb_exists($2, 'description_activite')
+                        THEN ($2 ->> 'description_activite') ELSE "description_activite" END,
+         "is_lmnp" = CASE WHEN jsonb_exists($2, 'is_lmnp')
+                        THEN ($2 ->> 'is_lmnp')::boolean ELSE "is_lmnp" END,
+         "adresse_ligne1" = CASE WHEN jsonb_exists($2, 'adresse_ligne1')
+                        THEN ($2 ->> 'adresse_ligne1') ELSE "adresse_ligne1" END,
+         "adresse_complement" = CASE WHEN jsonb_exists($2, 'adresse_complement')
+                        THEN ($2 ->> 'adresse_complement') ELSE "adresse_complement" END,
+         "code_postal" = CASE WHEN jsonb_exists($2, 'code_postal')
+                        THEN ($2 ->> 'code_postal') ELSE "code_postal" END,
+         "ville" = CASE WHEN jsonb_exists($2, 'ville')
+                        THEN ($2 ->> 'ville') ELSE "ville" END,
+         "pays" = CASE WHEN jsonb_exists($2, 'pays')
+                        THEN ($2 ->> 'pays') ELSE "pays" END,
+         "email" = CASE WHEN jsonb_exists($2, 'email')
+                        THEN ($2 ->> 'email') ELSE "email" END,
+         "email_2" = CASE WHEN jsonb_exists($2, 'email_2')
+                        THEN ($2 ->> 'email_2') ELSE "email_2" END,
+         "telephone" = CASE WHEN jsonb_exists($2, 'telephone')
+                        THEN ($2 ->> 'telephone') ELSE "telephone" END,
+         "telephone_2" = CASE WHEN jsonb_exists($2, 'telephone_2')
+                        THEN ($2 ->> 'telephone_2') ELSE "telephone_2" END,
+         "contact_principal" = CASE WHEN jsonb_exists($2, 'contact_principal')
+                        THEN ($2 ->> 'contact_principal') ELSE "contact_principal" END,
+         "dirigeant" = CASE WHEN jsonb_exists($2, 'dirigeant')
+                        THEN ($2 ->> 'dirigeant') ELSE "dirigeant" END,
+         "numero_dossier" = CASE WHEN jsonb_exists($2, 'numero_dossier')
+                        THEN ($2 ->> 'numero_dossier') ELSE "numero_dossier" END,
+         "statut" = CASE WHEN jsonb_exists($2, 'statut')
+                        THEN ($2 ->> 'statut') ELSE "statut" END,
+         "regime_fiscal" = CASE WHEN jsonb_exists($2, 'regime_fiscal')
+                        THEN ($2 ->> 'regime_fiscal') ELSE "regime_fiscal" END,
+         "date_cloture" = CASE WHEN jsonb_exists($2, 'date_cloture')
+                        THEN ($2 ->> 'date_cloture')::date ELSE "date_cloture" END,
+         "date_entree_cabinet" = CASE WHEN jsonb_exists($2, 'date_entree_cabinet')
+                        THEN ($2 ->> 'date_entree_cabinet')::date ELSE "date_entree_cabinet" END,
+         "date_sortie_cabinet" = CASE WHEN jsonb_exists($2, 'date_sortie_cabinet')
+                        THEN ($2 ->> 'date_sortie_cabinet')::date ELSE "date_sortie_cabinet" END,
+         updated_at = now()
+   WHERE id = $1`,
+      [clientId, JSON.stringify(aEcrireJson)]
+    );
+    await cx.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'set_client_fiche', 'client', $2, $3)`,
+      [
+        contexte.userId,
+        clientId,
+        JSON.stringify({
+          via: 'connecteur MCP',
+          acces: contexte.cle,
+          remplacement: args.remplacer === true,
+          champs: aEcrire.map((c) => ({
+            champ: c.colonne,
+            ancienne: avant[c.colonne] ?? null,
+            nouvelle: c.valeur,
+          })),
+        }),
+      ]
+    );
+  });
+
+  // ---- 4. Ce que la base a etabli, et non ce qu'on a demande -------------
+  const apres = await requeteUne<Record<string, unknown>>(
+    'SELECT * FROM clients WHERE id = $1',
+    [clientId]
+  );
+
+  return {
+    ecrit: true,
+    client: { id: avant.id, nom: apres?.nom_entreprise ?? avant.nom_entreprise },
+    champs_modifies: aEcrire.map((c) => ({
+      champ: c.colonne,
+      libelle: c.libelle,
+      ancienne: avant[c.colonne] ?? null,
+      nouvelle: c.valeur,
+    })),
+    /*
+     * Les colonnes que la base recompose, relues apres coup. Le modele doit
+     * pouvoir dire « le SIREN est maintenant 303265045 » sans l'avoir deduit —
+     * et voir tout de suite si le declencheur a fait autre chose que prevu.
+     */
+    recompose_par_la_base: {
+      nom_entreprise: apres?.nom_entreprise ?? null,
+      siren: apres?.siren ?? null,
+      adresse: apres?.adresse ?? null,
+      tva_intracom: apres?.tva_intracom ?? null,
+    },
+    avertissement:
+      "Cette ecriture modifie le dossier d'un client reel et figure dans le journal " +
+      "d'audit au nom de l'utilisateur. Annoncez a l'utilisateur ce qui a change.",
+  };
+}
+
 export const OUTILS: Outil[] = [
   {
     nom: 'list_clients',
@@ -1807,6 +2098,50 @@ export const OUTILS: Outil[] = [
     },
     executer: async (a, contexte) => ecrireAdresseFacturation(a, contexte),
   },
+  {
+    nom: 'set_client_fiche',
+    titre: 'Modifier la fiche d un client',
+    description:
+      "ECRIT un ou plusieurs champs de la fiche d'un client : identite, adresse, coordonnees, " +
+      'suivi du cabinet. ' +
+      "MONTREZ TOUJOURS A L'UTILISATEUR CE QUE VOUS ALLEZ ECRIRE, CHAMP PAR CHAMP, ET ATTENDEZ " +
+      "SON ACCORD : cet outil modifie le dossier d'un client reel et l'ecriture figure au " +
+      "journal d'audit a son nom. " +
+      'REFUS PAR DEFAUT SUR TOUT CHAMP DEJA RENSEIGNE : la reponse vous rend alors chaque ' +
+      "couple ancienne / nouvelle valeur. Montrez-les, et ne rappelez l'outil avec " +
+      '`remplacer: true` QUE sur les champs que l utilisateur a confirmes — ce drapeau vaut ' +
+      "pour TOUS les champs de l'appel. " +
+      "N'INVENTEZ AUCUNE VALEUR. Elle vient du client, d'un document, ou de ce que " +
+      "l'utilisateur vous dicte. Un SIRET ou une adresse deduits d'une recherche ne " +
+      's ecrivent pas sans que l utilisateur les ait vus et valides. ' +
+      'CERTAINES COLONNES SE REFUSENT ET C EST NORMAL : `siren`, `adresse`, `tva_intracom` ' +
+      'sont recomposees par la base depuis les champs que vous ecrivez ; ' +
+      '`adresse_facturation_electronique` et `parts_totales` ont leur propre outil. ' +
+      'Passer `null` EFFACE un champ ; ne pas le mentionner le laisse intact.',
+    parametres: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string', description: 'UUID du client' },
+        champs: {
+          type: 'object',
+          description:
+            'Les champs a ecrire, { colonne: valeur }. Colonnes acceptees : ' +
+            CHAMPS_ECRIVABLES.map((c) => c.colonne).join(', ') +
+            '. Les dates s ecrivent AAAA-MM-JJ, les nombres sans unite ni espace, ' +
+            '`null` efface.',
+        },
+        remplacer: {
+          type: 'boolean',
+          description:
+            "A ne passer a true QUE si l'utilisateur a vu chaque valeur existante et confirme " +
+            'son remplacement. Vaut pour tous les champs de l appel.',
+        },
+      },
+      required: ['client_id', 'champs'],
+    },
+    executer: async (a, contexte) => ecrireFicheClient(a, contexte),
+  },
 ];
 
 export const OUTILS_PAR_NOM = new Map(OUTILS.map((o) => [o.nom, o]));
+

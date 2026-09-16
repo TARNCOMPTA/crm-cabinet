@@ -40,5 +40,7 @@ export const OUTILS_MCP: OutilAffiche[] = [
   { nom: 'get_client_repartition', quoi: 'Répartition des parts' },
   { nom: 'set_client_repartition', quoi: 'Enregistrer la répartition', ecrit: true },
   { nom: 'set_client_facturation_electronique', quoi: "Enregistrer l'adresse de facturation électronique", ecrit: true },
+  { nom: 'set_client_fiche', quoi: 'Modifier la fiche client', ecrit: true },
   { nom: 'search', quoi: 'Recherche globale' },
 ];
+

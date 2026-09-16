@@ -23,6 +23,8 @@ import { BilanDAS2Panel } from './BilanDAS2Panel';
 import { PieceJointeLigne, type PieceJointe } from './PieceJointeLigne';
 import { VignettesCollaborateurs } from './VignettesCollaborateurs';
 import { vignettesDuBilan } from '../../lib/collaborateursBilan';
+import { createNotification, courrielPrevu, messagePrevenu } from '../../lib/notificationService';
+import { nomAffichable } from '../../lib/nomAffichable';
 import { ZoneDepot } from './ZoneDepot';
 import { useDepotFichiers } from '../../hooks/useDepotFichiers';
 import {
@@ -152,16 +154,61 @@ export function BilanCardDetailModal({ card, columns, isOpen, onClose, onUpdated
     }
   }
 
+  /**
+   * Changer la colonne depuis la fiche du bilan.
+   *
+   * ⚠️ CET ECRAN NE PREVENAIT PERSONNE, ET LE TABLEAU SI. Les deux gestes
+   * appellent pourtant le meme `moveCard` : selon qu'on glissait la carte ou
+   * qu'on ouvrait sa fiche pour changer le statut, le responsable recevait un
+   * courriel ou n'en recevait pas, sans que rien ne le signale. Constate le
+   * 2026-09-14 en remontant la chaine a la demande du cabinet.
+   *
+   * ⚠️ LA NOTIFICATION VIENT APRES `moveCard`, JAMAIS AVANT. Prevenir d'un
+   * deplacement qui echoue ensuite ferait courir quelqu'un pour rien.
+   */
   async function handleColumnChange(newColumnId: string) {
     if (!card || newColumnId === card.column_id) return;
+    const ancienne = card.column_id;
     setSelectedColumn(newColumnId);
     try {
       await moveCard(card.id, newColumnId, card.position);
+      await prevenirDuDeplacement(newColumnId);
       onUpdated();
     } catch {
-      setSelectedColumn(card.column_id);
+      setSelectedColumn(ancienne);
       showToast('Erreur lors du deplacement', 'error');
     }
+  }
+
+  /**
+   * Previent le responsable du bilan, et dit ce qui lui arrivera vraiment.
+   *
+   * Rien a annoncer quand il n'y a pas de responsable, ni quand c'est soi-meme
+   * qui deplace : se notifier soi est du bruit, et c'est deja la regle du
+   * tableau comme celle du declencheur `notify_task_assigned`.
+   */
+  async function prevenirDuDeplacement(newColumnId: string) {
+    if (!card?.assignee_id || card.assignee_id === user?.id) return;
+
+    const colonne = columns.find((c) => c.id === newColumnId)?.name ?? '';
+    const client = card.clients?.nom_entreprise ?? 'Client';
+
+    const posee = await createNotification(
+      card.assignee_id,
+      'bilan_moved',
+      'Bilan deplace',
+      `Le bilan de "${client}" a ete deplace vers "${colonne}"`,
+      '/bilans'
+    );
+    if (!posee) {
+      // ⚠️ ON LE DIT. Le deplacement, lui, a reussi : taire l'echec laisserait
+      // croire que le collegue a ete prevenu alors que non.
+      showToast("Bilan deplace, mais le responsable n'a pas pu etre prevenu.", 'error');
+      return;
+    }
+
+    const courriel = await courrielPrevu(card.assignee_id, 'bilan_moved');
+    showToast(messagePrevenu(nomAffichable(card.assignee), courriel), 'success');
   }
 
   /**
@@ -740,3 +787,4 @@ function LigneChecklist({
     </div>
   );
 }
+
