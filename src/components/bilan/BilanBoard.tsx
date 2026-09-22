@@ -240,4 +240,3 @@ export function BilanBoard({ columns, cards, sortAlpha, onCardsChanged, das2Enab
     </>
   );
 }
-

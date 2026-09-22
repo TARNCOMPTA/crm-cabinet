@@ -43,4 +43,3 @@ export const OUTILS_MCP: OutilAffiche[] = [
   { nom: 'set_client_fiche', quoi: 'Modifier la fiche client', ecrit: true },
   { nom: 'search', quoi: 'Recherche globale' },
 ];
-

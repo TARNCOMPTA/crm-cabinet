@@ -136,4 +136,3 @@ export function messagePrevenu(nom: string, courriel: boolean | null): string {
   if (courriel === false) return `${nom} est prevenu(e) dans l'application (courriel desactive de son cote).`;
   return `${nom} est prevenu(e).`;
 }
-

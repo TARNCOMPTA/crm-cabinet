@@ -218,4 +218,3 @@ export function dejaRenseigne(valeur: unknown): boolean {
   if (typeof valeur === 'string') return valeur.trim() !== '';
   return true;
 }
-

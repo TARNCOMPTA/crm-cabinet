@@ -40,4 +40,3 @@ describe('messagePrevenu', () => {
     expect(messagePrevenu('la personne concernee', true)).toContain('la personne concernee');
   });
 });
-

@@ -218,4 +218,3 @@ describe('dejaRenseigne', () => {
     expect(dejaRenseigne('   ')).toBe(false);
   });
 });
-

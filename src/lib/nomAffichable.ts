@@ -43,4 +43,3 @@ export function nomAffichable(p: PersonneAffichable | null | undefined): string 
 
   return 'la personne concernee';
 }
-

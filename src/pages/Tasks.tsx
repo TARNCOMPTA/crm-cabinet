@@ -623,4 +623,3 @@ export function Tasks() {
     </div>
   );
 }
-

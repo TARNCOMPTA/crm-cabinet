@@ -2144,4 +2144,3 @@ export const OUTILS: Outil[] = [
 ];
 
 export const OUTILS_PAR_NOM = new Map(OUTILS.map((o) => [o.nom, o]));
-

@@ -7,6 +7,41 @@ signale un changement qui demande une action de votre part.
 
 ## À venir
 
+### Le PDF de synthèse client, refait
+
+Demande du cabinet. Ce document sort du CRM pour aller chez un client ou dans un
+dossier : il est resté sur la mise en page d'origine, qui ne ressemblait plus à
+rien de ce que le cabinet envoie.
+
+- **La charte, enfin.** Le fichier codait en dur le turquoise `#0d9488` — il
+  était le dernier endroit turquoise du produit, `tokens.css` posant un bordeaux
+  depuis longtemps. La fiche imprimée ne ressemblait plus à l'écran dont elle sort.
+- **Le nom du client est le titre.** C'était « Fiche client » qui était écrit le
+  plus gros, sur un bandeau occupant 15 % de la page ; le nom passait en dessous,
+  plus petit. Numéro de dossier, SIREN et statut sont en étiquettes sous le nom.
+- **Deux colonnes.** Les rubriques d'information s'écrivaient sur une seule
+  colonne large de 40 % de la page, le reste blanc.
+- **Les rubriques vides ne prennent plus une page.** Un dossier sans
+  collaborateur, sans dirigeant et sans relance imprimait huit titres suivis de
+  « Aucune donnée », ce qui faisait une deuxième page entière. Elles sont
+  désormais réunies en une ligne de bas de page qui les nomme : la différence
+  entre « rien à dire » et « rubrique oubliée » reste lisible, sans le vide.
+- **Les montants s'écrivent en français** — `50 000,00 €` et non `50000 EUR`.
+  ⚠️ Les espaces fines insécables produites par le formatage français sont
+  remplacées : l'encodage des polices standard du générateur ne les connaît pas et
+  imprimait « 5 0 / 0 0 0 , 0 0 € », lettre par lettre.
+- **Le régime fiscal est lu dans la table des régimes**, avec son libellé réel.
+  Le document fabriquait le sien à partir du code, et imprimait « IS reel »
+  sans accent là où le cabinet a écrit « IS réel normal ».
+- **Un seul signe pour l'absence** dans tout le document. Les dates rendaient
+  « - », les montants « — » : deux signes pour la même chose sur la même page.
+- **La rubrique « Impôts suivis » disparaît.** Elle était alimentée par une
+  liste vide depuis le retrait du module d'échéances fiscales, et imprimait donc
+  « aucun » sur chaque fiche — ce qui se lit « le cabinet n'en suit aucun »
+  alors que la vérité est « le produit ne sait plus le dire ».
+- La date d'édition passe en en-tête, à la minute : la seconde ne renseignait
+  personne.
+
 ### Fiabilité de l’authentification, des suppressions et des campagnes
 
 - Les codes d’enrôlement sont liés côté serveur au parcours du navigateur et

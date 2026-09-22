@@ -54,43 +54,96 @@ interface LigneArd {
 }
 
 const MONTHS_FR = [
-  'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre',
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-const TEAL: [number, number, number] = [13, 148, 136];
-const DARK_GREY: [number, number, number] = [55, 65, 81];
-const LIGHT_GREY: [number, number, number] = [243, 244, 246];
+/**
+ * La charte du cabinet, telle que l'application la porte.
+ * ---------------------------------------------------------------------------
+ * ⚠️ CE DOCUMENT ETAIT LE DERNIER ENDROIT TURQUOISE DU PRODUIT. `tokens.css`
+ * pose `--teal: #7c2d5e` — un BORDEAUX, le nom de variable etant un vestige
+ * assume d'une charte anterieure. Ce fichier, lui, codait en dur le vrai
+ * turquoise #0d9488 : la fiche imprimee ne ressemblait plus a l'ecran dont elle
+ * sort, ni au reste de ce qui porte le nom du cabinet.
+ */
+const ACCENT: [number, number, number] = [124, 45, 94];
+/** L'accent eclairci, pour les aplats de tableau. */
+const ACCENT_PALE: [number, number, number] = [247, 240, 243];
+const ENCRE: [number, number, number] = [42, 36, 40];
+const ENCRE_DOUCE: [number, number, number] = [110, 100, 106];
+const FILET: [number, number, number] = [228, 222, 225];
+
+/*
+ * ⚠️ UN SEUL SIGNE POUR L'ABSENCE, DANS TOUT LE DOCUMENT. Le document melait
+ * « - » (les formateurs de dates) et « — » (ceux de montants) selon la
+ * fonction qui rendait la valeur : deux signes pour la meme chose, sur la meme
+ * page. Et le trait d'union se lit comme une valeur tronquee, la ou le cadratin
+ * se lit « rien a dire ». Tout passe par cette constante, ce qui rend le
+ * prochain ecart visible au grep.
+ */
+const ABSENT = '—';
+
+/**
+ * Un montant en euros, ecrit comme on l'ecrit en France.
+ *
+ * ⚠️ « 50000 EUR » N'EST PAS UN MONTANT LISIBLE. Sur un document qui sort d'un
+ * cabinet comptable, l'absence de separateur de milliers fait compter les
+ * zeros ; « EUR » a la place de « € » fait pense-bete d'export de tableur. Deux
+ * details, mais ce sont exactement ceux qu'un client remarque.
+ */
+function formaterEuros(valeur: number | string | null | undefined): string {
+  if (valeur === null || valeur === undefined || valeur === '') return ABSENT;
+  const n = Number(valeur);
+  if (!Number.isFinite(n)) return ABSENT;
+  /*
+   * ⚠️ LES ESPACES FINES INSECABLES SONT REMPLACEES, ET C'EST INDISPENSABLE.
+   * `toLocaleString('fr-FR')` separe les milliers par U+202F et precede l'euro
+   * du meme caractere. L'encodage WinAnsi des polices standard de jsPDF ne le
+   * connait pas : « 50 000,00 € » sortait imprime « 5 0 / 0 0 0 , 0 0  € »,
+   * lettre par lettre. Trouve en REGARDANT le PDF, pas en relisant le code —
+   * rien dans le typage ni dans les tests ne pouvait le signaler.
+   */
+  return n
+    .toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
+    .replace(/[\u202f\u00a0\u2009]/g, ' ');
+}
+
+/** Premiere lettre en capitale — pour `actif`, `prospect`, `archive`. */
+function capitaliser(v: string | null | undefined): string {
+  if (!v) return ABSENT;
+  return v.charAt(0).toUpperCase() + v.slice(1);
+}
 
 function formatDate(d: string | null | undefined): string {
-  if (!d) return '-';
+  if (!d) return ABSENT;
   try {
     return new Date(d).toLocaleDateString('fr-FR');
   } catch {
-    return '-';
+    return ABSENT;
   }
 }
 
 function formatDateTime(d: string | null | undefined): string {
-  if (!d) return '-';
+  if (!d) return ABSENT;
   try {
     return new Date(d).toLocaleString('fr-FR');
   } catch {
-    return '-';
+    return ABSENT;
   }
 }
 
 function formatClosingMonthFromDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-';
+  if (!dateString) return ABSENT;
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '-';
+  if (isNaN(date.getTime())) return ABSENT;
   return MONTHS_FR[date.getMonth()];
 }
 
 function formatClosingMonthFromDdMm(ddmm: string | null | undefined): string {
-  if (!ddmm || ddmm.length < 4) return '-';
+  if (!ddmm || ddmm.length < 4) return ABSENT;
   const idx = parseInt(ddmm.substring(2, 4), 10) - 1;
-  if (idx < 0 || idx > 11) return '-';
+  if (idx < 0 || idx > 11) return ABSENT;
   return MONTHS_FR[idx];
 }
 
@@ -111,8 +164,9 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
+/** Ce qu'on imprime pour une valeur absente — voir `ABSENT`. */
 function sanitize(value: string | null | undefined): string {
-  if (value === null || value === undefined || value === '') return '-';
+  if (value === null || value === undefined || value === '') return ABSENT;
   return String(value);
 }
 
@@ -122,6 +176,21 @@ interface SectionCursor {
   pageWidth: number;
   marginX: number;
   maxWidth: number;
+  /**
+   * Les sections sans aucune ligne, retenues plutot qu'imprimees.
+   *
+   * ⚠️ HUIT SECTIONS VIDES D'AFFILEE REMPLISSAIENT UNE PAGE ENTIERE. Chacune
+   * avait son titre en 13 pt, son marqueur colore et son « Aucune donnee » :
+   * le document consacrait plus de place a annoncer l'absence qu'a presenter
+   * la donnee, et c'est ce qui le faisait tenir en deux pages la ou une
+   * suffit. Elles sont maintenant nommees en UNE ligne, a la fin.
+   *
+   * ⚠️ ELLES NE SONT PAS TAISSUES POUR AUTANT. « Ce dossier n'a pas de
+   * dirigeant enregistre » est une information : la faire disparaitre
+   * laisserait croire que la rubrique n'existe pas, ce qui est la confusion
+   * que ce depot refuse partout ailleurs entre « absent » et « pas su ».
+   */
+  vides: string[];
 }
 
 function ensureSpace(cursor: SectionCursor, needed: number) {
@@ -132,35 +201,73 @@ function ensureSpace(cursor: SectionCursor, needed: number) {
   }
 }
 
+/**
+ * Un titre de section : petites capitales sur un filet pleine largeur.
+ *
+ * ⚠️ PLUS DE PAVE COLORE NI DE 13 PT. L'ancien titre pesait autant que le nom
+ * du client : sur douze sections, douze elements criaient aussi fort que
+ * l'unique information que le lecteur cherche. Le filet separe sans hurler, et
+ * l'espace au-dessus fait le travail que la couleur faisait mal.
+ */
 function drawSectionTitle(cursor: SectionCursor, title: string) {
-  ensureSpace(cursor, 16);
-  cursor.doc.setFillColor(...TEAL);
-  cursor.doc.rect(cursor.marginX, cursor.y, 3, 7, 'F');
-  cursor.doc.setTextColor(...TEAL);
+  ensureSpace(cursor, 14);
+  cursor.y += 3;
+  cursor.doc.setTextColor(...ACCENT);
   cursor.doc.setFont('helvetica', 'bold');
-  cursor.doc.setFontSize(13);
-  cursor.doc.text(title, cursor.marginX + 6, cursor.y + 5.5);
-  cursor.y += 10;
-  cursor.doc.setTextColor(...DARK_GREY);
+  cursor.doc.setFontSize(9.5);
+  cursor.doc.text(title.toUpperCase(), cursor.marginX, cursor.y);
+  cursor.y += 2;
+  cursor.doc.setDrawColor(...ACCENT);
+  cursor.doc.setLineWidth(0.4);
+  cursor.doc.line(cursor.marginX, cursor.y, cursor.pageWidth - cursor.marginX, cursor.y);
+  cursor.y += 5;
+  cursor.doc.setTextColor(...ENCRE);
   cursor.doc.setFont('helvetica', 'normal');
   cursor.doc.setFontSize(10);
 }
 
+/**
+ * Les couples etiquette / valeur, sur DEUX colonnes.
+ *
+ * ⚠️ UNE COLONNE LAISSAIT LA MOITIE DROITE DE LA PAGE VIDE SUR TOUTE SA
+ * HAUTEUR. Treize lignes d'identite occupaient 40 % de la largeur et
+ * repoussaient le reste sur une seconde page — pour un document qui tient
+ * largement en une. Deux colonnes n'est pas une coquetterie de mise en page :
+ * c'est une page de moins a imprimer, par fiche et par client.
+ *
+ * ⚠️ LE REMPLISSAGE EST EN COLONNES, PAS EN LIGNES. On lit une fiche de haut
+ * en bas ; alterner gauche-droite ferait sauter l'oeil et melerait l'identite
+ * legale aux coordonnees.
+ */
 function drawKeyValueGrid(cursor: SectionCursor, rows: Array<[string, string]>) {
   if (rows.length === 0) return;
+
+  const moitie = Math.ceil(rows.length / 2);
+  const gauche = rows.slice(0, moitie);
+  const droite = rows.slice(moitie);
+  const corps: string[][] = [];
+  for (let i = 0; i < moitie; i++) {
+    const g = gauche[i] ?? ['', ''];
+    const d = droite[i] ?? ['', ''];
+    corps.push([g[0], g[1], d[0], d[1]]);
+  }
+
+  const colonne = (cursor.maxWidth - 6) / 2;
   autoTable(cursor.doc, {
     startY: cursor.y,
-    body: rows.map(([k, v]) => [k, v]),
+    body: corps,
     theme: 'plain',
-    styles: { fontSize: 9, cellPadding: 1.5, textColor: DARK_GREY, valign: 'top' },
+    styles: { fontSize: 8.5, cellPadding: { top: 1.1, bottom: 1.1, left: 0, right: 2 }, textColor: ENCRE, valign: 'top' },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 55, textColor: [107, 114, 128] },
-      1: { cellWidth: 'auto' },
+      0: { cellWidth: colonne * 0.44, textColor: ENCRE_DOUCE },
+      1: { cellWidth: colonne * 0.56, fontStyle: 'bold' },
+      2: { cellWidth: colonne * 0.44, textColor: ENCRE_DOUCE },
+      3: { cellWidth: colonne * 0.56, fontStyle: 'bold' },
     },
     margin: { left: cursor.marginX, right: cursor.marginX },
   });
   // @ts-expect-error - lastAutoTable is attached by plugin
-  cursor.y = cursor.doc.lastAutoTable.finalY + 4;
+  cursor.y = cursor.doc.lastAutoTable.finalY + 3;
 }
 
 function drawParagraph(cursor: SectionCursor, text: string) {
@@ -173,39 +280,87 @@ function drawParagraph(cursor: SectionCursor, text: string) {
   }
 }
 
-function drawEmpty(cursor: SectionCursor, msg: string) {
-  ensureSpace(cursor, 6);
-  cursor.doc.setTextColor(156, 163, 175);
-  cursor.doc.setFont('helvetica', 'italic');
-  cursor.doc.setFontSize(9);
-  cursor.doc.text(msg, cursor.marginX, cursor.y);
-  cursor.y += 6;
-  cursor.doc.setTextColor(...DARK_GREY);
-  cursor.doc.setFont('helvetica', 'normal');
-  cursor.doc.setFontSize(10);
-}
-
-function drawTable(
+/**
+ * Une section en tableau : titre ET contenu, ou RIEN et le nom retenu.
+ *
+ * ⚠️ LE TITRE N'EST PLUS ECRIT AVANT DE SAVOIR S'IL Y A QUELQUE CHOSE DESSOUS.
+ * C'est tout le changement : l'ancien code posait le titre, puis decouvrait le
+ * vide et ecrivait « Aucune donnee ». Ici le nom part dans `cursor.vides`, qui
+ * se resume en une ligne a la fin du document.
+ */
+function drawTableSection(
   cursor: SectionCursor,
+  titre: string,
   head: string[],
   body: string[][]
 ) {
   if (body.length === 0) {
-    drawEmpty(cursor, 'Aucune donnee');
+    cursor.vides.push(titre);
     return;
   }
+  drawSectionTitle(cursor, titre);
   autoTable(cursor.doc, {
     startY: cursor.y,
     head: [head],
     body,
-    theme: 'striped',
-    headStyles: { fillColor: TEAL, textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
-    bodyStyles: { fontSize: 9, textColor: DARK_GREY },
-    alternateRowStyles: { fillColor: LIGHT_GREY },
+    theme: 'plain',
+    headStyles: {
+      fillColor: ACCENT_PALE,
+      textColor: ACCENT,
+      fontSize: 8,
+      fontStyle: 'bold',
+      cellPadding: { top: 1.8, bottom: 1.8, left: 2, right: 2 },
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: ENCRE,
+      cellPadding: { top: 1.6, bottom: 1.6, left: 2, right: 2 },
+    },
+    // Un filet horizontal plutot qu'une ligne sur deux coloree : les zebrures
+    // font tableur, le filet fait document.
+    didDrawCell: (donnees) => {
+      if (donnees.section !== 'body') return;
+      const d = donnees.doc as jsPDF;
+      d.setDrawColor(...FILET);
+      d.setLineWidth(0.1);
+      d.line(donnees.cell.x, donnees.cell.y + donnees.cell.height,
+             donnees.cell.x + donnees.cell.width, donnees.cell.y + donnees.cell.height);
+    },
     margin: { left: cursor.marginX, right: cursor.marginX },
   });
   // @ts-expect-error - lastAutoTable is attached by plugin
-  cursor.y = cursor.doc.lastAutoTable.finalY + 6;
+  cursor.y = cursor.doc.lastAutoTable.finalY + 5;
+}
+
+/**
+ * La mention finale des rubriques sans contenu.
+ *
+ * ⚠️ ELLE EXISTE POUR NE PAS MENTIR PAR OMISSION. Supprimer purement les
+ * sections vides laisserait croire au lecteur que le CRM ne porte pas ces
+ * rubriques, alors qu'elles sont la et qu'elles sont vides pour ce client-ci.
+ * Une ligne suffit a le dire ; huit blocs de titre ne le disaient pas mieux.
+ */
+function drawRubriquesVides(cursor: SectionCursor) {
+  if (cursor.vides.length === 0) return;
+  ensureSpace(cursor, 16);
+  cursor.y += 4;
+  cursor.doc.setDrawColor(...FILET);
+  cursor.doc.setLineWidth(0.3);
+  cursor.doc.line(cursor.marginX, cursor.y, cursor.pageWidth - cursor.marginX, cursor.y);
+  cursor.y += 5;
+  cursor.doc.setFont('helvetica', 'bold');
+  cursor.doc.setFontSize(8);
+  cursor.doc.setTextColor(...ENCRE_DOUCE);
+  cursor.doc.text('Rubriques sans donnée pour ce dossier', cursor.marginX, cursor.y);
+  cursor.y += 4;
+  cursor.doc.setFont('helvetica', 'normal');
+  const lignes = cursor.doc.splitTextToSize(cursor.vides.join(' · '), cursor.maxWidth);
+  for (const l of lignes) {
+    ensureSpace(cursor, 4);
+    cursor.doc.text(l, cursor.marginX, cursor.y);
+    cursor.y += 4;
+  }
+  cursor.doc.setTextColor(...ENCRE);
 }
 
 function addHeaderFooter(doc: jsPDF, cabinetName: string, clientName: string) {
@@ -224,8 +379,10 @@ function addHeaderFooter(doc: jsPDF, cabinetName: string, clientName: string) {
       doc.setDrawColor(229, 231, 235);
       doc.line(15, 12, pw - 15, 12);
     }
-    doc.text(`Page ${i} / ${pageCount}`, pw / 2, ph - 8, { align: 'center' });
-    doc.setTextColor(...DARK_GREY);
+    // « 1 / 2 » suffit : le mot « Page » repete a chaque bas de feuille
+    // n'apprend rien a personne.
+    doc.text(`${i} / ${pageCount}`, pw / 2, ph - 8, { align: 'center' });
+    doc.setTextColor(...ENCRE);
   }
 }
 
@@ -241,6 +398,7 @@ export async function exportClientToPdf({
     cabinetRes,
     collabRes,
     rolesRes,
+    regimesRes,
     depotsRes,
     officersRes,
     legalActsRes,
@@ -256,6 +414,7 @@ export async function exportClientToPdf({
       .select('id, role, created_at, user_id, user:profiles(prenom, nom, email, job_role)')
       .eq('client_id', clientId),
     supabase.from('cabinet_collaborator_roles').select('key, label'),
+    supabase.from('regimes_fiscaux').select('value, label'),
     supabase
       .from('bodacc_depot_comptes')
       .select('date_cloture, date_parution, type_depot, tribunal, numero_annonce')
@@ -306,10 +465,20 @@ export async function exportClientToPdf({
     roleMap.set((r as { key: string }).key, (r as { label: string }).label);
   }
 
-  // Les types d'impots fiscaux venaient du module « echeances fiscales », retire
-  // du produit : les tables fiscal_tax_types et client_fiscal_tax_types
-  // n'existent plus. La rubrique correspondante disparait donc de l'export.
-  const clientTaxTypeLabels: string[] = [];
+  /*
+   * Le libelle du regime fiscal, tel que le cabinet l'a defini.
+   *
+   * ⚠️ ON NE RECONSTITUE PAS « IS_REEL » EN « IS réel ». Une regle de decodage
+   * devinerait l'accent, la casse et les abreviations ; elle donnerait
+   * « Is reel » ou « IS reel » selon l'humeur, et se tromperait des qu'un
+   * cabinet nommera un regime autrement. La table `regimes_fiscaux` porte le
+   * libelle : on le lit. Si le code n'y figure pas, on imprime le code brut —
+   * visiblement technique, donc signalant qu'il manque quelque chose.
+   */
+  const regimeMap = new Map<string, string>();
+  for (const r of regimesRes.data ?? []) {
+    regimeMap.set((r as { value: string }).value, (r as { label: string }).label);
+  }
 
   const attachmentsByDeclaration = new Map<string, string[]>();
   for (const decl of revenueDeclRes.data ?? []) {
@@ -331,78 +500,112 @@ export async function exportClientToPdf({
     pageWidth,
     marginX,
     maxWidth: pageWidth - marginX * 2,
+    vides: [],
   };
 
-  // Cover page
-  doc.setFillColor(...TEAL);
-  doc.rect(0, 0, pageWidth, 45, 'F');
+  /*
+   * L'EN-TETE.
+   *
+   * ⚠️ LE CLIENT EST LE TITRE, PAS « FICHE CLIENT ». L'ancien en-tete donnait
+   * 22 pt a la mention generique et laissait le nom du dossier plus bas, plus
+   * petit : le lecteur qui prend la feuille sur une pile cherchait de quel
+   * client il s'agit, et l'oeil tombait sur ce qu'il savait deja.
+   *
+   * ⚠️ ET IL PREND 26 mm, PAS 45. Le bandeau occupait un sixieme de la page
+   * pour trois lignes de coordonnees. Un cartouche fin suffit a signer le
+   * document ; le reste de la hauteur revient a la donnee.
+   */
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 0, pageWidth, 26, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(cabinet.nom || 'Cabinet', marginX, 15);
+  doc.setFontSize(10);
+  doc.text(cabinet.nom || 'Cabinet', marginX, 11);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  if (cabinet.adresse) doc.text(cabinet.adresse, marginX, 21);
-  const contactLine = [cabinet.telephone, cabinet.email].filter(Boolean).join('  -  ');
-  if (contactLine) doc.text(contactLine, marginX, 27);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Fiche client', pageWidth - marginX, 28, { align: 'right' });
+  doc.setFontSize(7.5);
+  const enTete = [cabinet.adresse, cabinet.telephone, cabinet.email].filter(Boolean).join('   ·   ');
+  if (enTete) doc.text(enTete, marginX, 17);
+  doc.setFontSize(8);
+  doc.text('FICHE CLIENT', pageWidth - marginX, 11, { align: 'right' });
+  // La date d'edition appartient a l'en-tete : c'est une propriete du tirage,
+  // pas du client. A la minute — la seconde ne renseigne personne.
+  doc.text(
+    `Éditée le ${formatDateTime(new Date().toISOString()).replace(/:\d{2}$/, '')}`,
+    pageWidth - marginX,
+    17,
+    { align: 'right' }
+  );
 
-  cursor.y = 60;
-  doc.setTextColor(...DARK_GREY);
+  cursor.y = 42;
+  doc.setTextColor(...ENCRE);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
+  doc.setFontSize(19);
   const nameLines = doc.splitTextToSize(client.nom_entreprise || 'Client', cursor.maxWidth);
   for (const line of nameLines) {
     doc.text(line, marginX, cursor.y);
     cursor.y += 8;
   }
 
+  /*
+   * Les trois reperes du dossier, en pastilles.
+   *
+   * Numero, SIREN, statut : ce qu'on cite au telephone. Les separer par des
+   * pastilles plutot que par des tirets leur donne le statut d'etiquettes,
+   * qu'ils ont — et evite la ligne grise indifferenciee d'avant.
+   *
+   * Les trois reparaissent plus bas dans les rubriques, et c'est voulu : le
+   * bandeau se lit d'un coup d'oeil, le tableau se lit ligne a ligne. Retirer
+   * « SIREN » de la rubrique Identite ferait chercher ailleurs quelqu'un qui
+   * la parcourt dans l'ordre.
+   */
+  cursor.y += 1;
+  let px = marginX;
+  doc.setFontSize(8);
+  for (const [etiquette, valeur] of [
+    ['Dossier', client.numero_dossier],
+    ['SIREN', client.siren],
+    ['Statut', client.statut ? capitaliser(client.statut) : null],
+  ] as Array<[string, string | null]>) {
+    if (!valeur) continue;
+    const texte = `${etiquette} ${valeur}`;
+    const largeur = doc.getTextWidth(texte) + 6;
+    doc.setFillColor(...ACCENT_PALE);
+    doc.roundedRect(px, cursor.y - 3.4, largeur, 5.6, 1.2, 1.2, 'F');
+    doc.setTextColor(...ACCENT);
+    doc.text(texte, px + 3, cursor.y);
+    px += largeur + 3;
+  }
+  cursor.y += 9;
+  doc.setTextColor(...ENCRE);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(107, 114, 128);
-  const coverMeta: string[] = [];
-  if (client.numero_dossier) coverMeta.push(`Dossier ${client.numero_dossier}`);
-  if (client.siren) coverMeta.push(`SIREN ${client.siren}`);
-  if (client.statut) coverMeta.push(`Statut ${client.statut}`);
-  if (coverMeta.length > 0) {
-    cursor.y += 2;
-    doc.text(coverMeta.join('   -   '), marginX, cursor.y);
-    cursor.y += 6;
-  }
-  doc.text(`Genere le ${formatDateTime(new Date().toISOString())}`, marginX, cursor.y);
-  cursor.y += 12;
-  doc.setTextColor(...DARK_GREY);
 
-  // Section: Identite
-  drawSectionTitle(cursor, 'Identite');
+  drawSectionTitle(cursor, 'Identité');
   drawKeyValueGrid(cursor, [
     ['Raison sociale', sanitize(client.nom_entreprise)],
     // Le type de personne d'abord : il explique pourquoi les lignes suivantes
     // portent un nom et un prenom plutot qu'une raison sociale.
-    ['Type', client.type_personne === 'physique' ? 'Personne physique' : client.type_personne === 'morale' ? 'Personne morale' : '-'],
+    ['Type', client.type_personne === 'physique' ? 'Personne physique' : client.type_personne === 'morale' ? 'Personne morale' : ABSENT],
     ['Nom commercial', sanitize(client.nom_commercial)],
-    ['Numero de dossier', sanitize(client.numero_dossier)],
+    ['Numéro de dossier', sanitize(client.numero_dossier)],
     ['Forme juridique', sanitize(client.forme_juridique)],
     ['SIREN', sanitize(client.siren)],
     ['SIRET', sanitize(client.siret)],
-    ['Numero de TVA', sanitize(client.tva_intracom)],
+    ['Numéro de TVA', sanitize(client.tva_intracom)],
     ['Code APE', sanitize(client.code_ape)],
-    ['Capital social', client.capital_social != null ? `${client.capital_social} EUR` : '-'],
+    ['Capital social', formaterEuros(client.capital_social)],
     ['Dirigeant', sanitize(client.dirigeant)],
-    ['Date de creation', formatDate(client.date_creation_entreprise)],
+    ['Date de création', formatDate(client.date_creation_entreprise)],
     ['Dossier LMNP', client.is_lmnp ? 'Oui' : 'Non'],
   ]);
 
-  // Section: Adresse et contact
   drawSectionTitle(cursor, 'Adresse et contact');
   drawKeyValueGrid(cursor, [
     // Une cellule par composant : c'est ce qu'on recopie sur une enveloppe.
     // Repli sur la chaine heritee si le decoupage n'a pas eu lieu — six fiches
     // sur 649 sont dans ce cas, et leur adresse doit quand meme s'imprimer.
     ['Adresse', sanitize(client.adresse_ligne1 || client.adresse)],
-    ['Complement', sanitize(client.adresse_complement)],
+    ['Complément', sanitize(client.adresse_complement)],
     ['Code postal / Ville', sanitize([client.code_postal, client.ville].filter(Boolean).join(' '))],
     // Le pays n'apparait que s'il n'est pas la France : l'implicite d'un cabinet
     // francais n'a pas besoin d'etre imprime.
@@ -411,73 +614,78 @@ export async function exportClientToPdf({
       : []),
     ['Email', sanitize(client.email)],
     ['Email 2', sanitize(client.email_2)],
-    ['Telephone', sanitize(client.telephone)],
-    ['Telephone 2', sanitize(client.telephone_2)],
+    ['Téléphone', sanitize(client.telephone)],
+    ['Téléphone 2', sanitize(client.telephone_2)],
     ['Contact principal', sanitize(client.contact_principal)],
   ]);
 
-  // Section: Informations comptables et fiscales
-  drawSectionTitle(cursor, 'Informations comptables et fiscales');
+  drawSectionTitle(cursor, 'Comptabilité et fiscalité');
   drawKeyValueGrid(cursor, [
-    ['Mois de cloture', formatClosingMonthFromDate(client.date_cloture)],
-    ['Date de cloture exercice social', formatClosingMonthFromDdMm(client.date_cloture_exercice_social)],
-    ['Date de premiere cloture', formatDate(client.date_premiere_cloture)],
-    ['Regime fiscal', sanitize(client.regime_fiscal)],
-    ['Statut', sanitize(client.statut)],
-    ['Date entree cabinet', formatDate(client.date_entree_cabinet)],
-    ['Date sortie cabinet', formatDate(client.date_sortie_cabinet)],
-    ['Types d\'impots suivis', clientTaxTypeLabels.length > 0 ? clientTaxTypeLabels.join(', ') : '-'],
+    ['Mois de clôture', formatClosingMonthFromDate(client.date_cloture)],
+    ['Clôture exercice social', formatClosingMonthFromDdMm(client.date_cloture_exercice_social)],
+    ['Première clôture', formatDate(client.date_premiere_cloture)],
+    // `IS_REEL` est un code technique : le lecteur d'une fiche imprimee
+    // n'a pas a le decoder.
+    ['Régime fiscal', (client.regime_fiscal && regimeMap.get(client.regime_fiscal)) || sanitize(client.regime_fiscal)],
+    ['Statut', capitaliser(client.statut)],
+    ['Entrée au cabinet', formatDate(client.date_entree_cabinet)],
+    ['Sortie du cabinet', formatDate(client.date_sortie_cabinet)],
+    /*
+     * ⚠️ PAS DE LIGNE « IMPÔTS SUIVIS » ICI, ET CE N'EST PAS UN OUBLI. Elle
+     * existait, alimentee par une liste codee vide depuis le retrait du module
+     * d'echeances fiscales (les tables `fiscal_tax_types` et
+     * `client_fiscal_tax_types` n'existent plus). Elle imprimait donc « — » sur
+     * chaque fiche, ce qui se lit « le cabinet ne suit aucun impot pour ce
+     * client » alors que la verite est « le produit ne sait plus le dire ».
+     * Une rubrique qui ne peut jamais rien porter ment a chaque impression.
+     */
   ]);
   if (client.description_activite) {
     ensureSpace(cursor, 6);
     cursor.doc.setFont('helvetica', 'bold');
     cursor.doc.setFontSize(9);
     cursor.doc.setTextColor(107, 114, 128);
-    cursor.doc.text('Description de l\'activite', marginX, cursor.y);
+    cursor.doc.text('Description de l\'activité', marginX, cursor.y);
     cursor.y += 4;
     cursor.doc.setFont('helvetica', 'normal');
     cursor.doc.setFontSize(9);
-    cursor.doc.setTextColor(...DARK_GREY);
+    cursor.doc.setTextColor(...ENCRE);
     drawParagraph(cursor, client.description_activite);
     cursor.y += 2;
   }
 
-  // Section: Collaborateurs
-  drawSectionTitle(cursor, 'Collaborateurs assignes');
   const collabRows = (collabRes.data ?? []).map((c: LigneCollaborateur) => {
     const user = c.user;
-    const fullName = user ? `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() : '-';
-    const roleLabel = (c.role ? roleMap.get(c.role) : null) || c.role || '-';
+    const fullName = user ? `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() : ABSENT;
+    const roleLabel = (c.role ? roleMap.get(c.role) : null) || c.role || '—';
     return [
-      fullName || '-',
+      fullName || ABSENT,
       sanitize(user?.job_role),
       sanitize(user?.email),
       roleLabel,
       formatDate(c.created_at),
     ];
   });
-  drawTable(cursor, ['Collaborateur', 'Fonction', 'Email', 'Role', 'Affecte le'], collabRows);
+  drawTableSection(cursor, 'Collaborateurs assignés',
+    ['Collaborateur', 'Fonction', 'Email', 'Rôle', 'Affecté le'], collabRows);
 
-  // Section: Contacts annuaire
-  drawSectionTitle(cursor, 'Contacts annuaire');
   const contactsRows = directoryContacts.contacts.map((c) => [
-    `${c.lastName} ${c.firstName}`.trim() || '-',
+    `${c.lastName} ${c.firstName}`.trim() || ABSENT,
     sanitize(c.roleInCompany),
     sanitize(c.email),
     sanitize(c.phone || c.mobile),
     c.isPrimary ? 'Oui' : 'Non',
   ]);
-  drawTable(cursor, ['Contact', 'Fonction', 'Email', 'Telephone', 'Principal'], contactsRows);
+  drawTableSection(cursor, 'Contacts annuaire',
+    ['Contact', 'Fonction', 'Email', 'Téléphone', 'Principal'], contactsRows);
 
-  // Section: Dirigeants
-  drawSectionTitle(cursor, 'Dirigeants');
   const officerRows = (officersRes.data ?? []).map((o: LigneDirigeant) => {
     const off = o.company_officers;
     const name = off
       ? off.person_type === 'morale'
-        ? off.denomination || off.last_name || '-'
-        : `${off.last_name ?? ''} ${off.first_name ?? ''}`.trim() || '-'
-      : '-';
+        ? off.denomination || off.last_name || ABSENT
+        : `${off.last_name ?? ''} ${off.first_name ?? ''}`.trim() || ABSENT
+      : ABSENT;
     return [
       name,
       sanitize(o.role),
@@ -485,21 +693,19 @@ export async function exportClientToPdf({
       formatDate(o.end_date),
     ];
   });
-  drawTable(cursor, ['Dirigeant', 'Qualite', 'Date debut', 'Date fin'], officerRows);
+  drawTableSection(cursor, 'Dirigeants',
+    ['Dirigeant', 'Qualité', 'Début', 'Fin'], officerRows);
 
-  // Section: Depots de comptes
-  drawSectionTitle(cursor, 'Depots de comptes (BODACC)');
   const depotRows = (depotsRes.data ?? []).map((d: LigneDepot) => [
     formatDate(d.date_cloture),
     sanitize(d.type_depot),
     formatDate(d.date_parution),
     sanitize(d.tribunal),
-    d.numero_annonce != null ? String(d.numero_annonce) : '-',
+    d.numero_annonce != null ? String(d.numero_annonce) : ABSENT,
   ]);
-  drawTable(cursor, ['Cloture', 'Type', 'Parution', 'Tribunal', 'Annonce'], depotRows);
+  drawTableSection(cursor, 'Dépôts de comptes (BODACC)',
+    ['Clôture', 'Type', 'Parution', 'Tribunal', 'Annonce'], depotRows);
 
-  // Section: Actes juridiques
-  drawSectionTitle(cursor, 'Actes juridiques');
   const actRows = (legalActsRes.data ?? []).map((a: LigneActe) => [
     formatDate(a.act_date),
     sanitize(a.act_type),
@@ -507,71 +713,73 @@ export async function exportClientToPdf({
     formatDate(a.deposit_date),
     sanitize(a.inpi_reference),
   ]);
-  drawTable(cursor, ['Date', 'Type', 'Categorie', 'Depot', 'Reference INPI'], actRows);
+  drawTableSection(cursor, 'Actes juridiques',
+    ['Date', 'Type', 'Catégorie', 'Dépôt', 'Référence INPI'], actRows);
 
-  // Section: Déclarations de revenus
-  drawSectionTitle(cursor, 'Déclarations de revenus');
   const declRows: string[][] = [];
   for (const decl of (revenueDeclRes.data ?? []) as LigneDeclarationRevenus[]) {
     const atts = attachmentsByDeclaration.get(decl.id) ?? [];
-    const attText = atts.length > 0 ? atts.join('\n') : '-';
+    const attText = atts.length > 0 ? atts.join('\n') : ABSENT;
     declRows.push([
       String(decl.annee),
       sanitize(decl.person_name),
-      REVENUE_STATUS_LABELS[decl.statut as keyof typeof REVENUE_STATUS_LABELS] || decl.statut || '-',
+      REVENUE_STATUS_LABELS[decl.statut as keyof typeof REVENUE_STATUS_LABELS] || decl.statut || ABSENT,
       sanitize(decl.commentaire),
       attText,
     ]);
   }
-  drawTable(cursor, ['Annee', 'Personne', 'Statut', 'Commentaire', 'Pieces jointes'], declRows);
+  drawTableSection(cursor, 'Déclarations de revenus',
+    ['Année', 'Personne', 'Statut', 'Commentaire', 'Pièces jointes'], declRows);
 
-  // Section: Relances
-  drawSectionTitle(cursor, 'Relances');
   const relanceRows = (relancesRes.data ?? []).map((r: LigneRelance) => [
     sanitize(r.numero_facture),
     sanitize(r.libelle),
     formatDate(r.date_facture),
     formatDate(r.date_echeance),
-    r.montant != null ? `${Number(r.montant).toFixed(2)} EUR` : '-',
-    r.montant_regle != null ? `${Number(r.montant_regle).toFixed(2)} EUR` : '-',
+    formaterEuros(r.montant),
+    formaterEuros(r.montant_regle),
     sanitize(r.statut),
     r.nombre_relances != null ? String(r.nombre_relances) : '0',
   ]);
-  drawTable(
+  drawTableSection(
     cursor,
-    ['Facture', 'Libelle', 'Date', 'Echeance', 'Montant', 'Regle', 'Statut', 'Relances'],
+    'Relances',
+    ['Facture', 'Libellé', 'Date', 'Échéance', 'Montant', 'Réglé', 'Statut', 'Relances'],
     relanceRows
   );
 
-  // Section: ARD calculations (LMNP)
+  /*
+   * Les calculs ARD ne concernent que les dossiers LMNP : la section n'est
+   * meme pas comptee parmi les rubriques vides pour les autres, ou elle n'a
+   * aucun sens.
+   */
   if (ardRes.data && ardRes.data.length > 0) {
-    drawSectionTitle(cursor, 'Calculs ARD (LMNP)');
     const ardRows = ardRes.data.map((a: LigneArd) => [
       String(a.annee),
-      `${Number(a.ca || 0).toFixed(2)}`,
-      `${Number(a.charges_totales || 0).toFixed(2)}`,
-      `${Number(a.frais_compta || 0).toFixed(2)}`,
-      `${Number(a.adhesion_cga || 0).toFixed(2)}`,
-      `${Number(a.cfe || 0).toFixed(2)}`,
-      `${Number(a.autres_charges || 0).toFixed(2)}`,
+      formaterEuros(a.ca),
+      formaterEuros(a.charges_totales),
+      formaterEuros(a.frais_compta),
+      formaterEuros(a.adhesion_cga),
+      formaterEuros(a.cfe),
+      formaterEuros(a.autres_charges),
     ]);
-    drawTable(
+    drawTableSection(
       cursor,
-      ['Annee', 'CA', 'Charges', 'Frais compta', 'Adhesion CGA', 'CFE', 'Autres'],
+      'Calculs ARD (LMNP)',
+      ['Année', 'CA', 'Charges', 'Frais compta', 'Adhésion CGA', 'CFE', 'Autres'],
       ardRows
     );
   }
 
-  // Section: Comptes-rendus de reunion
-  drawSectionTitle(cursor, 'Comptes-rendus de reunion');
   if (meetingNotes.length === 0) {
-    drawEmpty(cursor, 'Aucun compte-rendu');
+    cursor.vides.push('Comptes-rendus de réunion');
   } else {
+    drawSectionTitle(cursor, 'Comptes-rendus de réunion');
     for (const note of meetingNotes) {
       ensureSpace(cursor, 22);
       cursor.doc.setFont('helvetica', 'bold');
       cursor.doc.setFontSize(10);
-      cursor.doc.setTextColor(...TEAL);
+      cursor.doc.setTextColor(...ACCENT);
       const titleLines = cursor.doc.splitTextToSize(note.objet || 'Compte-rendu', cursor.maxWidth);
       for (const l of titleLines) {
         ensureSpace(cursor, 5);
@@ -597,7 +805,7 @@ export async function exportClientToPdf({
           cursor.y += 4;
         }
       }
-      cursor.doc.setTextColor(...DARK_GREY);
+      cursor.doc.setTextColor(...ENCRE);
       cursor.y += 1;
       const contenuText = stripHtml(note.contenu);
       if (contenuText) {
@@ -608,7 +816,7 @@ export async function exportClientToPdf({
         cursor.doc.setFont('helvetica', 'bold');
         cursor.doc.setFontSize(9);
         ensureSpace(cursor, 5);
-        cursor.doc.text('Actions a suivre :', marginX, cursor.y);
+        cursor.doc.text('Actions à suivre :', marginX, cursor.y);
         cursor.y += 4;
         cursor.doc.setFont('helvetica', 'normal');
         drawParagraph(cursor, stripHtml(note.actions_a_suivre));
@@ -619,6 +827,8 @@ export async function exportClientToPdf({
       cursor.y += 4;
     }
   }
+
+  drawRubriquesVides(cursor);
 
   addHeaderFooter(doc, cabinet.nom || 'Cabinet', client.nom_entreprise || 'Client');
 

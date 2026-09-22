@@ -787,4 +787,3 @@ function LigneChecklist({
     </div>
   );
 }
-
