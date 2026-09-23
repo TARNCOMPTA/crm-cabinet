@@ -82,7 +82,7 @@ export function TaxAuthorizations() {
           </div>
           <div className="mb-4 p-3.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1.5">Comment recuperer le fichier ?</p>
                 <ol className="text-xs text-blue-700 dark:text-blue-400 space-y-1 list-decimal list-inside">
@@ -122,7 +122,7 @@ export function TaxAuthorizations() {
               <button
                 type="button"
                 onClick={() => setShowInactiveClients(!showInactiveClients)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
                   showInactiveClients ? 'bg-teal-600' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >

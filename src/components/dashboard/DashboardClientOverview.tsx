@@ -31,14 +31,14 @@ export function DashboardClientOverview({
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-40 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4 animate-pulse">
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-sm" />
             <div className="space-y-2">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm" />
               ))}
             </div>
           </div>
@@ -116,7 +116,7 @@ export function DashboardClientOverview({
             <div className="space-y-1.5">
               {regimeFiscalCounts.map(r => (
                 <div key={r.regime} className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-12 flex-shrink-0">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-12 shrink-0">
                     {r.regime}
                   </span>
                   <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">

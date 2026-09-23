@@ -188,7 +188,7 @@ export function PieceJointeLigne({ piece, onTelecharger, onSupprimer }: Props) {
           // `pointer-events-none` : le panneau ne doit jamais intercepter la
           // souris, sinon il se place sous le pointeur, la ligne perd le survol,
           // le panneau se ferme — et rouvre. Un clignotement sans fin.
-          className="fixed z-[60] pointer-events-none"
+          className="fixed z-60 pointer-events-none"
           style={{ top: position.top, left: position.left, width: position.width }}
           role="tooltip"
         >

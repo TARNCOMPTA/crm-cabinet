@@ -375,7 +375,7 @@ export function WebDirectory() {
                             )}
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{extractDomain(link.url)}</p>
                           </div>
-                          <div className="flex items-center gap-0.5 ml-2 flex-shrink-0">
+                          <div className="flex items-center gap-0.5 ml-2 shrink-0">
                             <button
                               onClick={() => moveLinkUp(catIndex, linkIndex)}
                               disabled={linkIndex === 0}
@@ -426,7 +426,7 @@ export function WebDirectory() {
                             )}
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">{extractDomain(link.url)}</p>
                           </div>
-                          <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-teal-500 transition-colors flex-shrink-0 ml-3 mt-0.5" />
+                          <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-teal-500 transition-colors shrink-0 ml-3 mt-0.5" />
                         </div>
                       </a>
                     ) : (

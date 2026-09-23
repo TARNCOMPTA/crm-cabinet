@@ -1,4 +1,5 @@
 import { ReactNode, MouseEventHandler } from 'react';
+import { cx } from '../../lib/cx';
 
 interface CardProps {
   children: ReactNode;
@@ -18,7 +19,7 @@ interface CardProps {
 export function Card({ children, className = '', interactive = false, onClick }: CardProps) {
   return (
     <div
-      className={`bg-white dark:bg-ink-900/60 dark:backdrop-blur-sm rounded-xl border border-gray-200/80 dark:border-white/[0.07] shadow-card dark:shadow-dark-soft ${interactive ? 'interactive-card' : ''} ${className}`}
+      className={cx(`bg-white dark:bg-ink-900/60 dark:backdrop-blur-xs rounded-xl border border-gray-200/80 dark:border-white/[0.07] shadow-card dark:shadow-dark-soft ${interactive ? 'interactive-card' : ''} ${className}`)}
       onClick={onClick}
     >
       {children}
@@ -33,7 +34,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`px-6 py-4 border-b border-gray-100 dark:border-white/[0.06] ${className}`}>
+    <div className={cx(`px-6 py-4 border-b border-gray-100 dark:border-white/6 ${className}`)}>
       {children}
     </div>
   );
@@ -45,5 +46,5 @@ interface CardContentProps {
 }
 
 export function CardContent({ children, className = '' }: CardContentProps) {
-  return <div className={`px-6 py-4 ${className}`}>{children}</div>;
+  return <div className={cx(`px-6 py-4 ${className}`)}>{children}</div>;
 }

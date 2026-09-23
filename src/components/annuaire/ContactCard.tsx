@@ -30,14 +30,14 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
             type="checkbox"
             checked={!!selected}
             onChange={onToggleSelect}
-            className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700 shadow-sm"
+            className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700 shadow-sm"
           />
         </div>
       )}
       <div onClick={onClick} className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
+            <div className="shrink-0 w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
               <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             </div>
             <div className="min-w-0">
@@ -62,7 +62,7 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
         <div className="space-y-1.5">
           {contact.phone && (
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <a
                 href={`tel:${contact.phone}`}
                 onClick={(e) => e.stopPropagation()}
@@ -74,7 +74,7 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
           )}
           {contact.mobile && (
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <Smartphone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <Smartphone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <a
                 href={`tel:${contact.mobile}`}
                 onClick={(e) => e.stopPropagation()}
@@ -86,7 +86,7 @@ export const ContactCard = memo(function ContactCard({ contact, onClick, onEdit,
           )}
           {contact.email && (
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <a
                 href={`mailto:${contact.email}`}
                 onClick={(e) => e.stopPropagation()}

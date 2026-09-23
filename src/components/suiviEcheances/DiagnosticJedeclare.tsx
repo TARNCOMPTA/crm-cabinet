@@ -52,13 +52,13 @@ function Ligne({
             {titre}
           </span>
           {marque && (
-            <span className="rounded px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40">
+            <span className="rounded-sm px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40">
               {marque}
             </span>
           )}
         </div>
         {detail && (
-          <p className="mt-1 ml-6 text-xs text-red-600 dark:text-red-400 break-words">{detail}</p>
+          <p className="mt-1 ml-6 text-xs text-red-600 dark:text-red-400 wrap-break-word">{detail}</p>
         )}
       </div>
       {mesure && (
@@ -183,7 +183,7 @@ export function DiagnosticJedeclare({ onFermer }: { onFermer: () => void }) {
               relève n'en a jamais, et reste donc absent du suivi.
             </p>
 
-            <div className="pt-2 border-t border-gray-100 dark:border-white/[0.06] divide-y divide-gray-100 dark:divide-gray-800">
+            <div className="pt-2 border-t border-gray-100 dark:border-white/6 divide-y divide-gray-100 dark:divide-gray-800">
               <Ligne
                 titre="Communication — comptes rendus"
                 ok={resultat.communication.ok}

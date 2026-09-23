@@ -294,7 +294,7 @@ export function ClientCollaboratorAssignModal({
         <div className="space-y-5">
           {!isSingleClient && (
             <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <Users className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+              <Users className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {clientIds.length} clients selectionnes
                 {clientNames.length > 0 && clientNames.length <= 5 && (

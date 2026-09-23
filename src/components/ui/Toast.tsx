@@ -123,7 +123,7 @@ function ToastItem({ id, message, type, progress, sticky, onClose }: ToastItemPr
         animate-in slide-in-from-right duration-300
       `}
     >
-      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColors[type]}`} />
+      <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${iconColors[type]}`} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium">{message}</p>
         {progress && (
@@ -146,7 +146,7 @@ function ToastItem({ id, message, type, progress, sticky, onClose }: ToastItemPr
       {!sticky && type !== 'progress' && (
         <button
           onClick={() => onClose(id)}
-          className="flex-shrink-0 hover:opacity-70 transition-opacity"
+          className="shrink-0 hover:opacity-70 transition-opacity"
           aria-label="Fermer"
         >
           <X className="w-4 h-4" />

@@ -150,9 +150,11 @@ async function validerCle(request: FastifyRequest): Promise<CleValide | null> {
     peut_ecrire: boolean;
     created_by: string | null;
   }>(
+    // ⚠️ `expires_at > now()` : une cle statique n'expirait jamais — un porteur
+    // colle un jour dans un outil restait valable indefiniment. Increment 022.
     `SELECT id, name, client_secret_hash, peut_ecrire, created_by
        FROM mcp_api_keys
-      WHERE client_id = $1 AND is_active`,
+      WHERE client_id = $1 AND is_active AND expires_at > now()`,
     [clientId]
   );
   if (!ligne) return null;

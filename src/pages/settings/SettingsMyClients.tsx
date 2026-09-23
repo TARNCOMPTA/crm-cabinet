@@ -500,7 +500,7 @@ export function SettingsMyClients() {
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-red-900 mb-1">Erreur de chargement</h3>
             <p className="text-sm text-red-700">{error}</p>
@@ -771,7 +771,7 @@ export function SettingsMyClients() {
                         if (el) el.indeterminate = someFilteredSelected && !allFilteredSelected;
                       }}
                       onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
+                      className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
                     />
                   </th>
                   <th className="sticky left-[48px] z-20 bg-gray-50 text-center py-4 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide min-w-[72px]">
@@ -847,7 +847,7 @@ export function SettingsMyClients() {
                           type="checkbox"
                           checked={selected}
                           onChange={() => toggleSelectClient(client.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
+                          className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
                         />
                       </td>
                       <td className={`sticky left-[48px] z-10 py-4 px-4 text-center min-w-[72px] ${stickyBg}`}>
@@ -855,7 +855,7 @@ export function SettingsMyClients() {
                           type="checkbox"
                           checked={effectiveAssigned}
                           onChange={() => handleAssignmentChange(client.id)}
-                          className="w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
+                          className="w-5 h-5 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
                         />
                       </td>
                       <td className={`sticky left-[120px] z-10 py-4 px-4 font-medium text-gray-900 whitespace-nowrap min-w-[180px] max-w-[220px] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] ${stickyBg}`} title={client.nom_entreprise || '-'}>
@@ -867,7 +867,7 @@ export function SettingsMyClients() {
                           value={getEffectiveValue(client, 'numero_dossier')}
                           onChange={e => handleFieldChange(client.id, 'numero_dossier', e.target.value)}
                           placeholder="-"
-                          className="w-full max-w-[140px] h-9 px-3 text-sm border border-transparent rounded-md bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
+                          className="w-full max-w-[140px] h-9 px-3 text-sm border border-transparent rounded-md bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-teal-500 transition-all"
                         />
                       </td>
                       <td className="py-4 px-4 text-gray-600 font-mono text-sm whitespace-nowrap">
@@ -883,7 +883,7 @@ export function SettingsMyClients() {
                         <select
                           value={effectiveStatus}
                           onChange={e => handleFieldChange(client.id, 'statut', e.target.value)}
-                          className={`h-9 px-3 text-sm font-medium border border-transparent rounded-md cursor-pointer bg-transparent hover:border-gray-300 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all ${
+                          className={`h-9 px-3 text-sm font-medium border border-transparent rounded-md cursor-pointer bg-transparent hover:border-gray-300 focus:border-teal-500 focus:outline-hidden focus:ring-1 focus:ring-teal-500 transition-all ${
                             effectiveStatus === 'actif'
                               ? 'text-emerald-700'
                               : effectiveStatus === 'inactif'
@@ -902,7 +902,7 @@ export function SettingsMyClients() {
                         <select
                           value={getEffectiveValue(client, 'regime_fiscal')}
                           onChange={e => handleFieldChange(client.id, 'regime_fiscal', e.target.value)}
-                          className="h-9 px-3 text-sm border border-transparent rounded-md bg-transparent cursor-pointer hover:border-gray-300 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all text-gray-700"
+                          className="h-9 px-3 text-sm border border-transparent rounded-md bg-transparent cursor-pointer hover:border-gray-300 focus:border-teal-500 focus:outline-hidden focus:ring-1 focus:ring-teal-500 transition-all text-gray-700"
                         >
                           <option value="">-</option>
                           {REGIMES_FISCAUX.map((regime) => (
@@ -917,7 +917,7 @@ export function SettingsMyClients() {
                           type="date"
                           value={getEffectiveValue(client, 'date_cloture')}
                           onChange={e => handleFieldChange(client.id, 'date_cloture', e.target.value)}
-                          className="w-full max-w-[160px] h-9 px-3 text-sm border border-transparent rounded-md bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
+                          className="w-full max-w-[160px] h-9 px-3 text-sm border border-transparent rounded-md bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-teal-500 transition-all"
                         />
                       </td>
                       <td className="py-4 px-4">

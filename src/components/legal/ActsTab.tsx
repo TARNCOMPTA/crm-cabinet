@@ -201,7 +201,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
             placeholder="Rechercher un client..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-colors"
+            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-hidden transition-colors"
           />
         </div>
         <Button
@@ -268,13 +268,13 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                 className="flex items-center gap-4 px-4 py-3.5 cursor-pointer select-none"
                 onClick={() => toggleRow(client.id)}
               >
-                <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                <div className="shrink-0 text-gray-400 dark:text-gray-500">
                   {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    {isExcluded && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                    {isExcluded && <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />}
                     <span className={`text-sm font-semibold truncate ${isExcluded ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
                       {client.nom_entreprise}
                     </span>
@@ -285,7 +285,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <Badge variant={acts.length > 0 ? 'info' : 'default'}>
                     {acts.length} acte{acts.length !== 1 ? 's' : ''}
                   </Badge>
@@ -299,7 +299,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="p-1.5 rounded-md text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors disabled:opacity-40"
                     onClick={() => handleSyncActs(client.id)}
@@ -379,7 +379,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                               <Badge variant={ACT_CATEGORY_BADGES[act.act_category || 'autre'] || 'default'}>
                                 {ACT_CATEGORY_LABELS[act.act_category || 'autre'] || act.act_category}
                               </Badge>
@@ -440,7 +440,7 @@ export function ActsTab({ clients, clientActsMap, onReloadActs, showToast, exclu
                                   }) : 'Date inconnue'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-2 shrink-0">
                                 <Badge variant="info">INPI</Badge>
                                 <button
                                   className="p-1.5 rounded-md text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors disabled:opacity-40"

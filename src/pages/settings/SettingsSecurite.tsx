@@ -92,7 +92,7 @@ export function SettingsSecurite() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-950/40 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-950/40 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             </div>
             <div>
@@ -114,7 +114,7 @@ export function SettingsSecurite() {
 
           {!chargement && passkeys.length === 1 && (
             <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 dark:text-amber-300">
                 Un seul appareil est enrôlé. Si vous le perdez, il faudra un code
                 d&apos;enrôlement pour retrouver l&apos;accès. Enrôlez-en un deuxième
@@ -136,7 +136,7 @@ export function SettingsSecurite() {
                   key={pk.id}
                   className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-800 px-4 py-3"
                 >
-                  <Fingerprint className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <Fingerprint className="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-white truncate">
                       {pk.libelle || 'Appareil sans nom'}

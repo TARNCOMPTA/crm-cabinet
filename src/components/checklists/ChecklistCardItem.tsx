@@ -58,7 +58,7 @@ export function ChecklistCardItem({
         <button
           {...attributes}
           {...listeners}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-opacity touch-none"
+          className="shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-opacity touch-none"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </button>
@@ -67,7 +67,7 @@ export function ChecklistCardItem({
       <button
         onClick={() => isOwner && onToggle(item.id, item.is_checked)}
         disabled={!isOwner}
-        className={`flex-shrink-0 ${isOwner ? 'cursor-pointer' : 'cursor-default'}`}
+        className={`shrink-0 ${isOwner ? 'cursor-pointer' : 'cursor-default'}`}
       >
         {item.is_checked ? (
           <CheckSquare className="w-4 h-4 text-emerald-500" />
@@ -87,7 +87,7 @@ export function ChecklistCardItem({
         {item.label}
       </button>
 
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         {hasComments && (
           <span className="flex items-center gap-0.5 text-[10px] text-gray-600 dark:text-gray-400">
             <MessageSquare className="w-3 h-3" />

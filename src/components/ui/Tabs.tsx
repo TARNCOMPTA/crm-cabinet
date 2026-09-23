@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, ReactNode } from 'react';
+import { cx } from '../../lib/cx';
 
 /**
  * Les onglets du CRM.
@@ -136,7 +137,7 @@ export function TabsList({ children, className = '', 'aria-label': ariaLabel }: 
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={auClavier}
-      className={`flex space-x-1 border-b border-gray-200 dark:border-gray-700 ${className}`}
+      className={cx(`flex space-x-1 border-b border-gray-200 dark:border-gray-700 ${className}`)}
     >
       {children}
     </div>
@@ -170,14 +171,14 @@ export function TabsTrigger({ value, children, className = '' }: TabsTriggerProp
       // l'interroger au moment de la frappe évite tout registre à tenir à jour.
       data-onglet={value}
       onClick={() => setActiveTab(value)}
-      className={`
+      className={cx(`
         px-4 py-3 font-medium text-sm transition-colors relative
         ${isActive
           ? 'text-teal-600 dark:text-teal-400 border-b-2 border-teal-600 dark:border-teal-400'
           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
         }
         ${className}
-      `}
+      `)}
     >
       {children}
     </button>

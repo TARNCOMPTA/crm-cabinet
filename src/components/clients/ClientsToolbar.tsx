@@ -82,7 +82,7 @@ export function ClientsToolbar({
               placeholder="Rechercher par nom, SIRET, numero de dossier..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
             />
           </div>
           <Button
@@ -92,7 +92,7 @@ export function ClientsToolbar({
             <Filter className="w-4 h-4 mr-2" />
             Filtres
             {activeFilterCount > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
+              <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-[11px] font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
                 {activeFilterCount}
               </span>
             )}
@@ -182,7 +182,7 @@ export function ClientsToolbar({
                   type="checkbox"
                   checked={showArchived}
                   onChange={(e) => onShowArchivedChange(e.target.checked)}
-                  className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded"
+                  className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded-sm"
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Afficher les archives</span>
               </label>

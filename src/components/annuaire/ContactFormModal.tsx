@@ -325,7 +325,7 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                     if (companySearch.trim()) setShowCompanyResults(true);
                   }}
                   onBlur={() => setTimeout(() => setShowCompanyResults(false), 200)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm"
                 />
 
                 {showCompanyResults && companySearch.trim() && (
@@ -349,7 +349,7 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                             {company.name}
                           </span>
                           {isClientCompany(company) && (
-                            <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                            <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                               <Users className="w-3 h-3" />
                               Client
                             </span>
@@ -378,14 +378,14 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                       key={entry.company.id}
                       className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50"
                     >
-                      <Building2 className="w-4 h-4 text-blue-500 mt-1.5 flex-shrink-0" />
+                      <Building2 className="w-4 h-4 text-blue-500 mt-1.5 shrink-0" />
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                             {entry.company.name}
                           </span>
                           {entry.company.siren && (
-                            <span className="text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
+                            <span className="text-xs text-gray-600 dark:text-gray-400 shrink-0">
                               {entry.company.siren}
                             </span>
                           )}
@@ -395,13 +395,13 @@ export function ContactFormModal({ isOpen, onClose, contact, onSaved, companies 
                           placeholder="Role dans la societe (optionnel)"
                           value={entry.role_in_company}
                           onChange={(e) => updateCompanyRole(entry.company.id, e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => removeCompany(entry.company.id)}
-                        className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors flex-shrink-0 mt-0.5"
+                        className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shrink-0 mt-0.5"
                       >
                         <X className="w-4 h-4" />
                       </button>

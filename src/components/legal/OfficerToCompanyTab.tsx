@@ -116,7 +116,7 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Rechercher un dirigeant, une societe..."
-          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent"
         />
       </div>
 
@@ -145,10 +145,10 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
                 className="flex items-center gap-4 px-4 py-3.5 cursor-pointer select-none"
                 onClick={() => toggle(officer.id)}
               >
-                <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                <div className="shrink-0 text-gray-400 dark:text-gray-500">
                   {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                 </div>
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {isMorale ? (
                     <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                       <Building className="w-4.5 h-4.5 text-amber-700 dark:text-amber-400" />
@@ -207,7 +207,7 @@ export function OfficerToCompanyTab({ officers, clientCount, excludedClientIds =
                               {mandate.end_date && ` au ${new Date(mandate.end_date).toLocaleDateString('fr-FR')}`}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
                             <Badge variant={mandate.is_active ? 'success' : 'default'}>
                               {mandate.is_active ? 'Actif' : 'Termine'}
                             </Badge>

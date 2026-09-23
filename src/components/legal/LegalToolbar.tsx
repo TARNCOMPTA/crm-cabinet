@@ -59,7 +59,7 @@ export function LegalToolbar({
             type="checkbox"
             checked={showMyDossiers}
             onChange={onToggleMyDossiers}
-            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded"
+            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded-sm"
           />
           <FolderOpen className="w-4 h-4 ml-2 mr-1.5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">Voir mes dossiers</span>

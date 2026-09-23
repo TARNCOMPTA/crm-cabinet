@@ -38,7 +38,7 @@ export function PeriodesTooltip({ periods, children }: PeriodesTooltipProps) {
 
               return (
                 <div key={idx} className="flex items-start gap-2">
-                  <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${colorClass}`} />
+                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${colorClass}`} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium">{formatDateFR(period.dateCloture)}</div>
                     <div className={`text-xs ${colorClass}`}>

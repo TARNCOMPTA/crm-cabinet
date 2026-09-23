@@ -244,9 +244,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   let globalIdx = -1;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[10vh] px-4">
+    <div className="fixed inset-0 z-60 flex items-start justify-center pt-[10vh] px-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
         onClick={onClose}
       />
       <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -261,10 +261,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               setActiveIndex(0);
             }}
             placeholder="Rechercher un client, naviguer, actions rapides..."
-            className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-400 text-[15px]"
+            className="flex-1 bg-transparent outline-hidden text-gray-900 dark:text-gray-100 placeholder:text-gray-400 text-[15px]"
             aria-label="Commande"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-sm border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
             ESC
           </kbd>
         </div>
@@ -311,7 +311,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       }`}
                     >
                       <Icon
-                        className={`w-4 h-4 flex-shrink-0 ${
+                        className={`w-4 h-4 shrink-0 ${
                           isActive ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400 dark:text-gray-500'
                         }`}
                       />
@@ -334,19 +334,19 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
         <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-950/40 text-[11px] text-gray-600 dark:text-gray-400">
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <kbd className="px-1.5 py-0.5 rounded-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <CornerDownLeft className="w-3 h-3" />
             </kbd>
             Ouvrir
           </span>
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <kbd className="px-1.5 py-0.5 rounded-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               Tab
             </kbd>
             Naviguer
           </span>
           <span className="ml-auto inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 inline-flex items-center gap-0.5">
+            <kbd className="px-1.5 py-0.5 rounded-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 inline-flex items-center gap-0.5">
               <Command className="w-3 h-3" />K
             </kbd>
             Ouvrir la palette

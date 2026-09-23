@@ -165,8 +165,8 @@ export function DashboardKPIStrip({ data, userId, loading }: DashboardKPIStripPr
           <Card key={i}>
             <CardContent className="py-5">
               <div className="animate-pulse space-y-3">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-                <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-2/3" />
+                <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/3" />
               </div>
             </CardContent>
           </Card>

@@ -27,7 +27,7 @@ export function CopyButton({ value, label = 'Valeur' }: CopyButtonProps) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors"
+      className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-sm transition-colors"
       title={`Copier ${label}`}
     >
       {copied ? (

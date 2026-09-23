@@ -340,7 +340,7 @@ function getPriorityVariant(priorite: string | null) {
         <div className="p-6 space-y-6">
           {task.is_archived && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-3">
-              <Archive className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <Archive className="w-5 h-5 text-amber-600 shrink-0" />
               <div className="text-sm text-amber-800">
                 <span className="font-medium">Tache archivee</span>
                 {task.archived_at && (

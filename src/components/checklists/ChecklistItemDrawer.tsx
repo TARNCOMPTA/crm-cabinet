@@ -180,7 +180,7 @@ export function ChecklistItemDrawer({
           <button
             onClick={() => isOwner && onToggle(item.id, item.is_checked)}
             disabled={!isOwner}
-            className="mt-0.5 flex-shrink-0"
+            className="mt-0.5 shrink-0"
           >
             {item.is_checked ? (
               <CheckSquare className="w-5 h-5 text-emerald-500" />
@@ -199,7 +199,7 @@ export function ChecklistItemDrawer({
                   if (e.key === 'Escape') setEditingLabel(false);
                 }}
                 onBlur={handleSaveLabel}
-                className="w-full text-base font-medium bg-transparent border-b-2 border-teal-500 outline-none text-gray-900 dark:text-white"
+                className="w-full text-base font-medium bg-transparent border-b-2 border-teal-500 outline-hidden text-gray-900 dark:text-white"
                 autoFocus
               />
             ) : (
@@ -219,7 +219,7 @@ export function ChecklistItemDrawer({
                       setLabelDraft(item.label);
                       setEditingLabel(true);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-teal-600 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-teal-600 transition-opacity"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -265,7 +265,7 @@ export function ChecklistItemDrawer({
               <div className="space-y-3">
                 {comments.map((comment) => (
                   <div key={comment.id} className="group flex gap-3">
-                    <div className="w-7 h-7 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center shrink-0">
                       <span className="text-[11px] font-bold text-teal-600 dark:text-teal-400">
                         {(comment.author?.prenom?.[0] || comment.user_id[0] || '?').toUpperCase()}
                       </span>
@@ -281,14 +281,14 @@ export function ChecklistItemDrawer({
                           {formatDate(comment.created_at)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 whitespace-pre-wrap break-words">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 whitespace-pre-wrap wrap-break-word">
                         {comment.content}
                       </p>
                     </div>
                     {(comment.user_id === userId || isOwner) && (
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 transition-opacity flex-shrink-0"
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 transition-opacity shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -311,7 +311,7 @@ export function ChecklistItemDrawer({
                   }
                 }}
                 placeholder="Ajouter un commentaire..."
-                className="flex-1 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-shadow"
+                className="flex-1 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-shadow"
               />
               <button
                 onClick={handleAddComment}

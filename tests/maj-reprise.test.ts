@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -70,5 +71,26 @@ describe('installation/maj.sh — remplacé par son propre git pull', () => {
     expect(faits).toContain('SAUVEGARDES=1');
     expect(faits).toContain('PGDUMP=1');
     expect(faits).toContain('UP=1');
+  });
+});
+
+/**
+ * ⚠️ UNE SAUVEGARDE EST UNE COPIE COMPLÈTE DE LA BASE, ET ELLE NAISSAIT EN 644.
+ * Tout compte du serveur — `crm-runner` compris — pouvait lire les fiches
+ * clients et le mot de passe SMTP. Ces cas tombent si l'on retire le `umask` du
+ * sous-shell du `pg_dump`, ou le resserrement du dossier.
+ */
+describe('les sauvegardes restent privees', () => {
+  const maj = readFileSync(resolve(RACINE, 'installation/maj.sh'), 'utf8');
+
+  it('le pg_dump ecrit sous umask 077, dans le meme sous-shell', () => {
+    const ligne = maj.split('\n').find((l) => l.includes('pg_dump') && l.includes('gzip >'));
+    expect(ligne, 'ligne du pg_dump introuvable').toBeTruthy();
+    expect(ligne!).toMatch(/^\s*\(\s*umask 077\s*;.*pg_dump.*gzip > "\$FICHIER"\s*\)\s*$/);
+  });
+
+  it('le dossier et les sauvegardes deja ecrites sont resserres', () => {
+    expect(maj).toMatch(/chmod 700 "\$SAUVEGARDES"/);
+    expect(maj).toMatch(/chmod 600 "\$SAUVEGARDES"\/base_\*\.sql\.gz/);
   });
 });

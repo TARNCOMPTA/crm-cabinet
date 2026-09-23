@@ -185,7 +185,7 @@ export function SettingsMiseAJour() {
         <Card>
           <CardContent className="py-5 space-y-4">
             <div className="flex items-start gap-3">
-              <ArrowUpCircle className="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0 mt-0.5" />
+              <ArrowUpCircle className="w-5 h-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-gray-100">
                   La version {etat?.distante} est disponible
@@ -211,7 +211,7 @@ export function SettingsMiseAJour() {
                 remplacer l’image, et n’applique rien d’autre :
               </p>
               <div className="flex items-center gap-2 bg-gray-900 dark:bg-black rounded-lg px-3 py-2.5">
-                <Terminal className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <Terminal className="w-4 h-4 text-gray-400 shrink-0" />
                 <code className="text-xs text-gray-100 font-mono overflow-x-auto">{COMMANDE}</code>
                 <Button
                   variant="ghost"
@@ -259,7 +259,7 @@ function Encart({
 }) {
   return (
     <div className={`flex gap-3 rounded-lg border p-4 ${TONS[ton]}`}>
-      <Icone className="w-5 h-5 flex-shrink-0 mt-0.5" />
+      <Icone className="w-5 h-5 shrink-0 mt-0.5" />
       <div className="text-sm">
         <p className="font-medium">{titre}</p>
         <p className="mt-1 opacity-90">{children}</p>

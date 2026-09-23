@@ -49,7 +49,7 @@ export function CrossReferenceCard({
                   {item.label}
                 </span>
                 {item.sublabel && (
-                  <span className="text-gray-600 dark:text-gray-400 text-xs whitespace-nowrap flex-shrink-0">
+                  <span className="text-gray-600 dark:text-gray-400 text-xs whitespace-nowrap shrink-0">
                     {item.sublabel}
                   </span>
                 )}

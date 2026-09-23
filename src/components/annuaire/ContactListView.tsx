@@ -29,7 +29,7 @@ export const ContactListView = memo(function ContactListView({
           type="checkbox"
           checked={allSelected}
           onChange={onSelectAll}
-          className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+          className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
         />
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {contacts.length} contact{contacts.length > 1 ? 's' : ''}
@@ -57,11 +57,11 @@ export const ContactListView = memo(function ContactListView({
                   type="checkbox"
                   checked={selected}
                   onChange={() => onToggleSelect(contact.id)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+                  className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
                 />
               </div>
 
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
                 <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
               </div>
 
@@ -76,16 +76,16 @@ export const ContactListView = memo(function ContactListView({
                 )}
               </div>
 
-              <div className="hidden md:block flex-shrink-0 w-28" onClick={(e) => e.stopPropagation()}>
+              <div className="hidden md:block shrink-0 w-28" onClick={(e) => e.stopPropagation()}>
                 {(contact.phone || contact.mobile) ? (
                   <a
                     href={`tel:${contact.mobile || contact.phone}`}
                     className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
                   >
                     {contact.mobile ? (
-                      <Smartphone className="w-3 h-3 flex-shrink-0" />
+                      <Smartphone className="w-3 h-3 shrink-0" />
                     ) : (
-                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <Phone className="w-3 h-3 shrink-0" />
                     )}
                     <span className="truncate">{contact.mobile || contact.phone}</span>
                   </a>
@@ -94,13 +94,13 @@ export const ContactListView = memo(function ContactListView({
                 )}
               </div>
 
-              <div className="hidden lg:block flex-shrink-0 w-44" onClick={(e) => e.stopPropagation()}>
+              <div className="hidden lg:block shrink-0 w-44" onClick={(e) => e.stopPropagation()}>
                 {contact.email ? (
                   <a
                     href={`mailto:${contact.email}`}
                     className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
                   >
-                    <Mail className="w-3 h-3 flex-shrink-0" />
+                    <Mail className="w-3 h-3 shrink-0" />
                     <span className="truncate">{contact.email}</span>
                   </a>
                 ) : (
@@ -109,8 +109,8 @@ export const ContactListView = memo(function ContactListView({
               </div>
 
               {companies.length > 0 && (
-                <div className="hidden sm:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 max-w-[140px]">
-                  <Building2 className="w-3 h-3 flex-shrink-0" />
+                <div className="hidden sm:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 shrink-0 max-w-[140px]">
+                  <Building2 className="w-3 h-3 shrink-0" />
                   <span className="truncate">
                     {companies.slice(0, 1).join(', ')}
                     {companies.length > 1 && ` +${companies.length - 1}`}
@@ -118,7 +118,7 @@ export const ContactListView = memo(function ContactListView({
                 </div>
               )}
 
-              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => onEdit(contact)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"

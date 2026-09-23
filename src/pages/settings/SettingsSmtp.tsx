@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Mail, Server, Shield, Send, CheckCircle2, XCircle, Loader2, Eye, EyeOff, Info, KeyRound } from 'lucide-react';
 import { champsManquants } from './reglagesSmtp';
+import { FileEnvoiEmails } from '../../components/settings/FileEnvoiEmails';
 
 interface SmtpFormData {
   smtp_host: string;
@@ -395,7 +396,7 @@ export function SettingsSmtp() {
           {formData.auth_mode === 'oauth2' && (
             <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4 dark:border-teal-900 dark:bg-teal-950/20">
               <div className="flex items-start gap-2">
-                <KeyRound className="mt-0.5 h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+                <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
                 <div className="text-sm text-gray-700 dark:text-gray-300">
                   <p className="font-medium">Application Azure (flux « client credentials »)</p>
                   <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
@@ -456,7 +457,7 @@ export function SettingsSmtp() {
                 type="checkbox"
                 checked={formData.use_tls}
                 onChange={(e) => setFormData((prev) => ({ ...prev, use_tls: e.target.checked }))}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Utiliser TLS / STARTTLS</span>
             </label>
@@ -538,6 +539,9 @@ export function SettingsSmtp() {
           )}
         </CardContent>
       </Card>
+
+      {/* La file d'envoi, et le renvoi de ce qui est bloque */}
+      <FileEnvoiEmails />
 
       {/* Save */}
       <div className="flex justify-end">

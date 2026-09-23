@@ -29,7 +29,7 @@ interface FieldCellProps {
   onOpenSoftwareModal: () => void;
 }
 
-const INPUT_BASE = 'w-full h-8 px-2 text-sm border border-transparent rounded bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all';
+const INPUT_BASE = 'w-full h-8 px-2 text-sm border border-transparent rounded-sm bg-transparent hover:border-gray-300 focus:border-teal-500 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-teal-500 transition-all';
 
 function validationClasses(v?: ValidationResult): string {
   if (!v || v.level === 'valid') return '';
@@ -63,7 +63,7 @@ export const FieldCell = memo(function FieldCell({
               {effectiveSoftware.slice(0, 1).map(swId => {
                 const sw = availableSoftware.find(s => s.id === swId);
                 return sw ? (
-                  <span key={sw.id} className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                  <span key={sw.id} className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-sm">
                     {sw.name}
                   </span>
                 ) : null;
@@ -77,7 +77,7 @@ export const FieldCell = memo(function FieldCell({
           )}
           <button
             onClick={onOpenSoftwareModal}
-            className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors"
+            className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-sm transition-colors"
             title="Gerer les logiciels"
           >
             <Package className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export const FieldCell = memo(function FieldCell({
             type="button"
             onClick={() => onFieldChange(client.id, 'siren', sirenSuggestion!)}
             title={`Deduire le SIREN du SIRET (${sirenSuggestion})`}
-            className="shrink-0 inline-flex items-center gap-0.5 px-1.5 h-6 rounded text-[10px] font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
+            className="shrink-0 inline-flex items-center gap-0.5 px-1.5 h-6 rounded-sm text-[10px] font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Auto

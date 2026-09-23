@@ -65,7 +65,7 @@ export function ActionMenu({ items }: ActionMenuProps) {
                 }
               `}
             >
-              {item.icon && <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>}
+              {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
               <span>{item.label}</span>
             </button>
           ))}

@@ -21,25 +21,18 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { echapperHtml } from '../html.js';
+import { valeurVariable, type ContexteVariables } from './variables.js';
 
-/** Les champs qu'une campagne peut insérer. Volontairement peu nombreux. */
-export const VARIABLES = [
-  'nom_entreprise',
-  'dirigeant',
-  'numero_dossier',
-  'date_cloture',
-  'regime_fiscal',
-] as const;
-
-export type Variable = (typeof VARIABLES)[number];
+/*
+ * Le catalogue des variables — ce qu'on peut insérer, et sous quel format —
+ * vit dans `variables.ts`. Ici on ne fait que les substituer, en protégeant
+ * chaque valeur selon l'endroit où elle va.
+ */
+export type { ContexteVariables } from './variables.js';
 
 export interface ClientDestinataire {
   id: string;
   nom_entreprise: string | null;
-  dirigeant: string | null;
-  numero_dossier: string | null;
-  date_cloture: string | null;
-  regime_fiscal: string | null;
   email: string | null;
   /**
    * La seconde adresse de la fiche. Facultative, et jamais privilégiée : elle
@@ -47,6 +40,11 @@ export interface ClientDestinataire {
    * exactement comme la première.
    */
   email_2: string | null;
+  /**
+   * Les autres colonnes lues pour les variables — voir `variables.ts`. Leur
+   * liste suit le catalogue ; les dates y arrivent en texte `AAAA-MM-JJ`.
+   */
+  [colonne: string]: unknown;
 }
 
 /**
@@ -287,12 +285,42 @@ export function resoudreDestinataires(
  *
  * Une variable connue mais VIDE devient une chaîne vide — un client sans dirigeant
  * renseigné ne doit pas recevoir « Bonjour {{dirigeant}} ».
+ *
+ * Pour du HTML : chaque valeur est échappée. Le sujet a sa propre fonction,
+ * `substituerTexte`, parce qu'un en-tête n'est pas du HTML.
  */
-export function substituer(corps: string, client: ClientDestinataire): string {
-  return corps.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (entier, nom: string) => {
-    const cle = nom.toLowerCase() as Variable;
-    if (!(VARIABLES as readonly string[]).includes(cle)) return entier;
-    return echapperHtml(client[cle] ?? '');
+export function substituer(
+  corps: string,
+  client: ClientDestinataire,
+  contexte: ContexteVariables = {}
+): string {
+  return corps.replace(MARQUEUR, (entier, nom: string) => {
+    const valeur = valeurVariable(nom, client, contexte);
+    return valeur === null ? entier : echapperHtml(valeur);
+  });
+}
+
+const MARQUEUR = /\{\{\s*([a-z_]+)\s*\}\}/gi;
+
+/**
+ * La même substitution, pour un SUJET : les valeurs arrivent telles quelles.
+ *
+ * ⚠️ LE SUJET PASSAIT PAR `substituer`, DONC PAR L'ÉCHAPPEMENT HTML. « L'Atelier
+ * Dupont & Fils » arrivait dans la boîte de réception du client écrit
+ * `L&#39;Atelier Dupont &amp; Fils` — une apostrophe suffit, et le français en
+ * met partout. Constaté le 2026-09-23 en rendant le sujet d'un client réel du
+ * harnais. Un sujet est un en-tête SMTP : il n'a rien à craindre du balisage,
+ * tout à craindre des retours chariot. C'est `nettoyerSujet`, appliqué APRÈS
+ * cette fonction, qui l'en protège.
+ */
+export function substituerTexte(
+  texte: string,
+  client: ClientDestinataire,
+  contexte: ContexteVariables = {}
+): string {
+  return texte.replace(MARQUEUR, (entier, nom: string) => {
+    const valeur = valeurVariable(nom, client, contexte);
+    return valeur === null ? entier : valeur;
   });
 }
 
@@ -371,8 +399,12 @@ export function verifierSignatureDesinscription(
  * Substituer avant d'échapper ferait passer une raison sociale contenant du
  * balisage à travers l'échappement du corps.
  */
-export function corpsEnHtml(corps: string, client: ClientDestinataire): string {
-  const substitue = substituer(echapperHtml(corps), client);
+export function corpsEnHtml(
+  corps: string,
+  client: ClientDestinataire,
+  contexte: ContexteVariables = {}
+): string {
+  const substitue = substituer(echapperHtml(corps), client, contexte);
   return substitue
     .split(/\n{2,}/)
     .map((p) => p.trim())
@@ -386,6 +418,8 @@ export interface OptionsCourriel {
   client: ClientDestinataire;
   urlDesinscription: string;
   nomCabinet: string;
+  /** Ce qu'il faut pour écrire certaines variables — le libellé des régimes. */
+  contexte?: ContexteVariables;
 }
 
 /**
@@ -414,7 +448,7 @@ export function construireCourriel(o: OptionsCourriel): string {
         <p style="margin:0;font:600 15px/1.4 Arial,Helvetica,sans-serif;color:#7c2d5e">${cabinet}</p>
       </td></tr>
       <tr><td style="padding:20px 32px 8px 32px;font:15px/1.6 Arial,Helvetica,sans-serif;color:#292524">
-        ${corpsEnHtml(o.corps, o.client)}
+        ${corpsEnHtml(o.corps, o.client, o.contexte)}
       </td></tr>
       <tr><td style="padding:8px 32px 24px 32px;border-top:1px solid #f5f5f4">
         <p style="margin:16px 0 0;font:12px/1.5 Arial,Helvetica,sans-serif;color:#78716c">

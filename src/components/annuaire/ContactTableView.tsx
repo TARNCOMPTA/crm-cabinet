@@ -32,7 +32,7 @@ export const ContactTableView = memo(function ContactTableView({
                 type="checkbox"
                 checked={allSelected}
                 onChange={onSelectAll}
-                className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+                className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
               />
             </th>
             <th className="px-3 py-3 text-left font-medium text-gray-600 dark:text-gray-400">Nom</th>
@@ -66,12 +66,12 @@ export const ContactTableView = memo(function ContactTableView({
                     type="checkbox"
                     checked={selected}
                     onChange={() => onToggleSelect(contact.id)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+                    className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
                   />
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center">
                       <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                     </div>
                     <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
@@ -114,7 +114,7 @@ export const ContactTableView = memo(function ContactTableView({
                       href={`mailto:${contact.email}`}
                       className="inline-flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors truncate max-w-[180px]"
                     >
-                      <Mail className="w-3 h-3 flex-shrink-0" />
+                      <Mail className="w-3 h-3 shrink-0" />
                       <span className="truncate">{contact.email}</span>
                     </a>
                   ) : (
@@ -124,7 +124,7 @@ export const ContactTableView = memo(function ContactTableView({
                 <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">
                   {companies.length > 0 ? (
                     <div className="flex items-center gap-1.5 truncate max-w-[160px]">
-                      <Building2 className="w-3 h-3 flex-shrink-0 text-gray-400" />
+                      <Building2 className="w-3 h-3 shrink-0 text-gray-400" />
                       <span className="truncate">
                         {companies.slice(0, 2).join(', ')}
                         {companies.length > 2 && ` +${companies.length - 2}`}

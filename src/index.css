@@ -1,10 +1,95 @@
 /* Les jetons de la charte d'abord : les échelles de Tailwind sont ancrées
    dessus, et le CSS écrit à la main y puise en `var(--…)`. */
-@import './styles/tokens.css';
+@import './styles/tokens.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* La charte : palette remappee, rayons, ombres. Voir ce fichier pour le pourquoi. */
+@import './styles/theme.css';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+@utility glass-panel {
+  @apply bg-white/90 backdrop-blur-lg border border-gray-200/60;
+  [data-theme='dark'] & {
+    background-color: rgba(30, 22, 32, 0.72);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+@utility surface-raised {
+  @apply bg-white shadow-card;
+  [data-theme='dark'] & {
+    background-color: rgba(36, 27, 39, 0.85);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 20px 40px -24px rgba(0, 0, 0, 0.55);
+  }
+}
+
+@utility hairline {
+  @apply border-gray-200/80;
+  [data-theme='dark'] & {
+    border-color: rgba(243, 236, 240, 0.12);
+  }
+}
+
+@utility hover-lift {
+  /* Micro-interaction utilities */
+  @apply transition-all duration-200 ease-out;
+  &:hover {
+    transform: translateY(-2px);
+    @apply shadow-card-hover;
+  }
+  [data-theme='dark'] &:hover {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 24px 48px -24px rgba(0, 0, 0, 0.7);
+  }
+}
+
+@utility press-scale {
+  @apply transition-transform duration-100;
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@utility interactive-card {
+  @apply transition-all duration-200 ease-out cursor-pointer;
+  &:hover {
+    transform: translateY(-1px);
+    @apply shadow-card-hover border-gray-300/80;
+  }
+  [data-theme='dark'] &:hover {
+    border-color: rgba(208, 107, 162, 0.15);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 20px 48px -24px rgba(0, 0, 0, 0.7);
+  }
+}
 
 @layer base {
   html {
@@ -143,69 +228,6 @@
       transform: translateY(0);
       opacity: 1;
     }
-  }
-
-  .animate-slide-up {
-    animation: slide-up 0.3s ease-out;
-  }
-
-  .glass-panel {
-    @apply bg-white/90 backdrop-blur-lg border border-gray-200/60;
-  }
-  [data-theme='dark'] .glass-panel {
-    background-color: rgba(30, 22, 32, 0.72);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border-color: rgba(255, 255, 255, 0.06);
-  }
-
-  .surface-raised {
-    @apply bg-white shadow-card;
-  }
-  [data-theme='dark'] .surface-raised {
-    background-color: rgba(36, 27, 39, 0.85);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 20px 40px -24px rgba(0, 0, 0, 0.55);
-  }
-
-  .hairline {
-    @apply border-gray-200/80;
-  }
-  [data-theme='dark'] .hairline {
-    border-color: rgba(243, 236, 240, 0.12);
-  }
-
-  /* Micro-interaction utilities */
-  .hover-lift {
-    @apply transition-all duration-200 ease-out;
-  }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    @apply shadow-card-hover;
-  }
-  [data-theme='dark'] .hover-lift:hover {
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 24px 48px -24px rgba(0, 0, 0, 0.7);
-  }
-
-  .press-scale {
-    @apply transition-transform duration-100;
-  }
-  .press-scale:active {
-    transform: scale(0.97);
-  }
-
-  .interactive-card {
-    @apply transition-all duration-200 ease-out cursor-pointer;
-  }
-  .interactive-card:hover {
-    transform: translateY(-1px);
-    @apply shadow-card-hover border-gray-300/80;
-  }
-  [data-theme='dark'] .interactive-card:hover {
-    border-color: rgba(208, 107, 162, 0.15);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 20px 48px -24px rgba(0, 0, 0, 0.7);
   }
 }
 

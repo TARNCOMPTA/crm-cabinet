@@ -306,7 +306,7 @@ export function SettingsTaskCategories() {
                   }`}
                 >
                   <div
-                    className="w-full h-8 rounded"
+                    className="w-full h-8 rounded-sm"
                     style={{ backgroundColor: color.value }}
                   />
                   <p className="text-xs text-gray-600 mt-1 text-center">{color.label}</p>
@@ -322,7 +322,7 @@ export function SettingsTaskCategories() {
             <select
               value={formData.icone}
               onChange={(e) => setFormData({ ...formData, icone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500"
             >
               {ICON_OPTIONS.map((icon) => (
                 <option key={icon} value={icon}>
@@ -338,7 +338,7 @@ export function SettingsTaskCategories() {
               id="is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+              className="w-4 h-4 text-teal-600 border-gray-300 rounded-sm focus:ring-teal-500"
             />
             <label htmlFor="is_active" className="text-sm text-gray-700">
               Catégorie active

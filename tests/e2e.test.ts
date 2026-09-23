@@ -45,6 +45,8 @@ suite('parcours de bout en bout', () => {
   /** Ressources réellement téléchargées, pour vérifier le découpage du bundle. */
   let recus: string[] = [];
   const erreursConsole: string[] = [];
+  /** Les requêtes de l'écran que le serveur a REFUSÉES (403), avec leur adresse. */
+  const refus: string[] = [];
 
   beforeAll(async () => {
     navigateur = await chromium.launch();
@@ -58,6 +60,7 @@ suite('parcours de bout en bout', () => {
     page.on('response', (r) => {
       const u = r.url();
       if (u.includes('/assets/')) recus.push(u.split('/assets/')[1]);
+      if (r.status() === 403) refus.push(`${r.request().method()} ${u.replace(BASE!, '')}`);
     });
 
     const cdp = await contexte.newCDPSession(page);
@@ -230,9 +233,34 @@ suite('parcours de bout en bout', () => {
    * Le client « SANS EMAIL SARL » est semé par le job `navigateur` de la CI,
    * comme le cabinet : la liste doit contenir une fiche sans email pour que la
    * case existe.
+   *
+   * ⚠️ LA FICHE EST REMISE À VIDE D'ABORD, ET C'EST CE QUI REND LE CAS REJOUABLE.
+   * Ce test la REMPLIT — email, dossier, régime, clôture — et le suivant relit
+   * ces valeurs. En CI la base est resemée à chaque exécution, donc rien ne se
+   * voyait ; rejoué sur une base persistante, il échouait au second passage en
+   * se trouvant lui-même, avec un message qui accusait le produit (« Email du
+   * client » introuvable). Constaté le 2026-09-22 : quatre échecs de suite
+   * avant de comprendre que le défaut était dans le test.
+   *
+   * La remise à vide passe par l'API, depuis la page et sa session — le chemin
+   * du produit, sans accès direct à la base : la suite ne connaît que l'URL.
    */
   it('permet de completer les champs manquants sans ouvrir la fiche', async () => {
     await page.goto(BASE + '/clients', { waitUntil: 'networkidle' });
+    const remise = await page.evaluate(async () => {
+      const r = await fetch(
+        '/rest/v1/clients?nom_entreprise=eq.' + encodeURIComponent('SANS EMAIL SARL'),
+        {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ email: null, numero_dossier: null, regime_fiscal: null, date_cloture: null }),
+        }
+      );
+      return r.status;
+    });
+    expect(remise, 'la fiche de recette doit pouvoir etre remise a vide').toBeLessThan(300);
+    await page.reload({ waitUntil: 'networkidle' });
 
     // « Mes dossiers » est coche PAR DEFAUT (`profiles.show_my_dossiers`), et la
     // fiche semee n'est assignee a personne : sans ce decochage la liste est
@@ -688,5 +716,22 @@ suite('parcours de bout en bout', () => {
         )
     );
     expect(graves).toEqual([]);
+  });
+
+  /**
+   * ⚠️ LE FILTRE CI-DESSUS ÉCARTE « Failed to load resource … 40x », ET IL A
+   * CACHÉ UN DÉFAUT PENDANT DIX-HUIT JOURS. Le tableau de bord appelait
+   * `get_bilan_progression`, que le proxy refusait en 403 : le message tombait
+   * dans ce filtre, le bloc restait vide, et la suite était verte. Constaté le
+   * 2026-09-23 en relevant les réponses en échec d'une sonde.
+   *
+   * Le filtre reste — il écarte des 401 légitimes (la session avant connexion,
+   * la reconnexion après effacement du cookie). Mais un 403 est d'une autre
+   * nature : sur un parcours d'administrateur, c'est le serveur qui refuse ce
+   * que l'écran vient de lui demander. Il n'en faut aucun, et l'adresse est
+   * nommée pour que l'échec se diagnostique sans rejouer.
+   */
+  it("ne se voit refuser aucune requete par le serveur", () => {
+    expect(refus, `requetes refusees en 403 : ${refus.join(' | ')}`).toEqual([]);
   });
 });

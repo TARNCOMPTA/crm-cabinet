@@ -80,7 +80,7 @@ export function LandingPage() {
 
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-all shadow-sm backdrop-blur-sm z-20"
+        className="fixed top-4 right-4 p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-all shadow-sm backdrop-blur-xs z-20"
         aria-label="Changer de thème"
       >
         {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -108,7 +108,7 @@ export function LandingPage() {
                 type="button"
                 onClick={seConnecter}
                 disabled={enCours}
-                className="w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-medium rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
               >
                 <Fingerprint className="w-5 h-5" />
                 {enCours ? 'Connexion...' : 'Se connecter'}
@@ -160,7 +160,7 @@ export function LandingPage() {
               <button
                 type="submit"
                 disabled={enCours}
-                className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-medium rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {enCours ? 'Enrôlement...' : 'Enrôler cet appareil'}
               </button>
@@ -181,7 +181,7 @@ export function LandingPage() {
           {erreur && (
             <div className="mt-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-red-700 dark:text-red-400">{erreur}</p>
               </div>
             </div>

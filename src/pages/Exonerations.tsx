@@ -256,7 +256,7 @@ export function Exonerations() {
                   className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : item.id)}
                 >
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
                       <Building2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                     </div>
@@ -290,7 +290,7 @@ export function Exonerations() {
                     {remaining}
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {getRateBadge(item.currentRate, item.isExpired)}
                   </div>
 

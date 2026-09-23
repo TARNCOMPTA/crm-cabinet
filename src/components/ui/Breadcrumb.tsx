@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { cx } from '../../lib/cx';
 
 export interface BreadcrumbItem {
   label: string;
@@ -14,7 +15,7 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
   return (
-    <nav aria-label="Fil d'Ariane" className={`flex items-center text-sm ${className}`}>
+    <nav aria-label="Fil d'Ariane" className={cx(`flex items-center text-sm ${className}`)}>
       <ol className="flex items-center flex-wrap gap-1 min-w-0">
         <li className="flex items-center">
           <Link
@@ -30,13 +31,13 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
           const Icon = item.icon;
           return (
             <li key={idx} className="flex items-center min-w-0">
-              <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-1 flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-1 shrink-0" />
               {item.to && !isLast ? (
                 <Link
                   to={item.to}
                   className="flex items-center gap-1 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors truncate"
                 >
-                  {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                  {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                   <span className="truncate">{item.label}</span>
                 </Link>
               ) : (
@@ -48,7 +49,7 @@ export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
                   }`}
                   aria-current={isLast ? 'page' : undefined}
                 >
-                  {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                  {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                   <span className="truncate">{item.label}</span>
                 </span>
               )}

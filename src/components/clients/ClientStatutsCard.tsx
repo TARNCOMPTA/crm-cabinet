@@ -199,7 +199,7 @@ export function ClientStatutsCard({ client }: ClientStatutsCardProps) {
           )}
         </dl>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] divide-y divide-gray-100 dark:divide-gray-800">
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/6 divide-y divide-gray-100 dark:divide-gray-800">
           {visibles.map((d) => (
             <LigneDepot key={d.id} depot={d} principal={d.id === resume.derniereVersion.id} />
           ))}

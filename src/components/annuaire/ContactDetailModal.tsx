@@ -240,12 +240,12 @@ export function ContactDetailModal({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                          <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {comp?.name}
                           </span>
                           {link.is_primary_contact && (
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                           )}
                         </div>
                         {link.role_in_company && (

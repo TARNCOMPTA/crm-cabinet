@@ -448,7 +448,7 @@ export function RevenueDeclarationModal({
               type="checkbox"
               checked={derniereAnnee}
               onChange={(e) => setDerniereAnnee(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 w-4 h-4"
+              className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 w-4 h-4"
             />
             <span className="text-sm text-gray-700 dark:text-gray-300">
               Derniere annee
@@ -467,7 +467,7 @@ export function RevenueDeclarationModal({
               onChange={(e) => setCommentaire(e.target.value)}
               rows={4}
               placeholder="Notes, infos a transmettre..."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
@@ -627,7 +627,7 @@ export function RevenueDeclarationModal({
                       <button
                         type="button"
                         onClick={() => handleDownload(att)}
-                        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors"
                         title="Telecharger"
                       >
                         <Download className="w-4 h-4" />
@@ -635,7 +635,7 @@ export function RevenueDeclarationModal({
                       <button
                         type="button"
                         onClick={() => setAttachmentToDelete(att)}
-                        className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
                         title="Supprimer"
                       >
                         <X className="w-4 h-4" />

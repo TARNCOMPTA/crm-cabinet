@@ -165,20 +165,20 @@ export function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-transparent">
       <div
-        className={`fixed inset-0 bg-black/50 dark:bg-black/70 dark:backdrop-blur-sm z-20 lg:hidden ${
+        className={`fixed inset-0 bg-black/50 dark:bg-black/70 dark:backdrop-blur-xs z-20 lg:hidden ${
           sidebarOpen ? 'block' : 'hidden'
         }`}
         onClick={() => setSidebarOpen(false)}
       />
 
       <aside
-        className={`fixed top-0 left-0 z-30 h-full w-64 bg-white/95 backdrop-blur-lg dark:bg-ink-900/80 dark:backdrop-blur-xl border-r border-gray-200/60 dark:border-white/[0.06] transform transition-transform duration-200 ease-in-out shadow-sm dark:shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] ${
+        className={`fixed top-0 left-0 z-30 h-full w-64 bg-white/95 backdrop-blur-lg dark:bg-ink-900/80 dark:backdrop-blur-xl border-r border-gray-200/60 dark:border-white/6 transform transition-transform duration-200 ease-in-out shadow-sm dark:shadow-[inset_-1px_0_0_rgba(255,255,255,0.03)] ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
         aria-hidden={sidebarCollapsed ? 'true' : undefined}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/[0.06]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/6">
             <div className="flex items-center gap-2">
               {cabinetLogoUrl ? (
                 <img
@@ -188,7 +188,7 @@ export function DashboardLayout() {
                   onError={() => setCabinetLogoUrl(null)}
                 />
               ) : (
-                <div className="flex items-center justify-center w-10 h-10 bg-teal-600 dark:bg-gradient-to-br dark:from-cyan-400 dark:to-teal-500 rounded-lg dark:shadow-glow-cyan-sm">
+                <div className="flex items-center justify-center w-10 h-10 bg-teal-600 dark:bg-linear-to-br dark:from-cyan-400 dark:to-teal-500 rounded-lg dark:shadow-glow-cyan-sm">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
               )}
@@ -225,7 +225,7 @@ export function DashboardLayout() {
                           `relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                             isActive
                               ? 'bg-teal-50 text-teal-700 shadow-sm dark:bg-cyan-400/10 dark:text-cyan-200 dark:shadow-[inset_2px_0_0_0_rgb(34,211,238)]'
-                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-white'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-white/4 dark:hover:text-white'
                           }`
                         }
                         onClick={() => setSidebarOpen(false)}
@@ -240,8 +240,8 @@ export function DashboardLayout() {
             ))}
           </nav>
 
-          <div className="px-4 py-4 border-t border-gray-200 dark:border-white/[0.06]">
-            <div className="px-3 py-2 bg-gray-50 dark:bg-white/[0.03] dark:ring-1 dark:ring-white/[0.06] rounded-lg mb-2">
+          <div className="px-4 py-4 border-t border-gray-200 dark:border-white/6">
+            <div className="px-3 py-2 bg-gray-50 dark:bg-white/3 dark:ring-1 dark:ring-white/6 rounded-lg mb-2">
               <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
                 {profile?.prenom} {profile?.nom}
               </p>
@@ -265,7 +265,7 @@ export function DashboardLayout() {
                 variant="ghost"
                 size="sm"
                 onClick={toggleTheme}
-                className="text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-cyan-200"
+                className="text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-white/6 dark:hover:text-cyan-200"
                 aria-label="Basculer le theme"
               >
                 <span key={theme} className="inline-flex animate-icon-spin">
@@ -290,7 +290,7 @@ export function DashboardLayout() {
         </div>
       </aside>
 
-      <div className={`transition-[padding] duration-200 ease-in-out ${sidebarCollapsed ? 'lg:pl-0' : 'lg:pl-64'}`}>        <header className="sticky top-0 z-10 bg-white/85 dark:bg-ink-900/60 backdrop-blur-xl dark:backdrop-saturate-150 border-b border-gray-200/60 dark:border-white/[0.06] px-4 py-3">
+      <div className={`transition-[padding] duration-200 ease-in-out ${sidebarCollapsed ? 'lg:pl-0' : 'lg:pl-64'}`}>        <header className="sticky top-0 z-10 bg-white/85 dark:bg-ink-900/60 backdrop-blur-xl dark:backdrop-saturate-150 border-b border-gray-200/60 dark:border-white/6 px-4 py-3">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"

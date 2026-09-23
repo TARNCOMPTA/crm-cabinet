@@ -1,0 +1,350 @@
+/*
+ * Charte Tarn Compta, appliquée par remappage de la palette.
+ * ---------------------------------------------------------------------------
+ * Le CRM contient 9 463 utilitaires de couleur en dur — `gray-*` 5 480,
+ * `teal-*` 1 551, `red-*` 586, `amber-*` 473, `green-*` 244, `blue-*` 208…
+ * Les réécrire un par un serait absurde, et surtout intenable : la moindre
+ * retouche de charte demanderait de tout reprendre.
+ *
+ * Les échelles ci-dessous sont donc redéfinies pour rendre la charte du
+ * cabinet. Les classes déjà écrites dans les composants ne changent pas d'un
+ * caractère ; c'est ce qu'elles désignent qui change.
+ *
+ *   teal, cyan, pink   ->  bordeaux, l'accent du cabinet
+ *   gray, slate, zinc  ->  neutres chauds
+ *   green, emerald     ->  --ok
+ *   red, rose          ->  --red
+ *   amber, yellow      ->  --gold
+ *   blue, sky          ->  --navy
+ *
+ * Chaque échelle est ANCRÉE sur les valeurs réelles de `src/styles/tokens.css`,
+ * jamais inventée : les nuances repères y sont annotées. Les intermédiaires
+ * sont interpolés pour que la rampe reste régulière.
+ *
+ * Pourquoi des valeurs figées plutôt que des `var(--…)` : les composants
+ * écrivent partout « bg-gray-100 dark:bg-gray-800 ». Si une nuance basculait
+ * d'elle-même avec le thème, elle basculerait DEUX fois et le thème sombre
+ * rendrait des fonds clairs. Ce sont les variantes `dark:` déjà en place qui
+ * font la bascule — la palette, elle, doit rester stable.
+ */
+
+/*
+ * ⚠️ CE FICHIER ÉTAIT `tailwind.config.js` JUSQU'À TAILWIND 4. L'outil de
+ * migration officiel l'a converti en variables CSS (`@theme`) et a SUPPRIMÉ
+ * l'ancien fichier — avec l'en-tête ci-dessus et l'ancrage de chaque nuance,
+ * c'est-à-dire tout ce qui dit POURQUOI ces valeurs et pas d'autres. Les deux
+ * sont remis ici, repris mot pour mot de la version 3 (2026-09-23). Les valeurs,
+ * elles, sont inchangées : les captures d'écran avant/après le prouvent.
+ */
+
+/*
+ * `data-theme` et non la classe `.dark` : c'est la langue que parlent les
+ * autres outils du cabinet, et celle qu'attend le verrou d'impression de
+ * tokens.css. Les milliers de variantes `dark:` des composants continuent de
+ * fonctionner telles quelles.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: Hanken Grotesk, system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-mono: Consolas, ui-monospace, monospace;
+
+  --color-gray-50: #faf7f5; /* --card-soft */
+  --color-gray-100: #f7f3f0; /* --canvas */
+  --color-gray-200: #ece5e0; /* --line */
+  --color-gray-300: #ddd3cd; /* --border-strong */
+  --color-gray-400: #c0b4ba;
+  --color-gray-500: #9a8d92; /* --faint */
+  --color-gray-600: #7a6f74; /* --neutral */
+  --color-gray-700: #5c5258; /* --muted */
+  --color-gray-800: #2e2430; /* --line (sombre) */
+  --color-gray-900: #1e1620; /* --paper (sombre) */
+  --color-gray-950: #161015; /* --canvas (sombre) */
+
+  --color-slate-50: #faf7f5; /* --card-soft */
+  --color-slate-100: #f7f3f0; /* --canvas */
+  --color-slate-200: #ece5e0; /* --line */
+  --color-slate-300: #ddd3cd; /* --border-strong */
+  --color-slate-400: #c0b4ba;
+  --color-slate-500: #9a8d92; /* --faint */
+  --color-slate-600: #7a6f74; /* --neutral */
+  --color-slate-700: #5c5258; /* --muted */
+  --color-slate-800: #2e2430; /* --line (sombre) */
+  --color-slate-900: #1e1620; /* --paper (sombre) */
+  --color-slate-950: #161015; /* --canvas (sombre) */
+
+  --color-zinc-50: #faf7f5; /* --card-soft */
+  --color-zinc-100: #f7f3f0; /* --canvas */
+  --color-zinc-200: #ece5e0; /* --line */
+  --color-zinc-300: #ddd3cd; /* --border-strong */
+  --color-zinc-400: #c0b4ba;
+  --color-zinc-500: #9a8d92; /* --faint */
+  --color-zinc-600: #7a6f74; /* --neutral */
+  --color-zinc-700: #5c5258; /* --muted */
+  --color-zinc-800: #2e2430; /* --line (sombre) */
+  --color-zinc-900: #1e1620; /* --paper (sombre) */
+  --color-zinc-950: #161015; /* --canvas (sombre) */
+
+  --color-neutral-50: #faf7f5; /* --card-soft */
+  --color-neutral-100: #f7f3f0; /* --canvas */
+  --color-neutral-200: #ece5e0; /* --line */
+  --color-neutral-300: #ddd3cd; /* --border-strong */
+  --color-neutral-400: #c0b4ba;
+  --color-neutral-500: #9a8d92; /* --faint */
+  --color-neutral-600: #7a6f74; /* --neutral */
+  --color-neutral-700: #5c5258; /* --muted */
+  --color-neutral-800: #2e2430; /* --line (sombre) */
+  --color-neutral-900: #1e1620; /* --paper (sombre) */
+  --color-neutral-950: #161015; /* --canvas (sombre) */
+
+  --color-stone-50: #faf7f5; /* --card-soft */
+  --color-stone-100: #f7f3f0; /* --canvas */
+  --color-stone-200: #ece5e0; /* --line */
+  --color-stone-300: #ddd3cd; /* --border-strong */
+  --color-stone-400: #c0b4ba;
+  --color-stone-500: #9a8d92; /* --faint */
+  --color-stone-600: #7a6f74; /* --neutral */
+  --color-stone-700: #5c5258; /* --muted */
+  --color-stone-800: #2e2430; /* --line (sombre) */
+  --color-stone-900: #1e1620; /* --paper (sombre) */
+  --color-stone-950: #161015; /* --canvas (sombre) */
+
+  --color-teal-50: #fbf1f6;
+  --color-teal-100: #f7e3ee;
+  --color-teal-200: #efc7dc;
+  --color-teal-300: #e3a3c4;
+  --color-teal-400: #d06ba2; /* --teal (sombre) : l'accent en thème sombre */
+  --color-teal-500: #b04a80;
+  --color-teal-600: #7c2d5e; /* --teal : l'accent */
+  --color-teal-700: #63244b; /* --teal-dark */
+  --color-teal-800: #4e1d3c;
+  --color-teal-900: #3a1630;
+  --color-teal-950: #22111b; /* --on-accent (sombre) */
+
+  --color-cyan-50: #fbf1f6;
+  --color-cyan-100: #f7e3ee;
+  --color-cyan-200: #efc7dc;
+  --color-cyan-300: #e3a3c4;
+  --color-cyan-400: #d06ba2; /* --teal (sombre) : l'accent en thème sombre */
+  --color-cyan-500: #b04a80;
+  --color-cyan-600: #7c2d5e; /* --teal : l'accent */
+  --color-cyan-700: #63244b; /* --teal-dark */
+  --color-cyan-800: #4e1d3c;
+  --color-cyan-900: #3a1630;
+  --color-cyan-950: #22111b; /* --on-accent (sombre) */
+
+  --color-pink-50: #fbf1f6;
+  --color-pink-100: #f7e3ee;
+  --color-pink-200: #efc7dc;
+  --color-pink-300: #e3a3c4;
+  --color-pink-400: #d06ba2; /* --teal (sombre) : l'accent en thème sombre */
+  --color-pink-500: #b04a80;
+  --color-pink-600: #7c2d5e; /* --teal : l'accent */
+  --color-pink-700: #63244b; /* --teal-dark */
+  --color-pink-800: #4e1d3c;
+  --color-pink-900: #3a1630;
+  --color-pink-950: #22111b; /* --on-accent (sombre) */
+
+  --color-green-50: #edf5f0;
+  --color-green-100: #e7f1ea; /* --ok-bg */
+  --color-green-200: #c8e2d3;
+  --color-green-300: #9fcdb4;
+  --color-green-400: #6fd29a; /* --ok (sombre) */
+  --color-green-500: #4f9a6c;
+  --color-green-600: #3f7d54; /* --ok */
+  --color-green-700: #336344;
+  --color-green-800: #284e36;
+  --color-green-900: #1d3a28;
+  --color-green-950: #16291f; /* --ok-bg (sombre) */
+
+  --color-emerald-50: #edf5f0;
+  --color-emerald-100: #e7f1ea; /* --ok-bg */
+  --color-emerald-200: #c8e2d3;
+  --color-emerald-300: #9fcdb4;
+  --color-emerald-400: #6fd29a; /* --ok (sombre) */
+  --color-emerald-500: #4f9a6c;
+  --color-emerald-600: #3f7d54; /* --ok */
+  --color-emerald-700: #336344;
+  --color-emerald-800: #284e36;
+  --color-emerald-900: #1d3a28;
+  --color-emerald-950: #16291f; /* --ok-bg (sombre) */
+
+  --color-lime-50: #edf5f0;
+  --color-lime-100: #e7f1ea; /* --ok-bg */
+  --color-lime-200: #c8e2d3;
+  --color-lime-300: #9fcdb4;
+  --color-lime-400: #6fd29a; /* --ok (sombre) */
+  --color-lime-500: #4f9a6c;
+  --color-lime-600: #3f7d54; /* --ok */
+  --color-lime-700: #336344;
+  --color-lime-800: #284e36;
+  --color-lime-900: #1d3a28;
+  --color-lime-950: #16291f; /* --ok-bg (sombre) */
+
+  --color-red-50: #fbeeeb;
+  --color-red-100: #f8e6e2; /* --red-soft */
+  --color-red-200: #f2cbc3;
+  --color-red-300: #e8a99c;
+  --color-red-400: #f08a78; /* --red (sombre) */
+  --color-red-500: #cc5843;
+  --color-red-600: #b3402f; /* --red */
+  --color-red-700: #8f3325; /* --red (impression) */
+  --color-red-800: #71281d;
+  --color-red-900: #551e16;
+  --color-red-950: #351a16; /* --red-soft (sombre) */
+
+  --color-rose-50: #fbeeeb;
+  --color-rose-100: #f8e6e2; /* --red-soft */
+  --color-rose-200: #f2cbc3;
+  --color-rose-300: #e8a99c;
+  --color-rose-400: #f08a78; /* --red (sombre) */
+  --color-rose-500: #cc5843;
+  --color-rose-600: #b3402f; /* --red */
+  --color-rose-700: #8f3325; /* --red (impression) */
+  --color-rose-800: #71281d;
+  --color-rose-900: #551e16;
+  --color-rose-950: #351a16; /* --red-soft (sombre) */
+
+  --color-amber-50: #fcf6e9;
+  --color-amber-100: #faf0dd; /* --gold-soft */
+  --color-amber-200: #f2ddb4;
+  --color-amber-300: #e6c684;
+  --color-amber-400: #e3b15e; /* --gold (sombre) */
+  --color-amber-500: #c9922f;
+  --color-amber-600: #b5781f; /* --gold */
+  --color-amber-700: #7d5313; /* --gold (impression) */
+  --color-amber-800: #634211;
+  --color-amber-900: #4a320e;
+  --color-amber-950: #2e240f; /* --gold-soft (sombre) */
+
+  --color-yellow-50: #fcf6e9;
+  --color-yellow-100: #faf0dd; /* --gold-soft */
+  --color-yellow-200: #f2ddb4;
+  --color-yellow-300: #e6c684;
+  --color-yellow-400: #e3b15e; /* --gold (sombre) */
+  --color-yellow-500: #c9922f;
+  --color-yellow-600: #b5781f; /* --gold */
+  --color-yellow-700: #7d5313; /* --gold (impression) */
+  --color-yellow-800: #634211;
+  --color-yellow-900: #4a320e;
+  --color-yellow-950: #2e240f; /* --gold-soft (sombre) */
+
+  --color-orange-50: #fcf6e9;
+  --color-orange-100: #faf0dd; /* --gold-soft */
+  --color-orange-200: #f2ddb4;
+  --color-orange-300: #e6c684;
+  --color-orange-400: #e3b15e; /* --gold (sombre) */
+  --color-orange-500: #c9922f;
+  --color-orange-600: #b5781f; /* --gold */
+  --color-orange-700: #7d5313; /* --gold (impression) */
+  --color-orange-800: #634211;
+  --color-orange-900: #4a320e;
+  --color-orange-950: #2e240f; /* --gold-soft (sombre) */
+
+  --color-blue-50: #eef4f8;
+  --color-blue-100: #dde9f1;
+  --color-blue-200: #bcd3e3;
+  --color-blue-300: #9dbdd4;
+  --color-blue-400: #86aed3; /* --navy (sombre) */
+  --color-blue-500: #5b8cad;
+  --color-blue-600: #3f7293; /* --navy */
+  --color-blue-700: #325b76;
+  --color-blue-800: #27475c;
+  --color-blue-900: #1d3444;
+  --color-blue-950: #142530;
+
+  --color-sky-50: #eef4f8;
+  --color-sky-100: #dde9f1;
+  --color-sky-200: #bcd3e3;
+  --color-sky-300: #9dbdd4;
+  --color-sky-400: #86aed3; /* --navy (sombre) */
+  --color-sky-500: #5b8cad;
+  --color-sky-600: #3f7293; /* --navy */
+  --color-sky-700: #325b76;
+  --color-sky-800: #27475c;
+  --color-sky-900: #1d3444;
+  --color-sky-950: #142530;
+
+  --color-indigo-50: #eef4f8;
+  --color-indigo-100: #dde9f1;
+  --color-indigo-200: #bcd3e3;
+  --color-indigo-300: #9dbdd4;
+  --color-indigo-400: #86aed3; /* --navy (sombre) */
+  --color-indigo-500: #5b8cad;
+  --color-indigo-600: #3f7293; /* --navy */
+  --color-indigo-700: #325b76;
+  --color-indigo-800: #27475c;
+  --color-indigo-900: #1d3444;
+  --color-indigo-950: #142530;
+
+  --color-ink-700: #4a3d4d;
+  --color-ink-750: #3d3040;
+  --color-ink-800: #2e2430; /* --line (sombre) */
+  --color-ink-850: #241b27;
+  --color-ink-900: #1e1620; /* --paper (sombre) */
+  --color-ink-950: #161015; /* --canvas (sombre) */
+
+  --radius-xl: 11px;
+  --radius-2xl: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(44, 35, 41, 0.04);
+  --shadow-card:
+    0 1px 2px rgba(44, 35, 41, 0.04), 0 8px 24px rgba(44, 35, 41, 0.06);
+  --shadow-card-hover:
+    0 4px 12px rgba(44, 35, 41, 0.08), 0 12px 28px rgba(44, 35, 41, 0.06);
+  --shadow-elevated:
+    0 8px 24px rgba(44, 35, 41, 0.08), 0 2px 8px rgba(44, 35, 41, 0.05);
+  --shadow-accent: 0 4px 14px rgba(124, 45, 94, 0.3);
+  --shadow-glow-cyan:
+    0 0 0 1px rgba(208, 107, 162, 0.25),
+    0 10px 30px -10px rgba(208, 107, 162, 0.35);
+  --shadow-glow-cyan-sm:
+    0 0 0 1px rgba(208, 107, 162, 0.2),
+    0 4px 16px -4px rgba(208, 107, 162, 0.25);
+  --shadow-dark-card:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 40px -24px rgba(0, 0, 0, 0.6);
+  --shadow-dark-soft:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+
+  --background-image-dark-radial:
+    radial-gradient(at 20% 10%, rgba(208, 107, 162, 0.1) 0, transparent 50%),
+    radial-gradient(at 85% 90%, rgba(63, 114, 147, 0.08) 0, transparent 55%),
+    radial-gradient(at 50% 50%, rgba(22, 16, 21, 0) 0, #161015 100%);
+
+  --animate-fade-in: fade-in 300ms ease-out;
+  --animate-icon-spin: icon-spin 400ms ease-in-out;
+  --animate-slide-in-up: slide-in-up 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes icon-spin {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(180deg) scale(0.8);
+    }
+    100% {
+      transform: rotate(360deg) scale(1);
+    }
+  }
+  @keyframes slide-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

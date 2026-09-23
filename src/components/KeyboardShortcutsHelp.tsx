@@ -46,7 +46,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 function KeyCap({ children }: { children: React.ReactNode }) {
   const isMod = children === 'mod';
   return (
-    <kbd className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 text-xs font-semibold rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm">
+    <kbd className="inline-flex items-center justify-center min-w-7 h-7 px-2 text-xs font-semibold rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm">
       {isMod ? (
         <span className="inline-flex items-center gap-0.5">
           <Command className="w-3 h-3" />
@@ -79,9 +79,9 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
         onClick={onClose}
       />
       <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[85vh] flex flex-col">

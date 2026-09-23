@@ -221,7 +221,7 @@ export function ClientSoftwareTab({ clientId }: Props) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <Package className="w-4 h-4 text-gray-400 shrink-0" />
                       <span className="font-medium text-gray-900 truncate">
                         {assignment.software.name}
                       </span>
@@ -298,7 +298,7 @@ export function ClientSoftwareTab({ clientId }: Props) {
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
               placeholder="Notes optionnelles..."
             />
           </div>

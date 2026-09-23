@@ -53,7 +53,7 @@ export function DashboardSearch() {
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const flatResults = results
     ? CATEGORY_ORDER.flatMap((cat) => results[cat])
@@ -191,7 +191,7 @@ export function DashboardSearch() {
           className="
             flex-1 py-3.5 px-3 bg-transparent text-gray-900 dark:text-gray-100
             placeholder-gray-400 dark:placeholder-gray-500
-            text-[15px] focus:outline-none
+            text-[15px] focus:outline-hidden
           "
         />
         <div className="flex items-center gap-2 pr-4">
@@ -231,7 +231,7 @@ export function DashboardSearch() {
 
                 return (
                   <div key={cat}>
-                    <div className="px-4 py-2 flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-sm">
+                    <div className="px-4 py-2 flex items-center gap-2 sticky top-0 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-xs">
                       <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                       <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                         {meta.label}
@@ -266,7 +266,7 @@ export function DashboardSearch() {
                               </p>
                             )}
                           </div>
-                          <span className="flex-shrink-0 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                          <span className="shrink-0 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                             {meta.label}
                           </span>
                         </button>
@@ -285,19 +285,19 @@ export function DashboardSearch() {
               </span>
               <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                 <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] border border-gray-200 dark:border-gray-700">
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-sm text-[10px] border border-gray-200 dark:border-gray-700">
                     ↑↓
                   </kbd>
                   naviguer
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] border border-gray-200 dark:border-gray-700">
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-sm text-[10px] border border-gray-200 dark:border-gray-700">
                     ↵
                   </kbd>
                   ouvrir
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] border border-gray-200 dark:border-gray-700">
+                  <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-sm text-[10px] border border-gray-200 dark:border-gray-700">
                     esc
                   </kbd>
                   fermer

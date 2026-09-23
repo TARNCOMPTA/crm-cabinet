@@ -279,7 +279,7 @@ export function ClientServicesTable({
                       type="checkbox"
                       checked={selectedClients.size > 0 && selectedClients.size === displayData.length}
                       onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
+                      className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
                     />
                   </th>
                   {!isColumnSorted && <th className="w-8 py-3 px-1" />}
@@ -310,14 +310,14 @@ export function ClientServicesTable({
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelect(client.clientId)}
-                            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
+                            className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
                           />
                         </td>
                         <td className="py-3 px-1">
                           {!isNC && (
                             <button
                               onClick={() => toggleExpand(client.clientId)}
-                              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-sm transition-colors"
                             >
                               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                             </button>
@@ -325,7 +325,7 @@ export function ClientServicesTable({
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                               isNC ? 'bg-slate-100 dark:bg-slate-800' : isNonClient ? 'bg-orange-100 dark:bg-orange-900/40' : isWithout ? 'bg-red-100 dark:bg-red-900/40' : 'bg-teal-100 dark:bg-teal-900/40'
                             }`}>
                               {isNC ? <Ban className="w-4 h-4 text-slate-400" /> : isNonClient ? <UserX className="w-4 h-4 text-orange-500" /> : isWithout ? <ShieldOff className="w-4 h-4 text-red-500" /> : <Building className="w-4 h-4 text-teal-600 dark:text-teal-400" />}
@@ -375,20 +375,20 @@ export function ClientServicesTable({
                           {isNC ? (
                             <span className="text-xs text-slate-400 italic">--</span>
                           ) : isWithout ? (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-sm text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
                               Aucun service ouvert
                             </span>
                           ) : (
                             <div className="flex flex-wrap gap-1 max-w-md">
                               {(isExpanded ? client.services : client.services.slice(0, 3)).map((s) => (
-                                <span key={s.service} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getServiceColor(s.service)}`}>
+                                <span key={s.service} className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium ${getServiceColor(s.service)}`}>
                                   {s.service}
                                 </span>
                               ))}
                               {!isExpanded && client.services.length > 3 && (
                                 <button
                                   onClick={() => toggleExpand(client.clientId)}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors"
                                 >
                                   +{client.services.length - 3}
                                 </button>
@@ -400,7 +400,7 @@ export function ClientServicesTable({
                           {isNC ? (
                             <span className="text-xs text-slate-400 italic">--</span>
                           ) : percentage >= 90 ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
                               <CheckCircle2 className="w-3 h-3" />
                               Complet
                             </span>
@@ -408,7 +408,7 @@ export function ClientServicesTable({
                             <select
                               value={client.avancement || 'a_faire'}
                               onChange={(e) => onUpdateAvancement(client.clientId, e.target.value)}
-                              className={`text-xs font-medium rounded-lg border px-2.5 py-1.5 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 ${
+                              className={`text-xs font-medium rounded-lg border px-2.5 py-1.5 cursor-pointer transition-colors focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 ${
                                 AVANCEMENT_STYLES[client.avancement || 'a_faire'] || AVANCEMENT_STYLES.a_faire
                               }`}
                             >
@@ -438,7 +438,7 @@ export function ClientServicesTable({
                                     (e.target as HTMLInputElement).blur();
                                   }
                                 }}
-                                className="w-full min-w-[120px] max-w-[180px] text-xs px-2.5 py-1.5 border border-transparent rounded-lg bg-transparent hover:border-gray-200 hover:bg-white focus:border-teal-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all placeholder:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800 dark:focus:border-teal-600 dark:focus:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+                                className="w-full min-w-[120px] max-w-[180px] text-xs px-2.5 py-1.5 border border-transparent rounded-lg bg-transparent hover:border-gray-200 hover:bg-white focus:border-teal-300 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 transition-all placeholder:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800 dark:focus:border-teal-600 dark:focus:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
                               />
                               {!client.commentaire && (
                                 <MessageSquare className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 dark:text-gray-600 pointer-events-none group-hover/comment:hidden" />

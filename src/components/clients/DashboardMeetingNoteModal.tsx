@@ -177,7 +177,7 @@ export function DashboardMeetingNoteModal({ isOpen, onClose, onCreated }: Dashbo
                   }}
                   onFocus={() => setShowDropdown(true)}
                   placeholder="Rechercher un client par nom ou SIREN..."
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm ${
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 text-sm ${
                     errors.client
                       ? 'border-red-300 dark:border-red-700'
                       : 'border-gray-300 dark:border-gray-600'
@@ -198,7 +198,7 @@ export function DashboardMeetingNoteModal({ isOpen, onClose, onCreated }: Dashbo
                         onClick={() => handleSelectClient(client)}
                         className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
                       >
-                        <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                           <Building className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div className="min-w-0">

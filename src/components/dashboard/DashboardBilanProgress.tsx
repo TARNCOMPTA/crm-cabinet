@@ -32,15 +32,15 @@ export function DashboardBilanProgress({ data, loading }: DashboardBilanProgress
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-40 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-6 animate-pulse">
             {[1, 2].map(i => (
               <div key={i} className="space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-16" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-24" />
               </div>
             ))}
           </div>
@@ -107,7 +107,7 @@ export function DashboardBilanProgress({ data, loading }: DashboardBilanProgress
                         >
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             {pct > 12 && (
-                              <span className="text-[10px] font-bold text-white drop-shadow-sm">
+                              <span className="text-[10px] font-bold text-white drop-shadow-xs">
                                 {col.count}
                               </span>
                             )}

@@ -127,6 +127,73 @@ export const COLONNES_PROFIL_PERSONNELLES = new Set([
 ]);
 
 /**
+ * Tables qu'AUCUNE requête du navigateur ne touche, dans aucun sens.
+ * ---------------------------------------------------------------------------
+ * ⚠️ `email_queue` ÉTAIT OUVERTE EN ÉCRITURE À TOUT COLLABORATEUR CONNECTÉ, ET
+ * C'EST LA FAILLE LA PLUS GRAVE DE CET AUDIT. Elle porte `to_email`, `subject`
+ * et `html_body` ; l'ordonnanceur la vide toutes les deux minutes par le SMTP
+ * du cabinet. Un `POST /rest/v1/email_queue` suffisait donc à faire partir
+ * N'IMPORTE QUEL courriel, vers N'IMPORTE QUELLE adresse — hors du cabinet
+ * comprise — signé du domaine du cabinet.
+ *
+ * C'est exactement le scénario que `TABLES_LECTURE_ADMIN` nomme plus haut à
+ * propos du mot de passe SMTP : « de quoi faire changer un RIB à un client ».
+ * Le mot de passe était protégé ; la file d'envoi qu'il alimente ne l'était
+ * pas. Et c'est la même famille que le trou RPC ci-dessous : une porte latérale
+ * vers l'envoi de courriel, fermée d'un côté, restée ouverte de l'autre.
+ *
+ * Vérifié le 2026-09-22 sur le harnais, depuis une VRAIE session de
+ * collaborateur `role = 'user'` enrôlée par le navigateur : `201 Created`.
+ *
+ * ⚠️ FERMÉES AUX ADMINISTRATEURS AUSSI, et ce n'est pas un excès de zèle. Le
+ * front ne lit ni n'écrit ces deux tables : l'état de la file lui arrive par
+ * `/api/emails/etat`, une route du serveur. Une table qu'aucun écran n'utilise
+ * n'a pas à être joignable par le proxy — si un écran en a besoin un jour, il
+ * passera par une route, comme celui-là.
+ */
+export const TABLES_HORS_NAVIGATEUR = new Set([
+  'email_queue',
+  'email_digests',
+  /*
+   * Le compte rendu de l'ordonnanceur : « la tache de 2 h a-t-elle tourne
+   * cette nuit, et bien ? ». Le serveur seul y ecrit, et l'ecran
+   * d'administration le lit par `/api/taches`. Ouvert en ecriture a tout
+   * collaborateur, il permettait d'ecrire `statut = 'succes'` sur une tache qui
+   * n'a jamais tourne — c'est-a-dire de faire taire le seul endroit qui dit
+   * qu'une synchronisation ou une file d'envoi est en panne. La panne de
+   * vingt-quatre jours de septembre a coute assez cher pour ne pas laisser
+   * maquiller son signalement.
+   */
+  'taches_planifiees',
+]);
+
+/**
+ * Tables où l'on AJOUTE, jamais où l'on récrit.
+ * ---------------------------------------------------------------------------
+ * ⚠️ `audit_logs` ACCEPTAIT LE DELETE ET LE PATCH DE N'IMPORTE QUEL
+ * COLLABORATEUR. Le journal que le produit tient pour savoir qui a archivé,
+ * supprimé ou modifié quoi était donc effaçable — et, pire, RÉCRIVABLE — par
+ * les personnes mêmes qu'il enregistre. Vérifié le 2026-09-22 depuis une
+ * session `role = 'user'` : `DELETE …?action=eq.<x>` rend 204 et la ligne
+ * disparaît ; `PATCH` rend 204 et la ligne dit autre chose.
+ *
+ * Une trace effacée laisse un trou qu'on peut au moins remarquer. Une trace
+ * RÉCRITE ne laisse rien : elle est lue, et crue. C'est la seconde qui décide
+ * ici.
+ *
+ * ⚠️ L'INSERTION RESTE OUVERTE, ET IL LE FAUT : `clientDeletionService` écrit
+ * `archive_client` et `restore_client` depuis le navigateur. Fermer la table
+ * entièrement ferait disparaître ces deux traces — soit l'inverse du but.
+ *
+ * ⚠️ LA RÉÉCRITURE EST REFUSÉE AUX ADMINISTRATEURS AUSSI. Un journal que son
+ * lecteur le plus puissant peut corriger ne prouve rien à personne, à
+ * commencer par lui : le jour où il doit établir ce qui s'est passé, on lui
+ * répondra qu'il a pu l'écrire. La correction d'une ligne, si elle devait
+ * exister un jour, serait une ligne de PLUS, pas une ligne changée.
+ */
+export const TABLES_JOURNAL = new Set(['audit_logs']);
+
+/**
  * Les fonctions que le NAVIGATEUR a le droit d'appeler.
  * ---------------------------------------------------------------------------
  * ⚠️ TOUT APPEL RPC ÉTAIT AUTORISÉ, ET C'ÉTAIT UN TROU BÉANT. `nomTable()` rend
@@ -163,6 +230,13 @@ export const RPC_OUVERTES = new Set([
   // appels PostgREST — un DELETE puis un INSERT — laisseraient la fiche sans
   // aucun associe si le second echouait. Voir schema/increments/014.
   'replace_client_associes',
+  // ⚠️ ELLE MANQUAIT DEPUIS SON ARRIVEE (increment 017, 2026-09-05). Le
+  // tableau de bord l'appelle pour la progression des bilans, le proxy la
+  // refusait en 403 — et le bloc restait vide, sans message. Trouve le
+  // 2026-09-23 en relevant les reponses en echec du navigateur. Lecture seule
+  // (`STABLE`, un comptage), rien a craindre. `tests/rpc-front-jumelle.test.ts`
+  // tient desormais cette liste avec les appels du front.
+  'get_bilan_progression',
 ]);
 
 /**
@@ -189,6 +263,9 @@ export function fonctionRpc(chemin: string): string | null {
 }
 
 const METHODES_ECRITURE = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+/** Ce qui change ou efface une ligne DEJA ecrite — l'insertion en est exclue. */
+const METHODES_REECRITURE = new Set(['PATCH', 'PUT', 'DELETE']);
 
 /**
  * Nom de table visé par une URL, tel que PostgREST le comprendra.
@@ -249,6 +326,43 @@ function modifieSaProprefiche(url: string, corps: unknown, sub: string): boolean
   return colonnes.every((colonne) => COLONNES_PROFIL_PERSONNELLES.has(colonne));
 }
 
+/**
+ * Un lien de notification que le navigateur a le droit de poser.
+ * ---------------------------------------------------------------------------
+ * ⚠️ POSER UNE NOTIFICATION, C'EST FAIRE PARTIR UN COURRIEL. Le déclencheur
+ * `trg_notification_email_queue` remplit `email_queue` à chaque insertion, et
+ * `build_notification_email_html` transforme le champ `link` en un bouton
+ * « Voir le detail ». Cette fonction échappe déjà le lien et refuse
+ * `javascript:` et `data:` — mais elle ACCEPTE `https://`.
+ *
+ * Un collaborateur pouvait donc faire envoyer à un collègue, depuis le SMTP du
+ * cabinet et sous son nom de domaine, un courriel dont le seul bouton mène où
+ * il veut. Un hameçonnage interne n'a pas besoin de plus : c'est la confiance
+ * dans l'expéditeur qui fait le travail.
+ *
+ * ⚠️ ON N'INTERDIT PAS LA NOTIFICATION, ON BORNE SON LIEN. Fermer la table
+ * casserait l'avertissement d'affectation de tâche et de déplacement de fiche
+ * bilan — la chaîne entière. Les cinq appels du front passent `/tasks`,
+ * `/bilans`, ou rien : un chemin interne suffit à tout ce que le produit fait.
+ *
+ * `//exemple.fr` est refusé comme le reste : le navigateur y lit une URL
+ * absolue vers un autre domaine, pas un chemin.
+ */
+export function lienDeNotificationAdmis(lien: unknown): boolean {
+  if (lien === null || lien === undefined || lien === '') return true;
+  if (typeof lien !== 'string') return false;
+  return lien.startsWith('/') && !lien.startsWith('//');
+}
+
+/** Toutes les lignes proposées à l'insertion, que le corps en porte une ou dix. */
+function lignes(corps: unknown): Record<string, unknown>[] {
+  if (Array.isArray(corps)) {
+    return corps.filter((l): l is Record<string, unknown> => typeof l === 'object' && l !== null);
+  }
+  if (typeof corps === 'object' && corps !== null) return [corps as Record<string, unknown>];
+  return [];
+}
+
 export interface Demande {
   methode: string;
   url: string;
@@ -289,6 +403,25 @@ export function deciderAcces(demande: Demande): Verdict {
     return { autorise: true };
   }
 
+  // Ce qu'aucun ecran n'utilise n'a pas a etre joignable — administrateur
+  // compris. Refus avant tout autre controle : il n'y a pas de cas passant.
+  if (TABLES_HORS_NAVIGATEUR.has(table)) {
+    return {
+      autorise: false,
+      code: 403,
+      message: `« ${table} » n'est pas accessible depuis l'application.`,
+    };
+  }
+
+  // Un journal s'allonge ; il ne se corrige pas. Voir TABLES_JOURNAL.
+  if (TABLES_JOURNAL.has(table) && METHODES_REECRITURE.has(demande.methode)) {
+    return {
+      autorise: false,
+      code: 403,
+      message: `« ${table} » est un journal : on y ajoute, on n'y modifie ni n'y supprime.`,
+    };
+  }
+
   // Les tables d'identifiants se ferment dans les deux sens, lecture comprise.
   if (TABLES_LECTURE_ADMIN.has(table) && demande.roleApp !== 'admin') {
     return {
@@ -296,6 +429,21 @@ export function deciderAcces(demande: Demande): Verdict {
       code: 403,
       message: `Consultation de « ${table} » reservee aux administrateurs.`,
     };
+  }
+
+  // Poser une notification fait partir un courriel : son lien doit rester
+  // interne. Voir `lienDeNotificationAdmis`.
+  if (table === 'notifications' && demande.methode === 'POST') {
+    const douteuse = lignes(demande.corps).find((l) => !lienDeNotificationAdmis(l.link));
+    if (douteuse) {
+      return {
+        autorise: false,
+        code: 403,
+        message:
+          "Le lien d'une notification doit etre un chemin interne (« /taches ») : " +
+          'il devient un bouton dans un courriel envoye par le cabinet.',
+      };
+    }
   }
 
   if (!METHODES_ECRITURE.has(demande.methode) || !TABLES_ADMIN.has(table)) {

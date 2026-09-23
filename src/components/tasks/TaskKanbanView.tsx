@@ -55,7 +55,7 @@ export function TaskKanbanView({
 
           return (
             <div key={column.id} className="flex flex-col">
-              <Card className="flex-1 dark:!bg-ink-900/70 dark:!border-white/[0.08]">
+              <Card className="flex-1 dark:bg-ink-900/70! dark:border-white/8!">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900 dark:text-slate-100">{column.title}</h3>
@@ -87,7 +87,7 @@ export function TaskKanbanView({
 
       <DragOverlay>
         {activeTask ? (
-          <Card className="opacity-95 shadow-lg dark:!bg-ink-750 dark:!border-cyan-400/40 dark:shadow-glow-cyan">
+          <Card className="opacity-95 shadow-lg dark:bg-ink-750! dark:border-cyan-400/40! dark:shadow-glow-cyan">
             <CardContent className="py-3">
               <TaskCardContent
                 task={activeTask}
@@ -139,7 +139,7 @@ function DraggableTask({
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card
-        className="cursor-move hover:shadow-md dark:!bg-ink-800 dark:!border-white/10 dark:hover:!border-cyan-400/40 dark:hover:shadow-glow-cyan-sm transition-all duration-200"
+        className="cursor-move hover:shadow-md dark:bg-ink-800! dark:border-white/10! dark:hover:border-cyan-400/40! dark:hover:shadow-glow-cyan-sm transition-all duration-200"
         onClick={handleClick}
       >
         <CardContent className="py-3">
@@ -262,7 +262,7 @@ export const TaskCardContent = React.memo(function TaskCardContent({
         <div className="mt-2">
           <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1">
             <div
-              className="bg-teal-600 dark:bg-gradient-to-r dark:from-cyan-400 dark:to-teal-400 h-1 rounded-full transition-all"
+              className="bg-teal-600 dark:bg-linear-to-r dark:from-cyan-400 dark:to-teal-400 h-1 rounded-full transition-all"
               style={{ width: `${task.progress}%` }}
             />
           </div>

@@ -54,7 +54,7 @@ function JobRow({ job, onDismiss }: { job: SyncJob; onDismiss: (id: string) => v
             <button
               type="button"
               onClick={() => onDismiss(job.id)}
-              className="p-1 -m-1 text-gray-400 hover:text-gray-600 rounded"
+              className="p-1 -m-1 text-gray-400 hover:text-gray-600 rounded-sm"
               aria-label={isActive ? 'Retirer de la liste' : 'Retirer'}
               title={
                 isActive

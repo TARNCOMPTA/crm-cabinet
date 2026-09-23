@@ -84,12 +84,12 @@ function SortableTemplateItem({
         <button
           {...attributes}
           {...listeners}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-opacity touch-none"
+          className="shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-opacity touch-none"
         >
           <GripVertical className="w-3 h-3" />
         </button>
       )}
-      <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
+      <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-sm">
         {index + 1}
       </span>
       <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{label}</span>
@@ -306,7 +306,7 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
                               if (e.key === 'Enter') handleSaveTitle(template.id);
                               if (e.key === 'Escape') setEditingTemplate(null);
                             }}
-                            className="flex-1 text-sm font-semibold bg-transparent border-b-2 border-teal-500 outline-none text-gray-900 dark:text-white"
+                            className="flex-1 text-sm font-semibold bg-transparent border-b-2 border-teal-500 outline-hidden text-gray-900 dark:text-white"
                             autoFocus
                           />
                           <button onClick={() => handleSaveTitle(template.id)} className="text-teal-600">
@@ -354,7 +354,7 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
                         <div className="relative">
                           <button
                             onClick={() => setMenuOpen(menuOpen === template.id ? null : template.id)}
-                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"
+                            className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
@@ -450,12 +450,12 @@ export function ChecklistTemplatesPanel({ userId, onChecklistCreated }: Props) {
                           }))
                         }
                         placeholder="Ajouter un element au modele..."
-                        className="flex-1 text-sm bg-transparent border-none outline-none text-gray-700 dark:text-gray-300 placeholder:text-gray-400"
+                        className="flex-1 text-sm bg-transparent border-none outline-hidden text-gray-700 dark:text-gray-300 placeholder:text-gray-400"
                       />
                       <button
                         type="submit"
                         disabled={!(newItemTexts[template.id] || '').trim()}
-                        className="p-1 rounded text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-1 rounded-sm text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -519,7 +519,7 @@ function CreateTemplateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -542,7 +542,7 @@ function CreateTemplateModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Cloture annuelle, Onboarding client..."
-              className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
               autoFocus
             />
           </div>
@@ -554,7 +554,7 @@ function CreateTemplateModal({
             <div className="space-y-1 mb-3">
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2 py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 rounded">
+                  <span className="w-5 h-5 flex items-center justify-center text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-700 rounded-sm">
                     {idx + 1}
                   </span>
                   <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{item}</span>
@@ -580,7 +580,7 @@ function CreateTemplateModal({
                   }
                 }}
                 placeholder="Ajouter un element et appuyer sur Entree..."
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
               />
               <button
                 type="button"

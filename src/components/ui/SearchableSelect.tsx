@@ -171,7 +171,7 @@ export function SearchableSelect({
             onClick={handleTriggerClick}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/40 bg-white dark:bg-white/[0.04] ${
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-xl text-left transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500/40 bg-white dark:bg-white/4 ${
               error
                 ? 'border-red-500'
                 : 'border-gray-300 dark:border-gray-700'
@@ -206,7 +206,7 @@ export function SearchableSelect({
                   role="button"
                   tabIndex={-1}
                   onClick={clearSelection}
-                  className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="p-0.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </span>
@@ -227,7 +227,7 @@ export function SearchableSelect({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className={`w-full pl-9 pr-3 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/40 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 ${
+              className={`w-full pl-9 pr-3 py-2.5 border rounded-xl focus:outline-hidden focus:ring-2 focus:ring-teal-500/40 bg-white dark:bg-white/4 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 ${
                 error
                   ? 'border-red-500'
                   : 'border-teal-500 dark:border-teal-500'
@@ -239,7 +239,7 @@ export function SearchableSelect({
         {isOpen && (
           <ul
             ref={listRef}
-            className="absolute z-50 mt-1.5 w-full max-h-56 overflow-auto rounded-xl border border-gray-200/80 dark:border-white/[0.08] bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl shadow-elevated dark:shadow-dark-card py-1"
+            className="absolute z-50 mt-1.5 w-full max-h-56 overflow-auto rounded-xl border border-gray-200/80 dark:border-white/8 bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl shadow-elevated dark:shadow-dark-card py-1"
           >
             {filtered.length === 0 ? (
               <li className="px-3 py-3 text-sm text-gray-600 dark:text-gray-400 text-center">

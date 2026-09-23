@@ -119,7 +119,7 @@ export function FileUploadZone({ onFileSelected, isImporting, onImportComplete }
         </div>
       ) : (
         <div className="flex items-center gap-4 p-4 bg-teal-50 border border-teal-200 rounded-xl">
-          <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center shrink-0">
             <FileSpreadsheet className="w-6 h-6 text-teal-600" />
           </div>
           <div className="flex-1 min-w-0">
@@ -128,7 +128,7 @@ export function FileUploadZone({ onFileSelected, isImporting, onImportComplete }
               {(selectedFile.size / 1024).toFixed(1)} Ko
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               onClick={handleImport}
               disabled={isImporting}
@@ -160,7 +160,7 @@ export function FileUploadZone({ onFileSelected, isImporting, onImportComplete }
 
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}

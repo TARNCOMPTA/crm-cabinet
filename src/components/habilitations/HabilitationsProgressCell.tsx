@@ -11,7 +11,7 @@ interface HabilitationsProgressCellProps {
 export function HabilitationsProgressCell({ isNonConcerne, isWithout, completeness }: HabilitationsProgressCellProps) {
   if (isNonConcerne) {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400">
         <Ban className="w-3 h-3" />
         Non concerne
       </span>

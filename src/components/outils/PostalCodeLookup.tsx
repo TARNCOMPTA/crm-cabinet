@@ -89,7 +89,7 @@ export function PostalCodeLookup() {
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [selected, setSelected] = useState<Commune | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -170,7 +170,7 @@ export function PostalCodeLookup() {
 
       {error && (
         <div className="flex items-start gap-2 p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
@@ -215,7 +215,7 @@ export function PostalCodeLookup() {
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950 flex items-center justify-center flex-shrink-0">
+                        <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950 flex items-center justify-center shrink-0">
                           <Building2 className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400" />
                         </div>
                         <div>
@@ -228,7 +228,7 @@ export function PostalCodeLookup() {
                         </div>
                       </div>
                       {isSelected && (
-                        <Map className="w-4 h-4 text-rose-500 flex-shrink-0 mt-1" />
+                        <Map className="w-4 h-4 text-rose-500 shrink-0 mt-1" />
                       )}
                     </div>
 

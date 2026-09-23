@@ -918,7 +918,7 @@ export function SettingsIncompleteClients() {
                         type="checkbox"
                         checked={allPageSelected}
                         onChange={toggleSelectAllPage}
-                        className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                       />
                     </th>
                     <th className="sticky left-[44px] z-20 bg-gray-50 text-left py-3.5 px-4 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide min-w-[200px] max-w-[240px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)]">
@@ -998,7 +998,7 @@ export function SettingsIncompleteClients() {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectClient(client.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                            className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                           />
                         </td>
                         <td

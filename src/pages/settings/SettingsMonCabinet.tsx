@@ -219,7 +219,7 @@ export function SettingsMonCabinet() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3 p-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
-          <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0" />
           <div>
             <h3 className="font-semibold text-amber-900 dark:text-amber-200">Acces restreint</h3>
             <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">

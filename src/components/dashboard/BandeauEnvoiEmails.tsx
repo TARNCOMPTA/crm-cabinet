@@ -58,7 +58,7 @@ export function BandeauEnvoiEmails() {
       className="rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/40"
     >
       <div className="flex items-start gap-3">
-        <MailWarning className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+        <MailWarning className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
         <div className="min-w-0">
           <p className="font-medium text-red-900 dark:text-red-200">{verdict.titre}</p>
           <p className="mt-1 text-sm text-red-800 dark:text-red-300">{verdict.detail}</p>

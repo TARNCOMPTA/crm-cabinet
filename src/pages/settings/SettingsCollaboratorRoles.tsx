@@ -511,7 +511,7 @@ export function SettingsCollaboratorRoles() {
                           <Select
                             value={u.default_collaborator_role_key || ''}
                             onChange={(e) => setUserDefaultRole(u.id, e.target.value)}
-                            className="text-sm w-44 flex-shrink-0"
+                            className="text-sm w-44 shrink-0"
                           >
                             <option value="">Cabinet (par défaut)</option>
                             {roles.map((r) => (
@@ -559,7 +559,7 @@ export function SettingsCollaboratorRoles() {
                       <Select
                         value=""
                         onChange={(e) => setUserDefaultRole(u.id, e.target.value)}
-                        className="text-sm w-44 flex-shrink-0"
+                        className="text-sm w-44 shrink-0"
                       >
                         <option value="">Cabinet (par défaut)</option>
                         {roles.map((r) => (
@@ -594,7 +594,7 @@ export function SettingsCollaboratorRoles() {
                       <Select
                         value=""
                         onChange={(e) => setUserDefaultRole(u.id, e.target.value)}
-                        className="text-sm w-44 flex-shrink-0"
+                        className="text-sm w-44 shrink-0"
                       >
                         <option value="">Cabinet (par défaut)</option>
                         {roles.map((r) => (

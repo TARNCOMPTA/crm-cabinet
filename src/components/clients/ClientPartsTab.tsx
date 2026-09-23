@@ -792,7 +792,7 @@ function BandeauEtat({
           : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'
       }`}
     >
-      <Icone className="w-4 h-4 mt-0.5 flex-shrink-0" />
+      <Icone className="w-4 h-4 mt-0.5 shrink-0" />
       <span>{message}</span>
     </div>
   );

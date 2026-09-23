@@ -393,7 +393,7 @@ export function SettingsSoftware() {
               onChange={(e) =>
                 setFormData({ ...formData, is_active: e.target.checked })
               }
-              className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+              className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded-sm"
             />
             <label
               htmlFor="is_active"

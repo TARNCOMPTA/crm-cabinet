@@ -174,8 +174,17 @@ Il fait partie de la sauvegarde, au même titre que les données.
 Exemple de sauvegarde quotidienne, à mettre dans la crontab de `root` :
 
 ```
-30 2 * * * cd /opt/crmcabinet && docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > /var/sauvegardes/crm_$(date +\%F).sql.gz
+30 2 * * * umask 077 && cd /opt/crmcabinet && docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > /var/sauvegardes/crm_$(date +\%F).sql.gz
 ```
+
+⚠️ **Le `umask 077` n'est pas facultatif.** Sans lui, le fichier est lisible par
+tous les comptes du serveur, alors qu'il contient toutes les fiches clients et
+le mot de passe SMTP. Créez le dossier une fois avec `mkdir -m 700
+/var/sauvegardes`. Les sauvegardes faites par `maj.sh` sont déjà protégées ainsi.
+
+Une sauvegarde qui reste **sur le même serveur** ne protège ni d'une panne de
+disque ni d'une intrusion : recopiez-la ailleurs (un autre serveur, un stockage
+externe), et chiffrez-la si cet ailleurs n'est pas à vous.
 
 ### Restauration
 

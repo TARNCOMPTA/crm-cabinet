@@ -177,9 +177,9 @@ export function Modal({ isOpen, onClose, title, complementTitre, children, size 
         aria-modal="true"
         aria-labelledby={idTitre}
         tabIndex={-1}
-        className={`relative bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl rounded-2xl shadow-elevated dark:shadow-dark-card border border-gray-200/60 dark:border-white/[0.08] w-full ${sizes[size]} mx-4 max-h-[90vh] flex flex-col animate-slide-in-up outline-none`}
+        className={`relative bg-white dark:bg-ink-900/95 dark:backdrop-blur-xl rounded-2xl shadow-elevated dark:shadow-dark-card border border-gray-200/60 dark:border-white/8 w-full ${sizes[size]} mx-4 max-h-[90vh] flex flex-col animate-slide-in-up outline-hidden`}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/[0.06]">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/6">
           <div className="flex items-center gap-3 min-w-0 flex-wrap">
             <h2 id={idTitre} className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
             {complementTitre}

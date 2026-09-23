@@ -63,7 +63,7 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-36 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-36 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-3 animate-pulse">
@@ -71,8 +71,8 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
               <div key={i} className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4" />
+                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2" />
                 </div>
               </div>
             ))}
@@ -109,7 +109,7 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
                   onClick={() => item.clientId && navigate(`/clients/${item.clientId}`)}
                   className="w-full flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
                 >
-                  <div className={`p-1.5 rounded-lg ${config.bgClass} flex-shrink-0 mt-0.5`}>
+                  <div className={`p-1.5 rounded-lg ${config.bgClass} shrink-0 mt-0.5`}>
                     <Icon className={`w-4 h-4 ${config.iconClass}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -119,9 +119,9 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
                       </span>
                       {item.type === 'inpi_sync' && item.status && (
                         item.status === 'success' ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
                         ) : (
-                          <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                          <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
                         )
                       )}
                     </div>
@@ -131,7 +131,7 @@ export function DashboardActivityFeed({ activities, loading }: DashboardActivity
                       </span>
                     </p>
                   </div>
-                  <span className="text-[11px] text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5 whitespace-nowrap">
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400 shrink-0 mt-0.5 whitespace-nowrap">
                     {relativeTime(item.date)}
                   </span>
                 </button>

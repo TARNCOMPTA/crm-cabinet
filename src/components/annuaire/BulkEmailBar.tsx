@@ -19,7 +19,7 @@ export function BulkEmailBar({ count, emails, onClear }: BulkEmailBarProps) {
   }
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 py-2.5 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+    <div className="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 py-2.5 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xs border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
       <div className="flex items-center gap-3">
         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold">
           {count}

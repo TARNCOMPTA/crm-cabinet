@@ -105,7 +105,16 @@ describe('politique de sécurité du contenu', () => {
         .filter(Boolean)
         .sort();
 
-    expect(directives(entete!)).toEqual(directives(meta!));
+    // `frame-ancestors` n'a d'effet que dans l'EN-TÊTE : le navigateur l'ignore
+    // dans un `<meta>`, et le signale en console. Il a été retiré du `<meta>` le
+    // 2026-09-23 — l'y laisser faisait croire à une seconde barrière. La parité
+    // porte donc sur tout le reste ; sa présence dans l'en-tête est tenue par le
+    // cas suivant.
+    const horsCadres = (d: string[]) => d.filter((x) => !x.startsWith('frame-ancestors'));
+    expect(horsCadres(directives(entete!))).toEqual(directives(meta!));
+    expect(meta, 'frame-ancestors est ignore dans un <meta> : il appartient a l en-tete').not.toContain(
+      'frame-ancestors'
+    );
   });
 
   it('elle interdit le script en ligne et les cadres', () => {

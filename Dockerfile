@@ -19,7 +19,7 @@
 
 # ⚠️ L'IMAGE DE BASE EST FIGEE PAR SON DIGEST, pas seulement par son etiquette.
 #
-# `node:22-alpine` est une etiquette MOBILE : elle designe une image differente
+# `node:26-alpine` est une etiquette MOBILE : elle designe une image differente
 # chaque semaine. Deux consequences, et la seconde est la plus genante au
 # quotidien :
 #   · qui republie sous cette etiquette decide de ce qui tourne chez le cabinet.
@@ -39,10 +39,10 @@
 # existe : il propose le digest suivant chaque lundi. Retirer l'un rend l'autre
 # nuisible.
 #
-# Pour le relever a la main :  docker buildx imagetools inspect node:22-alpine
+# Pour le relever a la main :  docker buildx imagetools inspect node:26-alpine
 
 # ---- 1. Construction du front ---------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS front
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS front
 WORKDIR /build
 
 # Les dépendances d'abord : cette couche reste en cache tant que package*.json
@@ -68,13 +68,18 @@ RUN npm ci --no-audit --no-fund
 # version — `maj.sh` s'est arrêté avant de toucher aux conteneurs, la production
 # n'a rien vu. La CI construit désormais l'image à chaque poussée pour que la
 # prochaine occurrence soit rouge avant le déploiement.
-COPY index.html vite.config.ts tsconfig*.json postcss.config.js tailwind.config.js version.json ./
+# Pas de `tailwind.config.js` : depuis Tailwind 4, la charte vit dans
+# src/styles/theme.css, copie avec src/ ci-dessous. Le nommer ici apres sa
+# suppression a fait echouer la construction de l'image le 2026-09-23 —
+# `tests/dockerfile-copies.test.ts` verifie desormais que tout fichier nomme
+# par un COPY existe.
+COPY index.html vite.config.ts tsconfig*.json postcss.config.js version.json ./
 COPY public ./public
 COPY src ./src
 RUN npm run build
 
 # ---- 2. Construction du serveur -------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS serveur
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS serveur
 WORKDIR /build
 
 COPY server/package.json server/package-lock.json ./
@@ -90,7 +95,7 @@ COPY server/src ./src
 RUN npx tsc -p tsconfig.json
 
 # ---- 3. Image d'exécution --------------------------------------------------
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM node:26-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3
 WORKDIR /app
 
 # `postgresql-client` fournit pg_dump : c'est ce qui permet à maj.sh de

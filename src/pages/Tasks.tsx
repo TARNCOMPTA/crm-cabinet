@@ -491,7 +491,7 @@ export function Tasks() {
         <div className="flex flex-wrap items-center gap-2">
           {!showArchived && (
             <>
-              <div className="flex bg-gray-100 dark:bg-white/[0.04] dark:ring-1 dark:ring-white/10 rounded-lg p-1">
+              <div className="flex bg-gray-100 dark:bg-white/4 dark:ring-1 dark:ring-white/10 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('kanban')}
                   className={`px-3 py-1.5 rounded transition-colors ${
@@ -536,7 +536,7 @@ export function Tasks() {
 
       {showArchived && (
         <div className="mb-6 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/30 rounded-lg px-4 py-3 flex items-center gap-3">
-          <Archive className="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0" />
+          <Archive className="w-5 h-5 text-amber-600 dark:text-amber-300 shrink-0" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             Mode Archives -- Les taches archivees sont en lecture seule. Les taches terminees depuis plus de 30 jours sont archivees automatiquement chaque nuit.
           </p>

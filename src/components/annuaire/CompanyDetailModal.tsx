@@ -240,7 +240,7 @@ export function CompanyDetailModal({
                     type="checkbox"
                     checked={linkAsPrimary}
                     onChange={(e) => setLinkAsPrimary(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500"
                   />
                   <Star className="w-3.5 h-3.5 text-amber-500" />
                   Definir comme contact principal
@@ -281,9 +281,9 @@ export function CompanyDetailModal({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                           {link.is_primary_contact && (
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                           )}
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {contact.first_name} {contact.last_name}

@@ -38,6 +38,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { requete, requeteUne } from '../db.js';
 import { exigerSession } from '../gardes.js';
+import { DUREES_MOIS, dureeMois } from './mcp-cles-duree.js';
 
 /** Le préfixe `mcp_` rend la clé reconnaissable dans un fichier de config. */
 function genererClientId(): string {
@@ -61,29 +62,35 @@ export function enregistrerRoutesMcpCles(app: FastifyInstance): void {
     // `$1 IS NULL` plutot que deux requetes : l'administrateur passe `null` et
     // le filtre s'efface, sans dupliquer le SELECT ni sa liste de colonnes.
     const keys = await requete(
+      // `a_moi` : l'ecran propose « Prolonger » sur les seules cles de la
+      // personne connectee — la route refuse les autres, voir plus bas.
       `SELECT id, name, client_id, is_active, last_used_at, created_at, revoked_at,
-              peut_ecrire
+              peut_ecrire, expires_at, (created_by = $2) AS a_moi
          FROM mcp_api_keys
         WHERE $1::uuid IS NULL OR created_by = $1
         ORDER BY created_at DESC`,
-      [session.roleApp === 'admin' ? null : session.sub]
+      [session.roleApp === 'admin' ? null : session.sub, session.sub]
     );
     return { keys };
   });
 
-  app.post<{ Body: { name?: string } }>('/api/mcp-keys/generate', async (request, reply) => {
+  app.post<{ Body: { name?: string; duree_mois?: unknown } }>('/api/mcp-keys/generate', async (request, reply) => {
     const session = await exigerSession(request, reply);
     if (!session) return;
 
     const nom = request.body?.name?.trim() || 'Cle MCP';
+    const duree = dureeMois(request.body?.duree_mois);
+    if (duree === null) {
+      return reply.code(400).send({ error: `duree_mois doit valoir ${DUREES_MOIS.join(', ')}.` });
+    }
     const clientId = genererClientId();
     const secret = genererSecret();
 
     const key = await requeteUne(
-      `INSERT INTO mcp_api_keys (name, client_id, client_secret_hash, created_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, client_id, created_at`,
-      [nom, clientId, hacherSecret(secret), session.sub]
+      `INSERT INTO mcp_api_keys (name, client_id, client_secret_hash, created_by, expires_at)
+       VALUES ($1, $2, $3, $4, now() + make_interval(months => $5))
+       RETURNING id, name, client_id, created_at, expires_at`,
+      [nom, clientId, hacherSecret(secret), session.sub, duree]
     );
 
     // Seule occasion de voir le secret en clair. L'interface prévient l'utilisateur.
@@ -217,4 +224,46 @@ export function enregistrerRoutesMcpCles(app: FastifyInstance): void {
     }
     return { success: true };
   });
+
+  /**
+   * Prolonger une clé encore vivante.
+   *
+   * Sans ce geste, l'échéance forcerait à émettre une nouvelle clé chaque année
+   * et à la recoller dans chaque outil — assez pénible pour qu'on finisse par
+   * réclamer des clés sans échéance, c'est-à-dire le défaut qu'on vient de
+   * fermer.
+   *
+   * ⚠️ PROLONGER RESTE AU PROPRIÉTAIRE, MÊME POUR UN ADMINISTRATEUR. Prolonger,
+   * c'est accorder un an d'accès de plus : même raisonnement que pour le droit
+   * d'écriture (`/api/mcp-keys/ecriture`) — on n'étend pas l'accès d'un
+   * identifiant à l'insu de celui qui s'en sert.
+   *
+   * La nouvelle échéance part d'AUJOURD'HUI, pas de l'ancienne : prolonger une
+   * clé qui expire demain de douze mois donne un an, pas un an et un jour, et
+   * ne permet pas d'empiler des années d'avance en cliquant.
+   */
+  app.post<{ Body: { key_id?: string; duree_mois?: unknown } }>(
+    '/api/mcp-keys/prolonger',
+    async (request, reply) => {
+      const session = await exigerSession(request, reply);
+      if (!session) return;
+
+      const id = request.body?.key_id;
+      if (!id) return reply.code(400).send({ error: 'key_id requis.' });
+      const duree = dureeMois(request.body?.duree_mois);
+      if (duree === null) {
+        return reply.code(400).send({ error: `duree_mois doit valoir ${DUREES_MOIS.join(', ')}.` });
+      }
+
+      const r = await requeteUne<{ id: string; expires_at: string }>(
+        `UPDATE mcp_api_keys
+            SET expires_at = now() + make_interval(months => $3)
+          WHERE id = $1 AND is_active AND created_by = $2
+          RETURNING id, expires_at`,
+        [id, session.sub, duree]
+      );
+      if (!r) return reply.code(404).send({ error: 'Cle introuvable, revoquee, ou creee par quelqu un d autre.' });
+      return { success: true, expires_at: r.expires_at };
+    }
+  );
 }

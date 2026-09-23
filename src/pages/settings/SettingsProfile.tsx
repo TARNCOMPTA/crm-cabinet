@@ -149,7 +149,7 @@ export function SettingsProfile() {
                 Couleur de l'avatar
               </label>
               <div className="flex items-start gap-5">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div
                     className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold transition-colors duration-200"
                     style={{

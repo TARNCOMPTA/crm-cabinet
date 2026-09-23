@@ -1,4 +1,5 @@
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { cx } from '../../lib/cx';
 
 interface SortButtonProps {
   label: string;
@@ -48,7 +49,7 @@ export function SortSelect({ options, activeField, direction, onSort }: SortSele
       <select
         value={activeField}
         onChange={(e) => onSort(e.target.value)}
-        className="text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer"
+        className="text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -85,9 +86,9 @@ export function SortableTh({ label, field, activeField, direction, onSort, class
 
   return (
     <th
-      className={`text-left px-4 py-2.5 font-medium cursor-pointer select-none transition-colors ${
+      className={cx(`text-left px-4 py-2.5 font-medium cursor-pointer select-none transition-colors ${
         isActive ? 'text-teal-700 dark:text-teal-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-      } ${className}`}
+      } ${className}`)}
       onClick={() => onSort(field)}
     >
       <span className="inline-flex items-center gap-0.5">

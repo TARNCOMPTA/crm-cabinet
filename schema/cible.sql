@@ -890,6 +890,9 @@ CREATE TABLE "mcp_api_keys" (
   -- bord contre lequel le connecteur se premunit. L'accorder est un geste
   -- explicite, cle par cle.
   "peut_ecrire" boolean DEFAULT false NOT NULL,
+  -- Reporte depuis schema/increments/022, qui porte le raisonnement complet.
+  -- Toute cle a une echeance : NOT NULL, et douze mois par defaut.
+  "expires_at" timestamp with time zone DEFAULT (now() + '12 mons'::interval) NOT NULL,
   CONSTRAINT "mcp_api_keys_pkey" PRIMARY KEY (id),
   CONSTRAINT "mcp_api_keys_client_id_key" UNIQUE (client_id)
 );
@@ -1383,7 +1386,8 @@ CREATE TABLE "web_directory_links" (
 -- ============ CLÉS ÉTRANGÈRES ============
 -- Celles vers auth.users disparaissent aussi : l'authentification devient
 -- interne (passkeys), il n'y a plus de schéma auth de Supabase.
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE;
+-- RESTRICT et non CASCADE : supprimer un profil effacait son journal. Voir increments/023.
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT;
 ALTER TABLE "balance_sheets" ADD CONSTRAINT "balance_sheets_assignee_id_fkey" FOREIGN KEY (assignee_id) REFERENCES profiles(id) ON DELETE SET NULL;
 ALTER TABLE "balance_sheets" ADD CONSTRAINT "balance_sheets_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE;
 ALTER TABLE "bilan_cards" ADD CONSTRAINT "bilan_cards_assignee_id_fkey" FOREIGN KEY (assignee_id) REFERENCES profiles(id) ON DELETE SET NULL;
@@ -3023,3 +3027,56 @@ CREATE TRIGGER trg_conserver_resultat_campagne
 UPDATE mailing_destinataires d
    SET statut_envoi = q.status, envoye_le = q.sent_at, erreur_envoi = q.error_message
   FROM email_queue q WHERE q.id = d.email_queue_id;
+
+-- Repris de schema/increments/023-journal-fiche-client.sql, qui porte le
+-- raisonnement complet : les modifications de fiche faites A L'ECRAN sont
+-- journalisees, imputees par les revendications du jeton PostgREST.
+CREATE OR REPLACE FUNCTION journaliser_fiche_client() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public AS $$
+DECLARE
+  revendications jsonb;
+  auteur uuid;
+  avant jsonb := to_jsonb(OLD);
+  apres jsonb := to_jsonb(NEW);
+  champs jsonb := '[]'::jsonb;
+  cle text;
+BEGIN
+  -- Un GUC absent, vide ou mal formé ne doit jamais faire échouer l'écriture
+  -- de la fiche : la trace est un témoin, pas une condition.
+  BEGIN
+    revendications := nullif(current_setting('request.jwt.claims', true), '')::jsonb;
+    auteur := nullif(revendications ->> 'sub', '')::uuid;
+  EXCEPTION WHEN others THEN
+    auteur := NULL;
+  END;
+  IF auteur IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  FOR cle IN SELECT jsonb_object_keys(apres) LOOP
+    CONTINUE WHEN cle = 'updated_at';
+    IF (avant -> cle) IS DISTINCT FROM (apres -> cle) THEN
+      champs := champs || jsonb_build_array(jsonb_build_object(
+        'champ', cle, 'ancienne', avant -> cle, 'nouvelle', apres -> cle));
+    END IF;
+  END LOOP;
+
+  -- Un enregistrement qui ne change rien — l'écran renvoie souvent la fiche
+  -- entière — ne laisse rien : le journal dit ce qui a bougé, pas ce qui a été
+  -- cliqué.
+  IF jsonb_array_length(champs) = 0 THEN
+    RETURN NEW;
+  END IF;
+
+  INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+  VALUES (auteur, 'modification_fiche', 'client', NEW.id,
+          jsonb_build_object('via', 'ecran', 'champs', champs));
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION journaliser_fiche_client() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS trg_journal_fiche_client ON clients;
+CREATE TRIGGER trg_journal_fiche_client
+  AFTER UPDATE ON clients
+  FOR EACH ROW EXECUTE FUNCTION journaliser_fiche_client();

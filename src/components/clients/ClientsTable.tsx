@@ -131,7 +131,7 @@ export function ClientsTable({
                     type="checkbox"
                     checked={selectedClientIds.size === clients.length && clients.length > 0}
                     onChange={onToggleSelectAll}
-                    className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+                    className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded-sm cursor-pointer"
                   />
                 </th>
                 {useCustomOrder && <th className="w-8 py-3 px-1" />}
@@ -187,12 +187,12 @@ export function ClientsTable({
                       type="checkbox"
                       checked={selectedClientIds.has(client.id)}
                       onChange={() => onToggleSelection(client.id)}
-                      className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+                      className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded-sm cursor-pointer"
                     />
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-teal-100 dark:bg-teal-900/40 rounded-lg flex items-center justify-center">
+                      <div className="shrink-0 w-10 h-10 bg-teal-100 dark:bg-teal-900/40 rounded-lg flex items-center justify-center">
                         <Building className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                       </div>
                       <div className="flex-1">
@@ -290,7 +290,7 @@ export function ClientsTable({
                         }))}
                         size="small"
                       />
-                      <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover/collab:opacity-100 transition-opacity flex-shrink-0" />
+                      <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover/collab:opacity-100 transition-opacity shrink-0" />
                     </button>
                   </td>
                 </SortableRow>
@@ -523,7 +523,7 @@ function SaisieTexte({
             e.currentTarget.blur();
           }
         }}
-        className={`w-[180px] rounded-md border bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-1 disabled:opacity-60 transition-colors ${
+        className={`w-[180px] rounded-md border bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-hidden focus:ring-1 disabled:opacity-60 transition-colors ${
           erreur
             ? 'border-red-400 dark:border-red-600 focus:border-red-500 focus:ring-red-500'
             : 'border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-teal-500'
@@ -540,7 +540,7 @@ function SaisieTexte({
  * La case vide d'une colonne A CHOIX — regime, mois de cloture.
  *
  * PAS DE « QUITTER LE CHAMP POUR VALIDER », contrairement a la saisie texte :
- * choisir une option EST la validation. Attendre un `blur` obligerait a cliquer
+ * choisir une option EST la validation. Attendre un `blur-sm` obligerait a cliquer
  * ailleurs apres avoir deja fait son choix, et laisserait un etat intermediaire
  * ou l'ecran montre une valeur que la base n'a pas.
  *
@@ -582,7 +582,7 @@ function SaisieChoix({
         disabled={enCours}
         aria-label={libelle}
         onChange={(e) => void choisir(e.target.value)}
-        className={`w-[150px] rounded-md border bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 disabled:opacity-60 transition-colors ${
+        className={`w-[150px] rounded-md border bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-1 disabled:opacity-60 transition-colors ${
           erreur
             ? 'border-red-400 dark:border-red-600 focus:border-red-500 focus:ring-red-500'
             : 'border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-teal-500'

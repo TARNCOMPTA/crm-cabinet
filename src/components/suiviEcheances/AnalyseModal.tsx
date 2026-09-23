@@ -76,7 +76,7 @@ export function AnalyseModal({
     <Modal isOpen={ouvert} onClose={fermer} title="Analyser les accusés jedeclare" size="lg">
       <div className="space-y-5">
         <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="text-sm text-amber-900 dark:text-amber-200 space-y-2">
             <p>
               Lire un accusé le marque <strong>« récupéré »</strong> chez jedeclare. Le logiciel
@@ -164,7 +164,7 @@ export function AnalyseModal({
                           ne relit. */}
                       {c.marquageAutorise && (
                         <span
-                          className="ml-2 inline-block rounded px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40 align-middle"
+                          className="ml-2 inline-block rounded-sm px-1.5 py-0.5 text-[11px] font-medium text-amber-800 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40 align-middle"
                           title="La configuration du serveur autorise le marquage sur ce compte : ses accusés sont lus même jamais récupérés."
                         >
                           marquage autorisé

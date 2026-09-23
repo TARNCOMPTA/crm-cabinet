@@ -406,7 +406,7 @@ export function ARDCalculator() {
               <CardContent className="py-5">
                 <div className="flex items-center gap-4">
                   <div
-                    className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
                       results.regularisationStatus === 'ok'
                         ? 'bg-emerald-50 dark:bg-emerald-950'
                         : results.regularisationStatus === 'insuffisant'
@@ -455,7 +455,7 @@ export function ARDCalculator() {
                             formatCurrency(Math.abs(results.regularisation))}
                     </p>
                   </div>
-                  <div className="text-right text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">
+                  <div className="text-right text-sm text-gray-600 dark:text-gray-400 shrink-0">
                     <p>
                       A5 = {formatCurrency(results.a5)}
                     </p>
@@ -502,7 +502,7 @@ export function ARDCalculator() {
 
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       Charges non afferentes aux biens loues (AA2)
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -512,7 +512,7 @@ export function ARDCalculator() {
 
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       = Charges afferentes aux biens loues (A2 = Aa1 - AA2)
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -545,7 +545,7 @@ export function ARDCalculator() {
 
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       Amortissements deductibles = min(A4, A3)
                     </td>
                     <td className="py-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
@@ -630,7 +630,7 @@ export function ARDCalculator() {
           </Card>
 
           <div className="flex items-start gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <p className="font-medium">Formules appliquees (LMNP reel BIC) :</p>
               <p>A2 = Aa1 - AA2 (charges afferentes aux biens loues)</p>

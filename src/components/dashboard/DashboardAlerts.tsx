@@ -47,7 +47,7 @@ export function DashboardAlerts({ alerts, loading }: DashboardAlertsProps) {
   if (alerts.length === 0) {
     return (
       <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900/50">
-        <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400 flex-shrink-0" />
+        <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400 shrink-0" />
         <span className="text-sm font-medium text-green-800 dark:text-green-300">
           Tout est en ordre -- aucune alerte
         </span>
@@ -69,14 +69,14 @@ export function DashboardAlerts({ alerts, loading }: DashboardAlertsProps) {
             onClick={() => navigate(alert.link)}
             className={`group w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-150 hover:shadow-sm hover:-translate-y-0.5 ${config.containerClass}`}
           >
-            <Icon className={`w-5 h-5 flex-shrink-0 ${config.iconClass}`} />
+            <Icon className={`w-5 h-5 shrink-0 ${config.iconClass}`} />
             <span className={`text-sm font-medium flex-1 text-left ${config.textClass}`}>
               {alert.message}
             </span>
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${config.badgeClass}`}>
               {alert.count}
             </span>
-            <ArrowRight className={`w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${config.iconClass}`} />
+            <ArrowRight className={`w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${config.iconClass}`} />
           </button>
         );
       })}

@@ -35,7 +35,7 @@ export function SpeedDialFAB({ actions }: SpeedDialFABProps) {
   }, [open]);
 
   return (
-    <div ref={containerRef} className="fixed bottom-24 right-6 z-[9999] flex flex-col items-end gap-3">
+    <div ref={containerRef} className="fixed bottom-24 right-6 z-9999 flex flex-col items-end gap-3">
       {open && (
         <div className="flex flex-col items-end gap-2.5 mb-1">
           {actions.map((action, index) => {
@@ -66,7 +66,7 @@ export function SpeedDialFAB({ actions }: SpeedDialFABProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${
+        className={`w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${
           open
             ? 'bg-gray-700 dark:bg-gray-300 text-white dark:text-gray-900'
             : 'bg-teal-600 hover:bg-teal-700 text-white'

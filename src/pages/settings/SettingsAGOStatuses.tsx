@@ -292,7 +292,7 @@ export function SettingsAGOStatuses() {
                 type="checkbox"
                 checked={form.is_default}
                 onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
-                className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                className="rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Statut par defaut pour les nouveaux exercices

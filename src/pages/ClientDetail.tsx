@@ -552,7 +552,7 @@ function CollaboratorsCard({ collaborators, resolveRole, onAdd }: {
                     <tr key={collab.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center shrink-0">
                             <span className="text-sm font-medium text-teal-700 dark:text-teal-400">{collab.user?.prenom?.[0]}{collab.user?.nom?.[0]}</span>
                           </div>
                           <div className="min-w-0">

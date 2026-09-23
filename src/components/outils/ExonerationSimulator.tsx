@@ -280,7 +280,7 @@ export function ExonerationSimulator() {
             type="checkbox"
             checked={showMyClients}
             onChange={(e) => setShowMyClients(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+            className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500"
           />
           <Eye className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">Voir mes dossiers</span>
@@ -336,12 +336,12 @@ export function ExonerationSimulator() {
         <span className="font-medium">Legende :</span>
         {[100, 75, 50, 25].map((rate) => (
           <div key={rate} className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded ${RATE_COLORS[rate].bg}`} />
+            <div className={`w-3 h-3 rounded-sm ${RATE_COLORS[rate].bg}`} />
             <span>{rate}%</span>
           </div>
         ))}
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-gray-100 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600" />
+          <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600" />
           <span>Expire</span>
         </div>
       </div>
@@ -371,7 +371,7 @@ function SimulatorCard({
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-        <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center shrink-0">
           <Building2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
         </div>
         <div className="flex-1 min-w-0">
@@ -394,7 +394,7 @@ function SimulatorCard({
             </span>
           </div>
         </div>
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {getRateBadge(item.currentRate, item.isExpired)}
         </div>
       </div>
@@ -419,15 +419,15 @@ function SimulatorCard({
                 className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-left"
               >
                 {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                 )}
                 <span className={`text-sm font-semibold ${hasCurrentMonth ? 'text-teal-700 dark:text-teal-400' : 'text-gray-700 dark:text-gray-300'}`}>
                   {year}
                 </span>
                 {hasCurrentMonth && (
-                  <span className="text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/40 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/40 px-1.5 py-0.5 rounded-sm">
                     En cours
                   </span>
                 )}
@@ -441,7 +441,7 @@ function SimulatorCard({
                           return (
                             <div
                               key={idx}
-                              className="w-5 h-5 rounded-sm bg-gray-50 dark:bg-gray-900/20 border border-dashed border-gray-200 dark:border-gray-700"
+                              className="w-5 h-5 rounded-xs bg-gray-50 dark:bg-gray-900/20 border border-dashed border-gray-200 dark:border-gray-700"
                             />
                           );
                         }
@@ -449,7 +449,7 @@ function SimulatorCard({
                         return (
                           <div
                             key={idx}
-                            className={`w-5 h-5 rounded-sm ${colors.bg} flex items-center justify-center ${
+                            className={`w-5 h-5 rounded-xs ${colors.bg} flex items-center justify-center ${
                               isNow ? 'ring-2 ring-teal-500 ring-offset-1 dark:ring-offset-gray-900' : ''
                             }`}
                             title={`${MONTH_LABELS[idx]} ${year} - ${m.rate}%`}
@@ -467,7 +467,7 @@ function SimulatorCard({
                       {uniqueRates.map((r) => {
                         const colors = RATE_COLORS[r] || RATE_COLORS[0];
                         return (
-                          <span key={r} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
+                          <span key={r} className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${colors.bg} ${colors.text}`}>
                             {r}%
                           </span>
                         );
@@ -522,7 +522,7 @@ function SimulatorCard({
                     if (transitionMonths.length === 0) return null;
                     return (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-sm border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 inline-block" />
+                        <span className="w-2 h-2 rounded-xs border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 inline-block" />
                         Mois de transition (changement de taux)
                       </p>
                     );

@@ -57,7 +57,7 @@ export function ExpandableTextarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={minRows}
-        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-700 resize-y overflow-auto ${maxHeightClass} whitespace-pre-wrap font-mono text-sm`}
+        className={`w-full px-3 py-2 border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-700 resize-y overflow-auto ${maxHeightClass} whitespace-pre-wrap font-mono text-sm`}
       />
       {charCount > 0 && (
         <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
@@ -78,7 +78,7 @@ export function ExpandableTextarea({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-700 resize-none whitespace-pre-wrap font-mono text-sm leading-relaxed"
+              className="w-full px-4 py-3 border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border-gray-300 dark:border-gray-700 resize-none whitespace-pre-wrap font-mono text-sm leading-relaxed"
               style={{ height: '70vh' }}
             />
             <div className="flex items-center justify-between">

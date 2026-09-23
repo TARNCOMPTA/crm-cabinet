@@ -405,7 +405,7 @@ export function SettingsTaskTemplates() {
               id="is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+              className="w-4 h-4 text-teal-600 border-gray-300 rounded-sm focus:ring-teal-500"
             />
             <label htmlFor="is_active" className="text-sm text-gray-700">
               Modèle actif (visible lors de la création de tâches)

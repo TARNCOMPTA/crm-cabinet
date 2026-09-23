@@ -207,7 +207,7 @@ export function CSGCalculator() {
                   </tr>
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       Part deductible de la regul (Ratio x Regul N-1)
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -216,7 +216,7 @@ export function CSGCalculator() {
                   </tr>
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       + Total DED N
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -241,7 +241,7 @@ export function CSGCalculator() {
                   </tr>
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       + Regul CSG N-1
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -250,7 +250,7 @@ export function CSGCalculator() {
                   </tr>
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       - CSG Deductible Totale
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -271,7 +271,7 @@ export function CSGCalculator() {
           </Card>
 
           <div className="flex items-start gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <p className="font-medium">Formules appliquees :</p>
               <p>CSG Ded. Totale = (Total DED N-1 / Total CSG N-1) x Regul N-1 + Total DED N</p>

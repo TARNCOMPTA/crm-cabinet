@@ -58,7 +58,7 @@ export function HabilitationsToolbar({
             placeholder="Rechercher par nom ou SIREN..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
           />
         </div>
         <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
@@ -89,7 +89,7 @@ export function HabilitationsToolbar({
           <select
             value={avancementFilter}
             onChange={(e) => onAvancementFilterChange(e.target.value)}
-            className={`appearance-none pl-8 pr-7 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500/30 ${
+            className={`appearance-none pl-8 pr-7 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-teal-500/30 ${
               avancementFilter !== 'all'
                 ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-700'
                 : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'

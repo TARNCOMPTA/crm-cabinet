@@ -8,7 +8,7 @@
 
    Le CRM les utilise de deux façons :
      · directement, en `var(--…)`, pour le CSS écrit à la main ;
-     · indirectement, par les échelles de `tailwind.config.js`, qui sont
+     · indirectement, par les échelles de `src/styles/theme.css`, qui sont
        ancrées sur ces valeurs — c'est ce qui fait rendre la charte aux
        9 463 utilitaires de couleur déjà présents dans les composants,
        sans en réécrire un seul.

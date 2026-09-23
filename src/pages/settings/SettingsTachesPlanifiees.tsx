@@ -172,7 +172,7 @@ export function SettingsTachesPlanifiees() {
 
                   {t.detail && (
                     <p
-                      className={`mt-1.5 text-xs break-words ${
+                      className={`mt-1.5 text-xs wrap-break-word ${
                         t.statut === 'echec'
                           ? 'text-red-700 dark:text-red-300'
                           : 'text-gray-600 dark:text-gray-400'

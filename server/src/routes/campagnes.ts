@@ -66,12 +66,13 @@ import {
   resoudreDestinataires,
   signerDesinscription,
   nettoyerSujet,
-  substituer,
+  substituerTexte,
   verifierSignatureDesinscription,
-  VARIABLES,
   type ClientDestinataire,
+  type ContexteVariables,
   validerPieces,
 } from '../campagnes/gabarit.js';
+import { VARIABLES_CAMPAGNE, colonnesVariables } from '../campagnes/variables.js';
 
 /**
  * Les filtres que l'écran peut envoyer.
@@ -98,8 +99,40 @@ interface Filtres {
  * serait un compte de destinataires plus bas que prevu, dans un ecran ou
  * personne ne connait le chiffre attendu.
  */
-const COLONNES_CLIENT = `id, nom_entreprise, dirigeant, numero_dossier,
-                         date_cloture, regime_fiscal, email, email_2`;
+const COLONNES_CLIENT = [
+  'id',
+  'email',
+  'email_2',
+  /*
+   * Puis tout ce que les variables demandent, lu d'apres le catalogue : une
+   * variable ajoutee a `variables.ts` est lue ici sans qu'on y pense, et c'est
+   * le seul moyen qu'elle ne rende pas une chaine vide en silence.
+   *
+   * ⚠️ LES DATES SONT LUES EN TEXTE. Lues telles quelles, node-pg les rend en
+   * objets `Date`, et `{{date_cloture}}` levait « v.replace is not a function »
+   * a l'apercu comme a l'envoi. `to_char` rend `AAAA-MM-JJ`, sans fuseau — meme
+   * idiome que `routes/clients.ts`.
+   */
+  ...colonnesVariables()
+    .filter((c) => c.colonne !== 'email')
+    .map((c) =>
+      c.format === 'date' || c.format === 'mois'
+        ? `to_char(${c.colonne}, 'YYYY-MM-DD') AS ${c.colonne}`
+        : c.colonne
+    ),
+].join(', ');
+
+/**
+ * Le libelle de chaque regime fiscal, tel que le cabinet l'a ecrit dans ses
+ * reglages. Sans lui, `{{regime_fiscal}}` imprimait `IS_REEL` dans une lettre a
+ * un client.
+ */
+async function contexteVariables(): Promise<ContexteVariables> {
+  const lignes = await requete<{ value: string; label: string }>(
+    'SELECT value, label FROM regimes_fiscaux'
+  );
+  return { libellesRegimes: new Map(lignes.map((l) => [l.value, l.label])) };
+}
 
 /**
  * `code_ape` réduit à ce qui se compare : `62.01 Z`, `62.01Z` et `6201z`
@@ -227,6 +260,21 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
    * partie, sans que rien ne distingue « ce client n'est pas du métier visé » de
    * « on ne sait pas quel est son métier ».
    */
+  /**
+   * Le catalogue des variables, pour les boutons d'insertion de l'ecran.
+   *
+   * ⚠️ L'ECRAN EN TENAIT SA PROPRE COPIE, ECRITE EN DUR. Deux listes pour une
+   * seule verite : la prochaine variable ajoutee cote serveur n'aurait jamais
+   * eu de bouton, et personne ne l'aurait su. Il lit desormais celle-ci.
+   */
+  app.get('/api/campagnes/variables', async (request, reply) => {
+    const session = await exigerSession(request, reply);
+    if (!session) return;
+    return {
+      variables: VARIABLES_CAMPAGNE.map(({ nom, libelle, groupe }) => ({ nom, libelle, groupe })),
+    };
+  });
+
   app.get('/api/campagnes/codes-naf', async (request, reply) => {
     const session = await exigerSession(request, reply);
     if (!session) return;
@@ -256,13 +304,14 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
    * courriels avant d'envoyer — on en relit un, et il faut que ce soit un vrai,
    * avec un vrai nom et un vrai lien de désinscription.
    */
-  app.post<{ Body: { filtres?: Filtres; corps?: string; retires?: string[] } }>(
+  app.post<{ Body: { filtres?: Filtres; sujet?: string; corps?: string; retires?: string[] } }>(
     '/api/campagnes/apercu',
     async (request, reply) => {
       const session = await exigerSession(request, reply);
       if (!session) return;
 
-      const { filtres = {}, corps = '', retires = [] } = request.body ?? {};
+      const { filtres = {}, sujet = '', corps = '', retires = [] } = request.body ?? {};
+      const contexte = await contexteVariables();
       const clients = await clientsVises(filtres);
       const { retenus, exclus } = resoudreDestinataires(
         clients,
@@ -282,16 +331,20 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
           email: c.email,
         })),
         exclus,
-        variables: VARIABLES,
         apercu: temoin
           ? {
               client: temoin.nom_entreprise,
               email: temoin.email,
+              // Le sujet tel qu'il arrivera dans la boite de reception : il
+              // accepte les variables lui aussi, et c'est la qu'une apostrophe
+              // mal traitee se voyait le plus.
+              sujet: nettoyerSujet(substituerTexte(sujet, temoin, contexte)),
               html: construireCourriel({
                 corps,
                 client: temoin,
                 urlDesinscription: urlDesinscription(temoin.id),
                 nomCabinet: config.webauthn.rpName,
+                contexte,
               }),
             }
           : null,
@@ -354,6 +407,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
         });
       }
 
+      const contexte = await contexteVariables();
       const campagneId = await transaction(async (client) => {
         const { rows } = await client.query<{ id: string }>(
           `INSERT INTO mailing_campagnes
@@ -381,13 +435,18 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
             client: c,
             urlDesinscription: urlDesinscription(c.id),
             nomCabinet: config.webauthn.rpName,
+            contexte,
           });
           // Le sujet accepte aussi les variables : « Votre TVA — {{nom_entreprise}} »
           // se lit mieux dans une boite de reception qu'un sujet identique pour tous.
           // Le nettoyage vient APRES la substitution : c'est la valeur inseree
           // qui peut porter un retour chariot — donc une injection d'en-tete SMTP
           // — pas le sujet saisi par l'administrateur.
-          const sujetFinal = nettoyerSujet(substituer(sujet, c));
+          //
+          // ⚠️ `substituerTexte` ET NON `substituer` : un sujet n'est pas du HTML.
+          // L'ancienne version echappait les valeurs, et « L'Atelier » partait
+          // ecrit `L&#39;Atelier` dans la boite de reception du client.
+          const sujetFinal = nettoyerSujet(substituerTexte(sujet, c, contexte));
 
           const { rows: file } = await client.query<{ id: string }>(
             `INSERT INTO email_queue

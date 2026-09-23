@@ -261,3 +261,131 @@ describe('deciderAcces — les appels RPC', () => {
     expect(appel('/rest/v1/rpc_journal?select=*').autorise).toBe(true);
   });
 });
+
+/**
+ * Les trois failles relevées à l'audit du 2026-09-22, et vérifiées sur le
+ * harnais depuis une VRAIE session de collaborateur `role = 'user'` avant
+ * d'être fermées ici. Chacune répondait alors 201 ou 204.
+ */
+describe('la file d envoi et le journal, fermes a l audit du 2026-09-22', () => {
+  const requete = (methode: string, url: string, corps: unknown = null, roleApp = 'user') =>
+    deciderAcces({ methode, url, corps, roleApp, sub: UTILISATEUR.sub });
+
+  /*
+    ⚠️ LA PLUS GRAVE DES TROIS. `email_queue` porte `to_email`, `subject` et
+    `html_body`, et l'ordonnanceur la vide par le SMTP du cabinet : un POST
+    suffisait a envoyer n'importe quoi a n'importe qui, signe du domaine du
+    cabinet.
+  */
+  it('refuse toute ecriture dans email_queue, meme a un administrateur', () => {
+    for (const role of ['user', 'admin']) {
+      const v = requete('POST', '/rest/v1/email_queue', { to_email: 'x@y.z' }, role);
+      expect(v.autorise, role).toBe(false);
+    }
+  });
+
+  it('refuse aussi de LIRE email_queue : aucun ecran ne passe par la', () => {
+    expect(requete('GET', '/rest/v1/email_queue?select=*').autorise).toBe(false);
+    expect(requete('GET', '/rest/v1/email_queue?select=*', null, 'admin').autorise).toBe(false);
+  });
+
+  /*
+    Ecrire `statut = 'succes'` sur une tache qui n'a pas tourne fait taire le
+    seul endroit qui signale une panne d'ordonnanceur.
+  */
+  it('ferme taches_planifiees : le compte rendu de l ordonnanceur', () => {
+    expect(requete('PATCH', '/rest/v1/taches_planifiees?nom=eq.file-emails', { statut: 'succes' }).autorise).toBe(false);
+    expect(requete('GET', '/rest/v1/taches_planifiees?select=*', null, 'admin').autorise).toBe(false);
+  });
+
+  it('ferme email_digests par le meme raisonnement', () => {
+    expect(requete('GET', '/rest/v1/email_digests?select=*').autorise).toBe(false);
+    expect(requete('POST', '/rest/v1/email_digests', {}).autorise).toBe(false);
+  });
+
+  /*
+    Le contournement par caractere encode doit tomber ici AUSSI : PostgREST
+    route sur le chemin decode, et `email%5fqueue` y designe bien la table.
+  */
+  it('n est pas contournable par un caractere encode', () => {
+    expect(requete('POST', '/rest/v1/email%5fqueue', { to_email: 'x@y.z' }).autorise).toBe(false);
+  });
+
+  it('laisse AJOUTER dans audit_logs — sinon archiver un client ne trace plus', () => {
+    const v = requete('POST', '/rest/v1/audit_logs', { action: 'archive_client' });
+    expect(v.autorise).toBe(true);
+  });
+
+  /*
+    Une trace effacee laisse un trou qu'on peut remarquer ; une trace RECRITE
+    ne laisse rien. Les deux sont refusees, aux administrateurs compris : un
+    journal que son lecteur le plus puissant peut corriger ne prouve rien.
+  */
+  it('refuse d effacer ou de recrire une trace, a tout le monde', () => {
+    for (const methode of ['DELETE', 'PATCH', 'PUT']) {
+      for (const role of ['user', 'admin']) {
+        const v = requete(methode, '/rest/v1/audit_logs?action=eq.x', { action: 'y' }, role);
+        expect(v.autorise, `${methode} ${role}`).toBe(false);
+      }
+    }
+  });
+
+  it('dit POURQUOI un journal refuse : un 403 muet ne se diagnostique pas', () => {
+    const v = requete('DELETE', '/rest/v1/audit_logs?id=eq.1');
+    expect(v.autorise).toBe(false);
+    if (!v.autorise) expect(v.message).toMatch(/journal/i);
+  });
+});
+
+describe('le lien d une notification', () => {
+  const poser = (corps: unknown) =>
+    deciderAcces({
+      methode: 'POST',
+      url: '/rest/v1/notifications',
+      corps,
+      roleApp: 'user',
+      sub: UTILISATEUR.sub,
+    });
+
+  it('accepte les chemins internes que le front utilise', () => {
+    for (const link of ['/tasks', '/bilans', null, undefined, '']) {
+      expect(poser({ user_id: 'x', link }).autorise, String(link)).toBe(true);
+    }
+  });
+
+  /*
+    ⚠️ `build_notification_email_html` refuse deja `javascript:` et `data:`,
+    mais ACCEPTE `https://` : le lien devient le bouton « Voir le detail » d'un
+    courriel envoye par le cabinet. La confiance dans l'expediteur fait le
+    reste.
+  */
+  it('REFUSE un lien qui sort du site', () => {
+    for (const link of ['https://exemple.invalid/piege', 'http://exemple.invalid', '//exemple.invalid']) {
+      expect(poser({ user_id: 'x', link }).autorise, link).toBe(false);
+    }
+  });
+
+  it('refuse aussi quand le lien se cache dans un lot de plusieurs lignes', () => {
+    const v = poser([
+      { user_id: 'a', link: '/tasks' },
+      { user_id: 'b', link: 'https://exemple.invalid/piege' },
+    ]);
+    expect(v.autorise).toBe(false);
+  });
+
+  it('refuse un lien qui n est pas du texte', () => {
+    expect(poser({ user_id: 'x', link: { toString: 'piege' } }).autorise).toBe(false);
+  });
+
+  /* Marquer comme lu reste un PATCH ordinaire : la regle ne porte que sur la pose. */
+  it('ne gene pas le marquage comme lu', () => {
+    const v = deciderAcces({
+      methode: 'PATCH',
+      url: '/rest/v1/notifications?id=eq.1',
+      corps: { is_read: true },
+      roleApp: 'user',
+      sub: UTILISATEUR.sub,
+    });
+    expect(v.autorise).toBe(true);
+  });
+});

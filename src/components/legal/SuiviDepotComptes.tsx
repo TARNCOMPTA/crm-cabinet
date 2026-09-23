@@ -265,7 +265,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
           <select
             value={monthFilter === null ? '' : String(monthFilter)}
             onChange={(e) => setMonthFilter(e.target.value === '' ? null : Number(e.target.value))}
-            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
           >
             <option value="">Tous les mois</option>
             {[11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0].map((m) => (
@@ -283,7 +283,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
             <select
               value={avancementFilter ?? ''}
               onChange={(e) => setAvancementFilter(e.target.value === '' ? null : e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 appearance-none cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
             >
               <option value="">Tous avancements</option>
               <option value="__none__">Non renseigne</option>
@@ -397,7 +397,7 @@ export function SuiviDepotComptes({ clients, depotComptes, excludedClientIds = n
                             <select
                               value={currentStatusId}
                               onChange={(e) => handleAvancementChange(row.client.id, e.target.value)}
-                              className={`w-full max-w-[160px] px-2 py-1.5 text-xs rounded-lg border appearance-none cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                              className={`w-full max-w-[160px] px-2 py-1.5 text-xs rounded-lg border appearance-none cursor-pointer transition-colors focus:outline-hidden focus:ring-2 focus:ring-teal-500 ${
                                 currentStatus
                                   ? `${getAgoStatusBadgeClass(currentStatus.color)} border-transparent font-medium`
                                   : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'

@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { messageErreur } from '../../lib/erreurs';
 import { OUTILS_MCP } from '../../lib/outilsMcp';
+import { PORTEE_ECRITURE } from '../../lib/porteeConnecteur';
 import {
   Plug,
   Plus,
@@ -34,6 +35,23 @@ interface MCPKey {
   revoked_at: string | null;
   /** Droit d'ecrire la repartition des parts. Faux par defaut, jamais herite. */
   peut_ecrire: boolean;
+  /**
+   * L'echeance de la cle (increment 022). Facultative ici seulement parce que le
+   * service worker peut servir une liste mise en cache par la version
+   * precedente ; le serveur la rend toujours.
+   */
+  expires_at?: string;
+  /** La cle appartient a la personne connectee : elle seule peut la prolonger. */
+  a_moi?: boolean;
+}
+
+/** Une cle dont l'echeance tombe dans moins de trente jours, ou est passee. */
+function etatEcheance(expire: string | undefined): 'expiree' | 'proche' | 'lointaine' | 'inconnue' {
+  if (!expire) return 'inconnue';
+  const reste = new Date(expire).getTime() - Date.now();
+  if (Number.isNaN(reste)) return 'inconnue';
+  if (reste <= 0) return 'expiree';
+  return reste < 30 * 24 * 3600 * 1000 ? 'proche' : 'lointaine';
 }
 
 interface NewKeyData {
@@ -57,6 +75,8 @@ export function SettingsMCPConnector() {
   const [revokeTarget, setRevokeTarget] = useState<MCPKey | null>(null);
   const [cibleSuppression, setCibleSuppression] = useState<MCPKey | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
+  const [dureeNouvelleCle, setDureeNouvelleCle] = useState(12);
+  const [prolongationEnCours, setProlongationEnCours] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState<NewKeyData | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
@@ -162,7 +182,7 @@ export function SettingsMCPConnector() {
       }
       showToast(
         voulu
-          ? `« ${nom} » peut désormais écrire la répartition des parts.`
+          ? `« ${nom} » peut désormais modifier ${PORTEE_ECRITURE}.`
           : `« ${nom} » est repassé en lecture seule.`,
         'success'
       );
@@ -190,7 +210,7 @@ export function SettingsMCPConnector() {
       showToast(
         key.peut_ecrire
           ? `La clé « ${key.name} » est repassée en lecture seule.`
-          : `La clé « ${key.name} » peut désormais écrire la répartition des parts.`,
+          : `La clé « ${key.name} » peut désormais modifier ${PORTEE_ECRITURE}.`,
         'success'
       );
       await loadKeys();
@@ -255,7 +275,7 @@ export function SettingsMCPConnector() {
       const response = await fetch(`/api/mcp-keys/generate`, {
         method: 'POST',
         ...OPTIONS_API,
-        body: JSON.stringify({ name: newKeyName.trim() }),
+        body: JSON.stringify({ name: newKeyName.trim(), duree_mois: dureeNouvelleCle }),
       });
 
       if (!response.ok) {
@@ -288,6 +308,26 @@ export function SettingsMCPConnector() {
    * donc pas au bouton de le garantir, mais l'ecran n'offre le geste que sur
    * une ligne revoquee, pour ne pas proposer ce qui sera refuse.
    */
+  /** Repousse l'echeance d'une cle a douze mois d'aujourd'hui. */
+  async function prolonger(key: MCPKey) {
+    setProlongationEnCours(key.id);
+    try {
+      const r = await fetch('/api/mcp-keys/prolonger', {
+        method: 'POST',
+        ...OPTIONS_API,
+        body: JSON.stringify({ key_id: key.id, duree_mois: 12 }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Prolongation impossible');
+      showToast(`« ${key.name} » vaut jusqu'au ${new Date(d.expires_at).toLocaleDateString('fr-FR')}.`, 'success');
+      loadKeys();
+    } catch (err) {
+      showToast(messageErreur(err, 'Prolongation impossible'), 'error');
+    } finally {
+      setProlongationEnCours(null);
+    }
+  }
+
   async function supprimerDefinitivement() {
     if (!cibleSuppression) return;
     try {
@@ -400,8 +440,8 @@ export function SettingsMCPConnector() {
               promesse d'origine aurait ete la pire des deux erreurs : elle
               rassure sur ce qui a change. */}
           Connectez un assistant IA (Claude Desktop, Cursor, VS Code) à vos données via le protocole
-          MCP (Model Context Protocol). En lecture par défaut : seule la répartition des parts peut
-          être écrite, et uniquement si vous l'autorisez ci-dessous, accès par accès.
+          MCP (Model Context Protocol). En lecture seule par défaut. Vous pouvez autoriser un accès,
+          et lui seul, à modifier {PORTEE_ECRITURE} — jamais à supprimer.
         </p>
       </div>
 
@@ -421,8 +461,8 @@ export function SettingsMCPConnector() {
                     perimee sur un ecran de securite vaut moins que pas de
                     promesse du tout. */}
                 <li>
-                  Elle ne peut rien <strong>modifier</strong>, à une exception que vous accordez
-                  vous-même : la répartition des parts d'un client
+                  Elle ne peut rien <strong>modifier</strong>, sauf si vous l&apos;y autorisez
+                  vous-même, accès par accès : {PORTEE_ECRITURE}
                 </li>
                 <li>Aucune suppression, jamais</li>
               </ul>
@@ -477,7 +517,7 @@ export function SettingsMCPConnector() {
                   <tr key={key.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{key.name}</td>
                     <td className="px-4 py-3">
-                      <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                      <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-sm text-gray-700 dark:text-gray-300">
                         {key.client_id.slice(0, 16)}...
                       </code>
                     </td>
@@ -497,9 +537,15 @@ export function SettingsMCPConnector() {
                     <td className="px-4 py-3">
                       {key.is_active ? (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                            Actif
-                          </span>
+                          {etatEcheance(key.expires_at) === 'expiree' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                              Expirée
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                              Actif
+                            </span>
+                          )}
                           {/* La portee de la cle, et le geste qui la change.
                               `peut_ecrire` existait en base sans qu'aucun ecran
                               ne la montre ni ne la pose : une cle Claude Code ne
@@ -514,12 +560,37 @@ export function SettingsMCPConnector() {
                             }`}
                             title={
                               key.peut_ecrire
-                                ? "Cette clé peut enregistrer la répartition des parts. Cliquer pour la repasser en lecture seule."
-                                : "Cette clé ne peut rien écrire. Cliquer pour l'autoriser à enregistrer la répartition des parts."
+                                ? `Cette clé peut modifier ${PORTEE_ECRITURE}. Cliquer pour la repasser en lecture seule.`
+                                : `Cette clé ne peut rien écrire. Cliquer pour l'autoriser à modifier ${PORTEE_ECRITURE}.`
                             }
                           >
-                            {key.peut_ecrire ? 'écriture des parts' : 'lecture seule'}
+                            {key.peut_ecrire ? 'écriture autorisée' : 'lecture seule'}
                           </button>
+                          {/* L'echeance, visible sans ouvrir quoi que ce soit : une cle
+                              qui s'arrete sans prevenir casse un connecteur en
+                              silence, le jour ou l'on en a besoin. */}
+                          {key.expires_at && (
+                            <span
+                              className={`text-xs ${
+                                etatEcheance(key.expires_at) === 'lointaine'
+                                  ? 'text-gray-600 dark:text-gray-400'
+                                  : 'text-red-700 dark:text-red-400 font-medium'
+                              }`}
+                            >
+                              {etatEcheance(key.expires_at) === 'expiree' ? 'depuis le' : "jusqu'au"}{' '}
+                              {new Date(key.expires_at).toLocaleDateString('fr-FR')}
+                            </span>
+                          )}
+                          {key.a_moi && key.expires_at && etatEcheance(key.expires_at) !== 'lointaine' && (
+                            <button
+                              onClick={() => void prolonger(key)}
+                              disabled={prolongationEnCours === key.id}
+                              className="text-xs font-medium text-teal-700 dark:text-teal-400 underline hover:no-underline disabled:opacity-50"
+                              title="Repousser l'échéance à douze mois d'aujourd'hui"
+                            >
+                              Prolonger d&apos;un an
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
@@ -532,7 +603,7 @@ export function SettingsMCPConnector() {
                         <button
                           onClick={() => { setRevokeTarget(key); setShowRevokeModal(true); }}
                           aria-label={`Révoquer la clé ${key.name}`}
-                          className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           title="Révoquer cette clé"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -544,7 +615,7 @@ export function SettingsMCPConnector() {
                         <button
                           onClick={() => setCibleSuppression(key)}
                           aria-label={`Supprimer définitivement la clé ${key.name}`}
-                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           title="Supprimer définitivement cette clé révoquée"
                         >
                           <XCircle className="w-4 h-4" />
@@ -610,11 +681,11 @@ export function SettingsMCPConnector() {
                       }`}
                       title={
                         a.peutEcrire
-                          ? "Cet assistant peut enregistrer la répartition des parts d'un client."
+                          ? `Cet assistant peut modifier ${PORTEE_ECRITURE}.`
                           : 'Cet assistant peut lire, mais rien enregistrer.'
                       }
                     >
-                      {a.peutEcrire ? 'lecture + écriture des parts' : 'lecture seule'}
+                      {a.peutEcrire ? 'lecture + écriture' : 'lecture seule'}
                     </span>
                     <Button
                       variant="outline"
@@ -657,12 +728,12 @@ export function SettingsMCPConnector() {
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400">URL du serveur MCP</label>
               <div className="flex items-center gap-2 mt-1">
-                <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
+                <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-sm border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                   {mcpEndpoint}
                 </code>
                 <button
                   onClick={() => copyToClipboard(mcpEndpoint, 'endpoint')}
-                  className="shrink-0 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="shrink-0 p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="Copier"
                 >
                   {copiedField === 'endpoint' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
@@ -708,7 +779,7 @@ export function SettingsMCPConnector() {
                 </pre>
                 <button
                   onClick={() => copyToClipboard(commandeClaudeCode, 'cmd-code')}
-                  className="absolute top-2 right-2 p-1.5 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                  className="absolute top-2 right-2 p-1.5 rounded-sm bg-gray-700 hover:bg-gray-600 transition-colors"
                   title="Copier"
                 >
                   {copiedField === 'cmd-code' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
@@ -721,7 +792,7 @@ export function SettingsMCPConnector() {
                 </pre>
                 <button
                   onClick={() => copyToClipboard(mcpConfigDirect, 'config-direct')}
-                  className="absolute top-2 right-2 p-1.5 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                  className="absolute top-2 right-2 p-1.5 rounded-sm bg-gray-700 hover:bg-gray-600 transition-colors"
                   title="Copier"
                 >
                   {copiedField === 'config-direct' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
@@ -772,6 +843,26 @@ export function SettingsMCPConnector() {
             placeholder="Ex: Claude Desktop bureau"
             autoFocus
           />
+          {/* Pas de « jamais » : une cle statique sans echeance restait valable
+              des annees apres qu'on ait oublie ou elle etait collee. */}
+          <div>
+            <label htmlFor="duree-cle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Valable pendant
+            </label>
+            <select
+              id="duree-cle"
+              value={dureeNouvelleCle}
+              onChange={(e) => setDureeNouvelleCle(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+            >
+              <option value={3}>3 mois</option>
+              <option value={6}>6 mois</option>
+              <option value={12}>12 mois</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              À l&apos;échéance, la clé cesse de fonctionner. Elle se prolonge d&apos;un clic depuis cette page.
+            </p>
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => { setShowCreateModal(false); setNewKeyName(''); }}>
               Annuler
@@ -803,12 +894,12 @@ export function SettingsMCPConnector() {
               <div>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Client ID</label>
                 <div className="flex items-center gap-2 mt-1">
-                  <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
+                  <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-sm border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                     {newKeyData.client_id}
                   </code>
                   <button
                     onClick={() => copyToClipboard(newKeyData.client_id, 'new-id')}
-                    className="shrink-0 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="shrink-0 p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     {copiedField === 'new-id' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
                   </button>
@@ -818,18 +909,18 @@ export function SettingsMCPConnector() {
               <div>
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Client Secret</label>
                 <div className="flex items-center gap-2 mt-1">
-                  <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
+                  <code className="flex-1 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-sm border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 break-all">
                     {showSecret ? newKeyData.client_secret : '••••••••••••••••••••••••••••••••••••••••••••••••'}
                   </code>
                   <button
                     onClick={() => setShowSecret(!showSecret)}
-                    className="shrink-0 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="shrink-0 p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     {showSecret ? <EyeOff className="w-4 h-4 text-gray-500" /> : <Eye className="w-4 h-4 text-gray-500" />}
                   </button>
                   <button
                     onClick={() => copyToClipboard(newKeyData.client_secret, 'new-secret')}
-                    className="shrink-0 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="shrink-0 p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     {copiedField === 'new-secret' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
                   </button>
@@ -862,7 +953,7 @@ export function SettingsMCPConnector() {
                         },
                       },
                     }, null, 2), 'new-config')}
-                    className="absolute top-2 right-2 p-1.5 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                    className="absolute top-2 right-2 p-1.5 rounded-sm bg-gray-700 hover:bg-gray-600 transition-colors"
                   >
                     {copiedField === 'new-config' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-gray-300" />}
                   </button>

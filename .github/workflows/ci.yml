@@ -144,7 +144,16 @@ jobs:
       # Le plafond est pose juste au-dessus, comme les cliquets de `quality` :
       # il attrape aussi bien un motif `globIgnores` devenu obsolete apres un
       # renommage de morceau qu'un nouveau poids lourd ajoute sans y penser.
-      MAX_PRECACHE_KO: 2300
+      #
+      # 2 300 -> 2 400 le 2026-09-23, et c'est une decision, pas une derive :
+      # les 156 Ko sont le cout MESURE des trois montees de version demandees,
+      # morceau par morceau contre `main` — `vendor-react` +77 Ko (react-dom 19),
+      # `index.css` +41 Ko (format de sortie de Tailwind 4 ; il n'emet deja que
+      # les 169 variables utilisees sur 215), `index.js` +31 Ko (tailwind-merge,
+      # qui rend l'ordre des classes deterministe). Aucun morceau a la demande
+      # n'est rentre dans le precache : ce que le cliquet doit attraper n'a pas
+      # eu lieu. Plafond repose juste au-dessus, comme avant.
+      MAX_PRECACHE_KO: 2400
       # tsc : ZERO, atteint le 2026-08-02 depuis 136.
       #
       # Le plafond n'est plus un plafond mais une exigence : toute erreur
@@ -179,7 +188,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           # LES DEUX VERROUS. Le job `serveur` posait
           # `cache-dependency-path: server/package-lock.json` et les autres
@@ -256,6 +265,25 @@ jobs:
           fi
           echo "Aucun secret en dur."
 
+      # ⚠️ LES VULNERABILITES CONNUES DES DEPENDANCES N'ETAIENT CONTROLEES PAR
+      # RIEN. Dependabot propose des montees de version chaque lundi, mais une
+      # proposition qui reste ouverte ne protege personne — huit l'etaient au
+      # 2026-09-22. Rien, entre deux lundis, ne disait qu'une faille CONNUE
+      # etait entree dans l'arbre.
+      #
+      # Le seuil est `high` et non `moderate`, et c'est un choix : un garde-fou
+      # qui rougit chaque semaine sur une faille de developpement sans rapport
+      # avec la production finit contourne, puis retire. `high` et `critical`
+      # arretent la chaine ; le reste se voit dans le rapport, sans bloquer.
+      #
+      # `--omit=dev` cote front : vite, eslint et vitest ne tournent pas chez le
+      # cabinet. Cote serveur tout est de production ou presque, on garde tout.
+      - name: Vulnerabilites connues (front)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Vulnerabilites connues (serveur)
+        working-directory: server
+        run: npm audit --audit-level=high
+
       - name: Typecheck (zero erreur exigee)
         working-directory: server
         run: npx tsc --noEmit -p tsconfig.json
@@ -304,8 +332,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
-      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: false
@@ -417,7 +445,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
       - run: npm ci
       - name: Le schema doit s'appliquer et tenir ses invariants
@@ -501,7 +529,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
 
       - name: Dependances
@@ -664,7 +692,7 @@ jobs:
             exit 1
           fi
 
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
@@ -683,7 +711,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
-      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           push: true

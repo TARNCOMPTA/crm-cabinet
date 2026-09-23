@@ -61,7 +61,7 @@ export function KPIConfigModal({ isOpen, onClose, config, onSave }: KPIConfigMod
                 </span>
                 <button
                   onClick={() => toggleVisibility(item.id)}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   {item.visible ? (
                     <Eye className="w-4 h-4 text-teal-600 dark:text-teal-400" />

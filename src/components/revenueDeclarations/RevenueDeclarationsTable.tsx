@@ -186,7 +186,7 @@ export function RevenueDeclarationsTable({
                       type="checkbox"
                       checked={selectedIds ? selectedIds.size === declarations.length && declarations.length > 0 : false}
                       onChange={onToggleSelectAll}
-                      className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500"
+                      className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500"
                     />
                   </th>
                 )}
@@ -228,7 +228,7 @@ export function RevenueDeclarationsTable({
                           type="checkbox"
                           checked={selectedIds?.has(d.id) ?? false}
                           onChange={() => onToggleSelect(d.id)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500"
+                          className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500"
                         />
                       </td>
                     )}
@@ -259,7 +259,7 @@ export function RevenueDeclarationsTable({
                             <button
                               type="button"
                               onClick={() => toggleAttachmentsPopover(d.id)}
-                              className="inline-flex items-center gap-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer"
                               title="Voir les pieces jointes"
                             >
                               <Paperclip className="w-3 h-3" />
@@ -339,7 +339,7 @@ export function RevenueDeclarationsTable({
                         onChange={(e) =>
                           handleStatutChange(d.id, e.target.value as RevenueDeclarationStatus)
                         }
-                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-md border-0 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer ${colors.badge}`}
+                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-md border-0 focus:outline-hidden focus:ring-2 focus:ring-teal-500 cursor-pointer ${colors.badge}`}
                       >
                         {STATUS_ORDER.map((s) => (
                           <option key={s} value={s}>
@@ -366,19 +366,19 @@ export function RevenueDeclarationsTable({
                             value={commentDraft}
                             onChange={(e) => setCommentDraft(e.target.value)}
                             rows={2}
-                            className="w-full px-2 py-1 text-xs border border-teal-400 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            className="w-full px-2 py-1 text-xs border border-teal-400 rounded-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
                             autoFocus
                           />
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={() => handleCommentSave(d.id)}
-                              className="text-xs px-2 py-0.5 bg-teal-600 text-white rounded hover:bg-teal-700"
+                              className="text-xs px-2 py-0.5 bg-teal-600 text-white rounded-sm hover:bg-teal-700"
                             >
                               OK
                             </button>
                             <button
                               onClick={() => setEditingCommentId(null)}
-                              className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                              className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-sm"
                             >
                               X
                             </button>
@@ -410,7 +410,7 @@ export function RevenueDeclarationsTable({
                         <button
                           onClick={() => triggerAttach(d.id)}
                           disabled={uploadingId === d.id}
-                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors disabled:opacity-50 disabled:cursor-wait"
                           title="Joindre un PDF"
                         >
                           {uploadingId === d.id ? (
@@ -421,14 +421,14 @@ export function RevenueDeclarationsTable({
                         </button>
                         <button
                           onClick={() => onEdit(d)}
-                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors"
+                          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 transition-colors"
                           title="Modifier"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setDeleteTarget(d)}
-                          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-sm hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
                           title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />

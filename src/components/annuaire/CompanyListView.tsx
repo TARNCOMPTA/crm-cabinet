@@ -35,7 +35,7 @@ export const CompanyListView = memo(function CompanyListView({
           type="checkbox"
           checked={allSelected}
           onChange={onSelectAll}
-          className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+          className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
         />
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {companies.length} societe{companies.length > 1 ? 's' : ''}
@@ -64,11 +64,11 @@ export const CompanyListView = memo(function CompanyListView({
                     type="checkbox"
                     checked={selected}
                     onChange={() => onToggleSelect(company.id)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+                    className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
                   />
                 </div>
 
-                <div className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center ${
+                <div className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center ${
                   isClient
                     ? 'bg-teal-50 dark:bg-teal-950/50'
                     : 'bg-blue-50 dark:bg-blue-950/50'
@@ -81,26 +81,26 @@ export const CompanyListView = memo(function CompanyListView({
                     {company.name}
                   </span>
                   {isClient && (
-                    <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 uppercase tracking-wide">
+                    <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 uppercase tracking-wide">
                       Client
                     </span>
                   )}
                 </div>
 
                 {company.city && (
-                  <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 w-28 truncate">
-                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                  <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 shrink-0 w-28 truncate">
+                    <MapPin className="w-3 h-3 shrink-0" />
                     <span className="truncate">{company.city}</span>
                   </div>
                 )}
 
-                <div className="hidden lg:block flex-shrink-0 w-28" onClick={(e) => e.stopPropagation()}>
+                <div className="hidden lg:block shrink-0 w-28" onClick={(e) => e.stopPropagation()}>
                   {company.phone ? (
                     <a
                       href={`tel:${company.phone}`}
                       className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
                     >
-                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <Phone className="w-3 h-3 shrink-0" />
                       <span className="truncate">{company.phone}</span>
                     </a>
                   ) : (
@@ -108,13 +108,13 @@ export const CompanyListView = memo(function CompanyListView({
                   )}
                 </div>
 
-                <div className="hidden lg:block flex-shrink-0 w-44" onClick={(e) => e.stopPropagation()}>
+                <div className="hidden lg:block shrink-0 w-44" onClick={(e) => e.stopPropagation()}>
                   {company.email ? (
                     <a
                       href={`mailto:${company.email}`}
                       className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
                     >
-                      <Mail className="w-3 h-3 flex-shrink-0" />
+                      <Mail className="w-3 h-3 shrink-0" />
                       <span className="truncate">{company.email}</span>
                     </a>
                   ) : (
@@ -125,7 +125,7 @@ export const CompanyListView = memo(function CompanyListView({
                 {contactCount > 0 ? (
                   <button
                     onClick={(e) => toggleExpand(e, company.id)}
-                    className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 hover:text-teal-600 dark:hover:text-teal-400 transition-colors rounded-md px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 shrink-0 hover:text-teal-600 dark:hover:text-teal-400 transition-colors rounded-md px-1.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <User className="w-3 h-3" />
                     <span>{contactCount}</span>
@@ -136,10 +136,10 @@ export const CompanyListView = memo(function CompanyListView({
                     />
                   </button>
                 ) : (
-                  <div className="w-[52px] flex-shrink-0" />
+                  <div className="w-[52px] shrink-0" />
                 )}
 
-                <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                   {!isClient && (
                     <button
                       onClick={() => onEdit(company)}
@@ -163,7 +163,7 @@ export const CompanyListView = memo(function CompanyListView({
                           key={cc.id}
                           className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors"
                         >
-                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
+                          <div className="shrink-0 w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
                             <User className="w-3.5 h-3.5 text-teal-700 dark:text-teal-300" />
                           </div>
 
@@ -172,7 +172,7 @@ export const CompanyListView = memo(function CompanyListView({
                           </span>
 
                           {cc.is_primary_contact && (
-                            <Star className="w-3 h-3 text-amber-500 fill-amber-500 flex-shrink-0" />
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
                           )}
 
                           {cc.role_in_company && (
@@ -181,7 +181,7 @@ export const CompanyListView = memo(function CompanyListView({
                             </span>
                           )}
 
-                          <div className="ml-auto flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="ml-auto flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
                             {contact.phone && (
                               <a
                                 href={`tel:${contact.phone}`}

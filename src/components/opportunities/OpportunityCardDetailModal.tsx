@@ -369,7 +369,7 @@ export function OpportunityCardDetailModal({ card, columns, isOpen, onClose, onU
                         <button
                           type="button"
                           onClick={() => handleDownloadAttachment(att)}
-                          className="p-1.5 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 rounded"
+                          className="p-1.5 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 rounded-sm"
                           title="Telecharger"
                         >
                           <Download className="w-4 h-4" />
@@ -377,7 +377,7 @@ export function OpportunityCardDetailModal({ card, columns, isOpen, onClose, onU
                         <button
                           type="button"
                           onClick={() => setDeleteAttachmentId(att.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
+                          className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-sm"
                           title="Supprimer"
                         >
                           <X className="w-4 h-4" />

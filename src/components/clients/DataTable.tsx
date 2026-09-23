@@ -87,7 +87,7 @@ export function DataTable({ rows, editMode = false }: DataTableProps) {
                         value={row.editValue || ''}
                         onChange={(e) => row.onChange?.(e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       />
                     ) : (
                       <Input

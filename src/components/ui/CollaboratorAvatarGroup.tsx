@@ -59,7 +59,7 @@ export const CollaboratorAvatarGroup = memo(function CollaboratorAvatarGroup({
           >
             +{remainingCount}
           </div>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-sm whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
             {collaborators.slice(maxDisplay).map(c => c.full_name).join(', ')}
           </div>
         </div>

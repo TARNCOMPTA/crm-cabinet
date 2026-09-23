@@ -72,7 +72,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
 
       <div className="flex flex-wrap items-center gap-1.5 mt-2">
         {card.montant_estime != null && (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-sm">
             <Euro className="w-3 h-3" />
             {formatEuros(card.montant_estime)}
           </span>
@@ -103,7 +103,7 @@ export const OpportunityCard = memo(function OpportunityCard({ card, checklistPr
         )}
 
         {attachmentCount != null && attachmentCount > 0 && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded-sm">
             <Paperclip className="w-3 h-3" />
             {attachmentCount}
           </span>

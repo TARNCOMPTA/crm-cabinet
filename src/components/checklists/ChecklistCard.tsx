@@ -143,7 +143,7 @@ export function ChecklistCard({
                     if (e.key === 'Escape') setEditing(false);
                   }}
                   onBlur={saveTitle}
-                  className="flex-1 text-sm font-semibold bg-transparent border-b-2 border-teal-500 outline-none text-gray-900 dark:text-white"
+                  className="flex-1 text-sm font-semibold bg-transparent border-b-2 border-teal-500 outline-hidden text-gray-900 dark:text-white"
                   autoFocus
                 />
                 <button onClick={saveTitle} className="text-teal-600 hover:text-teal-700">
@@ -323,7 +323,7 @@ export function ChecklistCard({
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
               placeholder="Ajouter un element..."
-              className="flex-1 text-sm bg-transparent border-none outline-none text-gray-700 dark:text-gray-300 placeholder:text-gray-400"
+              className="flex-1 text-sm bg-transparent border-none outline-hidden text-gray-700 dark:text-gray-300 placeholder:text-gray-400"
             />
             <button
               type="submit"

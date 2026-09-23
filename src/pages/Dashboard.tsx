@@ -132,7 +132,7 @@ export function Dashboard() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.07] dark:opacity-[0.05]"
           style={{ backgroundImage: "url('/background.webp')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/80 to-gray-50 dark:via-gray-950/80 dark:to-gray-950" />
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-gray-50/80 to-gray-50 dark:via-gray-950/80 dark:to-gray-950" />
       </div>
       {/* Avant tout le reste : si les courriels ne partent plus, c'est la
           premiere chose a savoir en ouvrant l'ecran. */}

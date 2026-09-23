@@ -275,7 +275,7 @@ export function PartsImportModal({
 
           {erreurFichier && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{erreurFichier}</span>
             </div>
           )}
@@ -297,7 +297,7 @@ export function PartsImportModal({
               peut encore reprendre le fichier. */}
           {partsTotales !== null && resultat.sommeParts !== partsTotales && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
                 La somme des {motPluriel} du fichier ne correspond pas au total declare sur la
                 fiche. L’import restera possible, mais la repartition sera signalee comme
@@ -308,7 +308,7 @@ export function PartsImportModal({
 
           {lignesExistantes > 0 && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
                 Ce client porte deja <strong>{lignesExistantes}</strong> ligne(s). L’import les
                 <strong> remplace</strong> : une repartition est un tout, on ne l’additionne pas.
@@ -327,7 +327,7 @@ export function PartsImportModal({
               id="source-repartition"
               value={source}
               onChange={(e) => setSource(e.target.value as 'manual' | 'statuts')}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm dark:bg-white/[0.04]"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm dark:bg-white/4"
             >
               <option value="manual">Saisis ou verifies par le cabinet</option>
               <option value="statuts">Deduits des statuts deposes (a confirmer)</option>

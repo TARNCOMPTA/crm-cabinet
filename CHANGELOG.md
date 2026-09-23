@@ -7,6 +7,132 @@ signale un changement qui demande une action de votre part.
 
 ## À venir
 
+### Mises à jour de fond : Node 26, TypeScript 7, Tailwind 4, React 19
+
+Les dix propositions de mise à jour en attente sont intégrées, dont les trois
+qui ne pouvaient pas l'être telles quelles (Tailwind 4, React 19, react-leaflet 5).
+**Rien ne doit changer à l'écran**, à trois retouches près, voulues :
+
+- l'état vide des Bilans et des Opportunités respire comme il avait été dessiné ;
+- une bande vide de 24 px disparaît en tête du tableau de bord ;
+- « Déconnexion » s'aligne à gauche, comme les autres entrées.
+
+Ces trois écarts venaient d'un conflit de classes que l'ancienne version résolvait
+au rebours de ce qui était écrit. L'ordre est désormais déterministe : la classe
+de l'écran l'emporte toujours sur celle du composant.
+
+**Corrigé au passage :** la progression des bilans du tableau de bord restait vide
+depuis le 5 septembre — le serveur refusait la requête qui la calcule.
+
+L'application pèse environ 150 Ko de plus au premier chargement après une mise
+à jour (React 19 et Tailwind 4 sont plus lourds) ; les chargements suivants
+viennent du cache.
+
+### Sécurité : les derniers points de l'audit, fermés
+
+- **Les clés d'accès MCP expirent.** Une clé n'expirait jamais : collée un
+  jour dans un outil, elle restait valable indéfiniment. Toute clé a désormais
+  une échéance — 3, 6 ou 12 mois, sans option « jamais » — affichée à l'écran
+  du connecteur, et se prolonge d'un clic par la personne qui l'a créée. **Les
+  clés déjà émises valent un an à compter de cette mise à jour** : aucun
+  connecteur ne s'arrête aujourd'hui.
+- **Les modifications de fiche faites à l'écran sont journalisées**, avec
+  l'avant et l'après de chaque champ et la personne qui les a faites — comme
+  l'étaient déjà celles du connecteur. Qui a changé le SIRET d'un client, et
+  quand, a désormais une réponse quel que soit le chemin emprunté.
+- **Supprimer un profil ne peut plus effacer son journal.** La base supprimait
+  en cascade toutes les traces d'un collaborateur supprimé. Un profil qui a un
+  historique se désactive, ce que l'écran des utilisateurs faisait déjà.
+- **L'écran du connecteur dit tout ce qu'un accès peut modifier.** Il annonçait
+  « seule la répartition des parts », alors que le connecteur écrit aussi la
+  fiche client et l'adresse de facturation électronique. Un écran de sécurité
+  qui sous-estime un droit fait accorder ce droit à la légère.
+
+### Emails : renvoyer ce qui est resté bloqué
+
+**Paramètres ▸ Emails** affiche désormais la file d'envoi — en attente, envoyés,
+en erreur — et un bouton **« Renvoyer les N courriels en erreur »**, pour ceux
+des sept derniers jours. C'est le recours qui manquait pendant la panne de
+septembre : une fois le SMTP réparé, rien ne permettait de relancer ce qui
+n'était pas parti. Si l'envoi échoue encore, l'écran le dit.
+
+### Campagnes : les variables de la fiche client
+
+Demande du cabinet. Une campagne ne connaissait que cinq variables ; elle en
+connaît désormais **vingt-huit**, rangées en trois groupes — identité (raison
+sociale, nom commercial, SIREN, SIRET, n° de TVA, capital…), coordonnées
+(civilité, prénom, nom, dirigeant, adresse complète ou détaillée…) et dossier
+(n° de dossier, régime, date et mois de clôture, client depuis le, adresse de
+facturation électronique).
+
+- **Les boutons insèrent à l'endroit du curseur**, dans le sujet comme dans le
+  corps. Avant, le marqueur s'ajoutait en fin de corps, où qu'on écrive — et
+  jamais dans le sujet, qui accepte pourtant les variables.
+- **Chaque valeur est écrite à la française** : dates en JJ/MM/AAAA, mois en
+  lettres (« votre exercice clos en décembre »), capital en euros.
+- **L'aperçu montre aussi l'objet**, tel qu'il arrivera dans la boîte de réception.
+- La liste est tenue **par le serveur** et lue par l'écran, qui en gardait sa
+  propre copie : une variable ajoutée d'un côté aurait manqué de l'autre.
+- Ce qui n'a pas sa place dans une lettre au client n'est pas proposé : statut
+  interne, indicateur LMNP, date de sortie du cabinet, résumé IA.
+
+**Trois défauts corrigés au passage, tous trois en production :**
+
+- `{{date_cloture}}` **faisait échouer la campagne** — l'aperçu comme l'envoi.
+  La base rend cette colonne en objet date, que l'échappement ne savait pas
+  traiter. Les dates sont désormais lues en texte.
+- `{{regime_fiscal}}` imprimait le code technique (`IS_REEL`) au lieu du libellé
+  que le cabinet a écrit dans ses réglages.
+- **Le sujet était échappé comme du HTML** : « L'Atelier Dupont & Fils » arrivait
+  écrit `L&#39;Atelier Dupont &amp; Fils` dans la boîte du client. Une
+  apostrophe suffisait. Le sujet reste protégé contre l'injection d'en-tête.
+
+Les cinq noms historiques (`nom_entreprise`, `dirigeant`, `numero_dossier`,
+`date_cloture`, `regime_fiscal`) sont conservés à l'identique : les modèles
+déjà écrits continuent de fonctionner, et rendent désormais juste.
+
+### Audit de sécurité : quatre portes fermées sur le proxy de données
+
+Audit du 2026-09-22. Le CRM n'a **aucune policy RLS** : le rôle `authenticated`
+possède tous les droits sur toutes les tables, et la règle de
+`server/src/rest-droits.ts` est seule à décider. Elle protégeait les tables de
+réglages ; elle laissait ouvertes quatre tables qui n'en sont pas.
+
+Chaque point ci-dessous a été **vérifié sur le harnais depuis une vraie session
+de collaborateur** `role = 'user'`, enrôlée par le navigateur — pas déduit du
+code. Les quatre répondaient 201 ou 204.
+
+- **`email_queue` était ouverte en écriture à tout collaborateur connecté.**
+  C'est la plus grave. Cette table porte `to_email`, `subject` et `html_body`,
+  et l'ordonnanceur la vide toutes les deux minutes par le SMTP du cabinet : un
+  `POST` suffisait à faire partir **n'importe quel courriel vers n'importe
+  quelle adresse**, y compris hors du cabinet, signé de son domaine. C'est
+  exactement le scénario que le code nomme ailleurs — « de quoi faire changer
+  un RIB à un client ». Le mot de passe SMTP était protégé ; la file qu'il
+  alimente ne l'était pas.
+- **`audit_logs` acceptait la suppression ET la réécriture.** Le journal qui dit
+  qui a archivé, supprimé ou modifié quoi était effaçable par les personnes
+  qu'il enregistre. Il est désormais en **ajout seul**, pour tout le monde,
+  administrateurs compris : un journal que son lecteur le plus puissant peut
+  corriger ne prouve rien, à commencer par lui.
+- **Le lien d'une notification pouvait sortir du site.** Poser une notification
+  fait partir un courriel, dont le lien devient le bouton « Voir le detail ».
+  Le générateur refusait déjà `javascript:` et `data:`, mais acceptait
+  `https://` : un collaborateur pouvait faire envoyer à un collègue, depuis le
+  SMTP du cabinet, un courriel dont le bouton mène où il veut. Le lien doit
+  maintenant être un chemin interne — ce que le produit fait déjà partout.
+  **La notification elle-même reste ouverte** : la fermer casserait
+  l'avertissement d'affectation de tâche.
+- **`taches_planifiees` était modifiable.** Écrire `statut = 'succes'` sur une
+  tâche qui n'a pas tourné fait taire le seul endroit qui signale une panne
+  d'ordonnanceur — celle de septembre a duré vingt-quatre jours sans que rien
+  ne le dise.
+
+Ajouté par la même occasion : **la CI refuse désormais une vulnérabilité connue
+de niveau `high` ou `critical`** dans les dépendances, front et serveur. Rien ne
+le contrôlait entre deux propositions Dependabot. Le seuil n'est pas `moderate`
+à dessein : un garde-fou qui rougit chaque semaine finit contourné, puis retiré.
+
 ### Le PDF de synthèse client, refait
 
 Demande du cabinet. Ce document sort du CRM pour aller chez un client ou dans un

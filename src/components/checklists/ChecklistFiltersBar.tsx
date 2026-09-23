@@ -67,7 +67,7 @@ export function ChecklistFiltersBar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Rechercher..."
-          className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-shadow"
+          className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden transition-shadow"
         />
       </div>
 
@@ -78,7 +78,7 @@ export function ChecklistFiltersBar({
           <select
             value={sortMode}
             onChange={(e) => onSortModeChange(e.target.value as SortMode)}
-            className="text-sm bg-transparent border-none outline-none text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white pr-4"
+            className="text-sm bg-transparent border-none outline-hidden text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white pr-4"
           >
             {sortOptions.map(({ key, label }) => (
               <option key={key} value={key}>

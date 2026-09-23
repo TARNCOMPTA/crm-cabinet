@@ -82,7 +82,7 @@ export function SoftwareManagementModal({
                           type="checkbox"
                           checked={isAssigned}
                           onChange={() => {}}
-                          className="w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
+                          className="w-5 h-5 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer transition-colors"
                         />
                         <div className="text-left">
                           <div className="font-medium text-gray-900 text-sm">{s.name}</div>

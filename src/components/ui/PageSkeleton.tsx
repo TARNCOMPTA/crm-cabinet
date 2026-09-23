@@ -1,3 +1,4 @@
+import { cx } from '../../lib/cx';
 interface PageSkeletonProps {
   variant?: 'dashboard' | 'table' | 'kanban' | 'default';
 }
@@ -5,7 +6,7 @@ interface PageSkeletonProps {
 function SkeletonBlock({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`}
+      className={cx(`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-sm ${className}`)}
     />
   );
 }

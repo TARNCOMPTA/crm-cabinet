@@ -555,19 +555,19 @@ function CelluleSociete({ societe }: { societe: SocieteSuivie }) {
       </div>
       {societe.rapprochement === 'ambigu' && (
         <AlertTriangle
-          className="w-3.5 h-3.5 text-amber-500 flex-shrink-0"
+          className="w-3.5 h-3.5 text-amber-500 shrink-0"
           aria-label="Plusieurs fiches clients portent ce SIREN"
         />
       )}
       {societe.rapprochement === 'aucun' && (
         <UserX
-          className="w-3.5 h-3.5 text-orange-500 flex-shrink-0"
+          className="w-3.5 h-3.5 text-orange-500 shrink-0"
           aria-label="Aucune fiche client ne correspond"
         />
       )}
       {societe.rapprochement === 'dossier' && (
         <HelpCircle
-          className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0"
+          className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0"
           aria-label="Rapproché par numéro de dossier, pas par SIREN"
         />
       )}
@@ -635,7 +635,7 @@ function JourEcheance({
     return (
       <select
         autoFocus
-        className="text-[10px] font-mono bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0 text-gray-900 dark:text-gray-100"
+        className="text-[10px] font-mono bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-sm px-1 py-0 text-gray-900 dark:text-gray-100"
         defaultValue={origine === 'surcharge' && jour !== null ? String(jour) : ''}
         onBlur={() => setEdite(false)}
         onChange={(e) => {

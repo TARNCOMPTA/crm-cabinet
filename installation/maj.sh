@@ -88,6 +88,18 @@ DOMAIN=$(lire_env DOMAIN)
 
 SAUVEGARDES="$DIR/data/sauvegardes"
 mkdir -p "$SAUVEGARDES"
+# ⚠️ UNE SAUVEGARDE EST UNE COPIE COMPLETE DE LA BASE, ET ELLE ETAIT LISIBLE PAR
+# TOUS. Sans `umask`, `gzip >` l'ecrivait en 644 dans un dossier en 755 : tout
+# compte du serveur pouvait la lire — y compris `crm-runner`, l'utilisateur non
+# privilegie du runner de deploiement. Elle porte pourtant toutes les fiches
+# clients, les comptes-rendus, et le mot de passe SMTP en clair : ce que
+# `install.sh` protege dans le `.env` par un `chmod 600`, la sauvegarde le
+# laissait ouvert. Releve a l'audit du 2026-09-11, ferme le 2026-09-23.
+#
+# Seul root lit ce dossier (ce script tourne sous `sudo`) : 700 et 600 suffisent.
+# Les sauvegardes DEJA ecrites sont resserrees au passage.
+chmod 700 "$SAUVEGARDES"
+chmod 600 "$SAUVEGARDES"/base_*.sql.gz 2>/dev/null || true
 HORODATAGE=$(date +%Y-%m-%d_%H-%M-%S)
 FICHIER="$SAUVEGARDES/base_$HORODATAGE.sql.gz"
 
@@ -140,7 +152,9 @@ if [ "$REPRISE" = 1 ]; then
 else
 # pg_dump depuis le conteneur applicatif : postgresql-client y est installé, et
 # la base n'est joignable que depuis le réseau interne de compose.
-docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > "$FICHIER"
+# `umask 077` dans un sous-shell : le fichier NAIT en 600, sans fenetre ou il
+# serait lisible entre sa creation et un `chmod` pose apres coup.
+( umask 077; docker compose exec -T app sh -c 'pg_dump "$DATABASE_URL"' | gzip > "$FICHIER" )
 
 TAILLE=$(du -h "$FICHIER" | cut -f1)
 # Une sauvegarde vide ou minuscule signale un pg_dump qui a échoué en silence.

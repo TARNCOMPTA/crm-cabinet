@@ -95,7 +95,7 @@ export function SettingsNavigation() {
         </div>
       </div>
 
-      <div className="border border-gray-200 dark:border-white/[0.08] rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-white/[0.06]">
+      <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-white/6">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isHidden = hiddenItems.includes(item.to);
@@ -106,7 +106,7 @@ export function SettingsNavigation() {
               key={item.to}
               className={`flex items-center justify-between px-4 py-3 transition-colors ${
                 isHidden
-                  ? 'bg-gray-50/50 dark:bg-white/[0.02]'
+                  ? 'bg-gray-50/50 dark:bg-white/2'
                   : 'bg-white dark:bg-transparent'
               }`}
             >
@@ -128,7 +128,7 @@ export function SettingsNavigation() {
                   {item.label}
                 </span>
                 {isLocked && (
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-600 dark:text-slate-500 bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-600 dark:text-slate-500 bg-gray-100 dark:bg-white/6 px-1.5 py-0.5 rounded-sm">
                     requis
                   </span>
                 )}
@@ -137,7 +137,7 @@ export function SettingsNavigation() {
               {!isLocked && (
                 <button
                   onClick={() => toggleItem(item.to)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:focus:ring-cyan-400/30 ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-hidden focus:ring-2 focus:ring-teal-500/30 dark:focus:ring-cyan-400/30 ${
                     isHidden
                       ? 'bg-gray-200 dark:bg-white/10'
                       : 'bg-teal-600 dark:bg-cyan-500'

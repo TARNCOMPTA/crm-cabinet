@@ -198,14 +198,14 @@ function KanbanCard({
         <div className="flex items-center gap-1 shrink-0">
           {attachmentsCount > 0 && (
             <span
-              className="inline-flex items-center gap-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 px-1.5 py-0.5 rounded"
+              className="inline-flex items-center gap-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 px-1.5 py-0.5 rounded-sm"
               title={`${attachmentsCount} piece(s) jointe(s)`}
             >
               <Paperclip className="w-3 h-3" />
               {attachmentsCount}
             </span>
           )}
-          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-sm">
             {declaration.annee}
           </span>
         </div>

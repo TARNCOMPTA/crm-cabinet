@@ -271,6 +271,115 @@ suite('schema appliqué à PostgreSQL', () => {
     expect(fautives, `fonctions referencant un schema absent : ${fautives.join(', ')}`).toEqual([]);
   });
 
+  it('porte le contrat de l increment 023 : l ecran laisse une trace, imputee', async () => {
+    /*
+      Les quatre proprietes, chacune prouvee par un cas qui passerait si elle
+      manquait :
+
+      1. Avec les revendications que PostgREST pose (`request.jwt.claims`), une
+         modification de fiche laisse l'avant et l'apres, imputes au `sub`.
+      2. SANS revendications — le connecteur, les synchronisations — RIEN : le
+         connecteur trace deja lui-meme, et une seconde ligne sans auteur ne
+         servirait qu'a brouiller.
+      3. Un enregistrement qui ne change rien ne laisse rien.
+      4. Supprimer un profil qui a des traces est REFUSE : la cascade effacait
+         son journal.
+    */
+    const PROFIL = '00000000-0000-4000-8000-00000000a023';
+    await client.query(
+      `INSERT INTO profiles (id, email, prenom, nom, role) VALUES ($1, 'zz-023@zz.test', 'Zz', '023', 'user')`,
+      [PROFIL]
+    );
+    const { rows: c } = await client.query(
+      `INSERT INTO clients (nom_entreprise, ville) VALUES ('ZZ JOURNAL 023', 'Albi') RETURNING id`
+    );
+    const idClient = c[0].id;
+    const traces = async () =>
+      (await client.query(
+        `SELECT user_id, details FROM audit_logs WHERE entity_id = $1 AND action = 'modification_fiche'`,
+        [idClient]
+      )).rows;
+
+    // 1. Avec revendications
+    await client.query('BEGIN');
+    await client.query(`SELECT set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: PROFIL, role: 'authenticated' })]);
+    await client.query(`UPDATE clients SET ville = 'Castres' WHERE id = $1`, [idClient]);
+    await client.query('COMMIT');
+    const t = await traces();
+    expect(t, 'une modification a l ecran doit laisser une trace').toHaveLength(1);
+    expect(t[0].user_id).toBe(PROFIL);
+    expect(t[0].details.via).toBe('ecran');
+    const ville = t[0].details.champs.find((x: { champ: string }) => x.champ === 'ville');
+    expect(ville).toMatchObject({ ancienne: 'Albi', nouvelle: 'Castres' });
+    expect(t[0].details.champs.some((x: { champ: string }) => x.champ === 'updated_at')).toBe(false);
+
+    // 2. Sans revendications : rien
+    await client.query(`UPDATE clients SET ville = 'Gaillac' WHERE id = $1`, [idClient]);
+    expect(await traces(), 'une ecriture du serveur ne doit pas etre tracee ici').toHaveLength(1);
+
+    // 3. Rien ne change : rien
+    await client.query('BEGIN');
+    await client.query(`SELECT set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: PROFIL })]);
+    await client.query(`UPDATE clients SET ville = ville WHERE id = $1`, [idClient]);
+    await client.query('COMMIT');
+    expect(await traces(), 'un enregistrement sans changement ne laisse rien').toHaveLength(1);
+
+    // Un GUC mal forme ne doit jamais faire echouer l'ecriture elle-meme.
+    await client.query('BEGIN');
+    await client.query(`SELECT set_config('request.jwt.claims', 'pas du json', true)`);
+    await client.query(`UPDATE clients SET ville = 'Lavaur' WHERE id = $1`, [idClient]);
+    await client.query('COMMIT');
+
+    // 4. Le profil a des traces : il ne se supprime plus
+    await expect(client.query('DELETE FROM profiles WHERE id = $1', [PROFIL])).rejects.toMatchObject({
+      code: '23503',
+    });
+
+    await client.query('DELETE FROM audit_logs WHERE user_id = $1', [PROFIL]);
+    await client.query('DELETE FROM clients WHERE id = $1', [idClient]);
+    await client.query('DELETE FROM profiles WHERE id = $1', [PROFIL]);
+  });
+
+  it('porte le contrat de l increment 022 : toute cle MCP a une echeance', async () => {
+    /*
+      ⚠️ UNE CLE STATIQUE N'EXPIRAIT JAMAIS. Ce cas protege les deux proprietes
+      qui empechent le defaut de revenir par la base :
+
+      1. NOT NULL. Une colonne nullable ou NULL voudrait dire « jamais » rouvrirait
+         la cle eternelle pour tout chemin qui oublierait de la renseigner. On le
+         prouve NEGATIVEMENT : inserer NULL doit etre refuse.
+      2. Le defaut. Une insertion qui ne mentionne pas l'echeance — celle du code
+         d'avant cette version, ou d'un script — recoit douze mois, pas une erreur
+         et pas l'eternite.
+    */
+    const { rows: col } = await client.query(
+      `SELECT is_nullable, column_default
+         FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'mcp_api_keys'
+          AND column_name = 'expires_at'`
+    );
+    expect(col, 'colonne expires_at absente').toHaveLength(1);
+    expect(col[0].is_nullable).toBe('NO');
+    expect(col[0].column_default).toMatch(/now\(\)/);
+
+    const { rows } = await client.query(
+      `INSERT INTO mcp_api_keys (name, client_id, client_secret_hash)
+       VALUES ('ZZ echeance', 'zz_echeance_022', 'x')
+       RETURNING expires_at > now() + interval '11 months'
+             AND expires_at < now() + interval '13 months' AS douze_mois`
+    );
+    expect(rows[0].douze_mois, 'une cle sans echeance explicite doit valoir douze mois').toBe(true);
+
+    await expect(
+      client.query(
+        `INSERT INTO mcp_api_keys (name, client_id, client_secret_hash, expires_at)
+         VALUES ('ZZ jamais', 'zz_jamais_022', 'x', NULL)`
+      )
+    ).rejects.toMatchObject({ code: '23502' });
+
+    await client.query(`DELETE FROM mcp_api_keys WHERE client_id LIKE 'zz_%_022'`);
+  });
+
   it('porte le contrat de l increment 020 : les pieces jointes, sans toucher a l existant', async () => {
     /*
       Ce que ce cas protege n'est pas la presence des deux colonnes — ce serait

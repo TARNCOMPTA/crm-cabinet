@@ -214,7 +214,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             placeholder="Titre de la checklist..."
-            className="flex-1 text-sm px-2.5 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+            className="flex-1 text-sm px-2.5 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
             autoFocus
           />
           <button
@@ -264,7 +264,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
                 <button
                   type="button"
                   onClick={() => setDeleteConfirmId(checklist.id)}
-                  className="p-1 text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 rounded transition-colors"
+                  className="p-1 text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 rounded-sm transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -326,7 +326,7 @@ export function OpportunityChecklistSection({ cardId, userId }: Props) {
                 }
                 onKeyDown={(e) => e.key === 'Enter' && handleAddItem(checklist.id)}
                 placeholder="Ajouter un element..."
-                className="w-full text-xs px-2 py-1.5 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-teal-400 bg-transparent text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-colors"
+                className="w-full text-xs px-2 py-1.5 rounded-sm border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-teal-400 bg-transparent text-gray-600 dark:text-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 transition-colors"
               />
             </div>
           </div>

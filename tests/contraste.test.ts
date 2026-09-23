@@ -62,7 +62,7 @@ export function contraste(a: [number, number, number], b: [number, number, numbe
  * ⚠️ CES VALEURS SONT CELLES DU CABINET, PAS CELLES DE TAILWIND, et cette
  * distinction a failli me faire ecrire des chiffres faux.
  *
- * `tailwind.config.js` redefinit `gray`, `slate`, `zinc`, `neutral` et `stone`
+ * `src/styles/theme.css` (ex-`tailwind.config.js`) redefinit `gray`, `slate`, `zinc`, `neutral` et `stone`
  * sur une rampe de NEUTRES CHAUDS ancree sur `src/styles/tokens.css` : les
  * classes ecrites dans les composants ne changent pas, c'est ce qu'elles
  * designent qui change. Calculer un contraste sur le `gray-500` d'origine

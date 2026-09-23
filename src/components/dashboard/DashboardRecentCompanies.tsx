@@ -20,7 +20,7 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-52 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-52 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-3 animate-pulse">
@@ -28,10 +28,10 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
               <div key={i} className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4" />
+                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2" />
                 </div>
-                <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded-sm" />
               </div>
             ))}
           </div>
@@ -70,7 +70,7 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
                 onClick={() => navigate(`/clients/${company.id}`)}
                 className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
               >
-                <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 flex-shrink-0">
+                <div className="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 shrink-0">
                   <Building className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -79,14 +79,14 @@ export function DashboardRecentCompanies({ companies, loading }: DashboardRecent
                   </p>
                   {company.city && (
                     <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <MapPin className="w-3 h-3 text-gray-400 dark:text-gray-500 shrink-0" />
                       <span className="text-xs text-gray-600 dark:text-gray-400 truncate capitalize">
                         {company.city.toLowerCase()}
                       </span>
                     </div>
                   )}
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
+                <span className="text-[11px] text-gray-600 dark:text-gray-400 shrink-0 whitespace-nowrap">
                   {formatDateFR(company.dateCreation)}
                 </span>
               </button>

@@ -51,7 +51,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-44 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-44 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-3 animate-pulse">
@@ -59,8 +59,8 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
               <div key={i} className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4" />
+                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2" />
                 </div>
               </div>
             ))}
@@ -111,7 +111,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
                   onClick={() => item.clientId && navigate(`/clients/${item.clientId}`)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
                 >
-                  <div className="flex flex-col items-center w-10 flex-shrink-0">
+                  <div className="flex flex-col items-center w-10 shrink-0">
                     <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -119,7 +119,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {item.clientName}
                       </span>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${typeInfo.className}`}>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-sm ${typeInfo.className}`}>
                         {typeInfo.text}
                       </span>
                     </div>
@@ -127,7 +127,7 @@ export function DashboardDeadlines({ deadlines, loading }: DashboardDeadlinesPro
                       {item.label}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right shrink-0">
                     <span className={`text-xs font-medium ${isPast ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>
                       {formatDateFR(item.date)}
                     </span>

@@ -332,7 +332,7 @@ export function AssignmentsManagementModal({
                           setAssignments(newSet);
                         }
                       }}
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="w-5 h-5 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">
@@ -358,7 +358,7 @@ export function AssignmentsManagementModal({
                         type="checkbox"
                         checked={assignments.has(client.id)}
                         onChange={() => toggleAssignment(client.id)}
-                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        className="w-5 h-5 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
                     <td className="py-3 px-4 font-medium text-gray-900 cursor-pointer" onClick={() => toggleAssignment(client.id)}>

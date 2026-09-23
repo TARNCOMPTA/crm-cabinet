@@ -177,7 +177,7 @@ export function TEOMCalculator() {
                   </tr>
                   <tr className="text-sm">
                     <td className="py-3 text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                       Prorata frais de gestion (TEOM x Frais / Taxe totale)
                     </td>
                     <td className="py-3 text-right font-medium text-gray-900 dark:text-white">
@@ -186,7 +186,7 @@ export function TEOMCalculator() {
                   </tr>
                   <tr className="text-sm font-semibold bg-amber-50/50 dark:bg-amber-950/20">
                     <td className="py-3 px-2 rounded-l-lg text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                      <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                       Total a retrancher (TEOM + prorata)
                     </td>
                     <td className="py-3 px-2 rounded-r-lg text-right text-amber-700 dark:text-amber-400">
@@ -207,7 +207,7 @@ export function TEOMCalculator() {
           </Card>
 
           <div className="flex items-start gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <p className="font-medium">Formule appliquee :</p>
               <p>Taxe fonciere deductible = Taxe fonciere totale - TEOM - (TEOM x Frais de gestion / Taxe fonciere totale)</p>

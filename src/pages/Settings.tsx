@@ -226,8 +226,10 @@ const GROUPS: SettingsGroup[] = [
         description: 'Connecter un LLM à vos données',
         icon: Plug,
         component: SettingsMCPConnector,
-        // Ouvert a tout collaborateur : le connecteur n'expose que des outils en
-        // LECTURE SEULE, sur des donnees que chacun consulte deja a l'ecran.
+        // Ouvert a tout collaborateur : le connecteur est en LECTURE par defaut,
+        // sur des donnees que chacun consulte deja a l'ecran ; l'ecriture
+        // (voir src/lib/porteeConnecteur.ts) s'accorde acces par acces, et
+        // jamais sur plus que ce que l'ecran laisse modifier.
         // Chacun n'y gere que SES cles et SES autorisations — c'est le serveur
         // qui le garantit (routes/mcp-cles.ts, routes/mcp-oauth.ts), pas cette
         // ligne : un menu masque n'a jamais ete un controle d'acces.
@@ -319,7 +321,7 @@ export function Settings() {
           id="settings-mobile-select"
           value={activeKey}
           onChange={(e) => selectItem(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
         >
           {visibleGroups.map((group) => (
             <optgroup key={group.key} label={group.title}>
@@ -334,7 +336,7 @@ export function Settings() {
       </div>
 
       <div className="flex gap-6">
-        <aside className="hidden lg:block w-72 flex-shrink-0">
+        <aside className="hidden lg:block w-72 shrink-0">
           <div className="sticky top-20 space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -343,7 +345,7 @@ export function Settings() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher un parametre..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -375,7 +377,7 @@ export function Settings() {
                             aria-current={isActive ? 'page' : undefined}
                           >
                             <Icon
-                              className={`w-4 h-4 flex-shrink-0 ${
+                              className={`w-4 h-4 shrink-0 ${
                                 isActive
                                   ? 'text-teal-600 dark:text-teal-400'
                                   : 'text-gray-400 dark:text-gray-500'
@@ -401,7 +403,7 @@ export function Settings() {
             <div className="mb-5 pb-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-center gap-3">
                 {ActiveIcon && (
-                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex-shrink-0">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 shrink-0">
                     <ActiveIcon className="w-5 h-5" />
                   </div>
                 )}

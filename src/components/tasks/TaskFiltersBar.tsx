@@ -44,7 +44,7 @@ export function TaskFiltersBar({
       {!showArchived && (
         <div className="flex gap-4 flex-wrap">
           {statusCounts.map((status) => (
-            <Card key={status.id} className="flex-1 min-w-[200px] dark:!bg-ink-850/80">
+            <Card key={status.id} className="flex-1 min-w-[200px] dark:bg-ink-850/80!">
               <CardContent className="py-4 text-center">
                 <div className="text-3xl font-bold text-teal-600 dark:text-cyan-300">{status.count}</div>
                 <div className="text-sm text-gray-600 dark:text-slate-300 mt-1">{status.title}</div>

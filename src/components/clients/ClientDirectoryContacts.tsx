@@ -243,7 +243,7 @@ export function ClientDirectoryContacts({
                     type="checkbox"
                     checked={linkAsPrimary}
                     onChange={(e) => setLinkAsPrimary(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500"
                   />
                   <Star className="w-3.5 h-3.5 text-amber-500" />
                   Definir comme contact principal
@@ -283,7 +283,7 @@ export function ClientDirectoryContacts({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         {contact.isPrimary && (
-                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
+                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                         )}
                         <span className="text-sm font-medium text-gray-900">
                           {contact.firstName} {contact.lastName}

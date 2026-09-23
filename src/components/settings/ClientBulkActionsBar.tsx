@@ -54,7 +54,7 @@ export function ClientBulkActionsBar({
       <div className="h-5 w-px bg-gray-200 hidden sm:block" />
 
       <select
-        className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
+        className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
         defaultValue=""
         onChange={(e) => {
           if (e.target.value) {
@@ -70,7 +70,7 @@ export function ClientBulkActionsBar({
       </select>
 
       <select
-        className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
+        className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
         defaultValue=""
         onChange={(e) => {
           if (e.target.value) {
@@ -110,7 +110,7 @@ export function ClientBulkActionsBar({
                 type="date"
                 value={dateValue}
                 onChange={(e) => setDateValue(e.target.value)}
-                className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-colors"
               />
               <Button size="sm" onClick={handleSetDate} disabled={!dateValue} className="bg-teal-600 hover:bg-teal-700">
                 OK
@@ -128,7 +128,7 @@ export function ClientBulkActionsBar({
 
       {onAssignSoftware && availableSoftware.length > 0 && (
         <select
-          className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
+          className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) {
@@ -148,7 +148,7 @@ export function ClientBulkActionsBar({
 
       {onRemoveSoftware && availableSoftware.length > 0 && (
         <select
-          className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
+          className="text-sm border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-700 hover:border-gray-400 focus:outline-hidden focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer transition-colors"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) {

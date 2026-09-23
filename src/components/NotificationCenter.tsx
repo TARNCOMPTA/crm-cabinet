@@ -245,7 +245,7 @@ export function NotificationCenter() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 mt-2 w-[22rem] sm:w-96 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50 flex flex-col max-h-[80vh]"
+          className="absolute right-0 mt-2 w-88 sm:w-96 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-50 flex flex-col max-h-[80vh]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-2">
@@ -354,7 +354,7 @@ function NotificationSection({
                 }`}
               >
                 <div
-                  className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${
+                  className={`mt-1 shrink-0 w-2 h-2 rounded-full ${
                     isRead ? 'bg-gray-300 dark:bg-gray-700' : 'bg-teal-500'
                   }`}
                 />
@@ -371,7 +371,7 @@ function NotificationSection({
                     {n.message}
                   </p>
                   {g.count > 1 && (
-                    <span className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">
+                    <span className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-sm">
                       <Layers className="w-3 h-3" />
                       {g.count} fois
                     </span>
@@ -385,7 +385,7 @@ function NotificationSection({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') onDelete(e as unknown as React.MouseEvent, g);
                   }}
-                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 inline-flex items-center justify-center w-6 h-6 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-all cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 shrink-0 inline-flex items-center justify-center w-6 h-6 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-sm transition-all cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </span>

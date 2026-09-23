@@ -289,7 +289,7 @@ export function RelanceClientList({
                                     {formatDate(inv.date_reglement)}
                                   </div>
                                   {inv.mode_reglement && (
-                                    <span className="inline-block px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-[10px] font-medium text-green-700 dark:text-green-300">
+                                    <span className="inline-block px-1.5 py-0.5 rounded-sm bg-green-100 dark:bg-green-900/30 text-[10px] font-medium text-green-700 dark:text-green-300">
                                       {MODE_LABELS[inv.mode_reglement] || inv.mode_reglement}
                                     </span>
                                   )}

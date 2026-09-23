@@ -61,8 +61,8 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
   const [searchingClients, setSearchingClients] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientTrouve | null>(null);
   const [createPrimaryContact, setCreatePrimaryContact] = useState(false);
-  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
-  const inpiTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inpiTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [inpiSearching, setInpiSearching] = useState(false);
   const [inpiResult, setInpiResult] = useState<INPICompanyData | null>(null);
   const [inpiError, setInpiError] = useState<string | null>(null);
@@ -267,7 +267,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
                 placeholder="Rechercher par nom ou SIREN..."
                 value={clientQuery}
                 onChange={(e) => handleClientSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-blue-300 dark:border-blue-800 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-blue-300 dark:border-blue-800 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-sm"
               />
               {searchingClients && (
                 <Loader className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-blue-500" />
@@ -342,7 +342,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
           <div className="p-3 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/30 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
-                <Building2 className="w-4 h-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+                <Building2 className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-teal-800 dark:text-teal-200 truncate">
                     {inpiResult.denomination}
@@ -436,7 +436,7 @@ export function CompanyFormModal({ isOpen, onClose, company, onSaved }: CompanyF
               type="checkbox"
               checked={createPrimaryContact}
               onChange={(e) => setCreatePrimaryContact(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              className="w-4 h-4 rounded-sm border-gray-300 text-teal-600 focus:ring-teal-500"
             />
             <div className="flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-amber-600 dark:text-amber-400" />

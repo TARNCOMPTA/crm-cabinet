@@ -45,7 +45,7 @@ export function HabilitationsExpandedRow({ isWithout, completeness, services }: 
                 {serviceNames.map((name) => (
                   <span
                     key={name}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100/80 text-red-700 dark:bg-red-900/40 dark:text-red-300 line-through decoration-red-400/50"
+                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-red-100/80 text-red-700 dark:bg-red-900/40 dark:text-red-300 line-through decoration-red-400/50"
                   >
                     {name}
                   </span>
@@ -65,7 +65,7 @@ export function HabilitationsExpandedRow({ isWithout, completeness, services }: 
             {extraServiceNames.map((name) => (
               <span
                 key={name}
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
               >
                 {name}
               </span>

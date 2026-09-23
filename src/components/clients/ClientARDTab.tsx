@@ -85,7 +85,7 @@ function CurrencyInput({ value, onChange }: { value: number; onChange: (v: numbe
     <input
       type="text"
       inputMode="decimal"
-      className="w-full px-2 py-1.5 text-right text-sm font-mono border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors"
+      className="w-full px-2 py-1.5 text-right text-sm font-mono border border-gray-200 dark:border-gray-700 rounded-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-hidden transition-colors"
       value={focused ? raw : (value === 0 ? '' : new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value))}
       placeholder="0"
       onFocus={() => {
@@ -117,7 +117,7 @@ function NullableCurrencyInput({ value, onChange }: { value: number | null; onCh
     <input
       type="text"
       inputMode="decimal"
-      className="w-full px-2 py-1.5 text-right text-sm font-mono border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors"
+      className="w-full px-2 py-1.5 text-right text-sm font-mono border border-gray-200 dark:border-gray-700 rounded-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-hidden transition-colors"
       value={focused ? raw : (value === null || value === 0 ? '' : new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value))}
       placeholder="-"
       onFocus={() => {
@@ -426,9 +426,9 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                           >
                             <div className="flex items-center justify-end gap-1.5">
                               {r.a5 > 0 ? (
-                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                               ) : (
-                                <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
                               )}
                               {formatCurrency(r.a5)}
                             </div>
@@ -566,9 +566,9 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
                           >
                             <div className="flex items-center justify-end gap-1.5">
                               {r.totalAReporter > 0 ? (
-                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                               ) : (
-                                <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
                               )}
                               {formatCurrency(r.totalAReporter)}
                             </div>
@@ -585,7 +585,7 @@ export function ClientARDTab({ clientId }: ClientARDTabProps) {
       </Card>
 
       <div className="flex items-start gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-        <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+        <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
         <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
           <p className="font-medium">Formules appliquees (LMNP reel BIC) :</p>
           <p>A2 = Aa1 - AA2 (charges afferentes aux biens loues)</p>

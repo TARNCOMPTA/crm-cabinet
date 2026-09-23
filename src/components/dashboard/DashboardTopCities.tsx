@@ -16,15 +16,15 @@ export function DashboardTopCities({ cities, loading }: DashboardTopCitiesProps)
     return (
       <Card>
         <CardHeader>
-          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse" />
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-sm w-40 animate-pulse" />
         </CardHeader>
         <CardContent>
           <div className="space-y-3 animate-pulse">
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="w-6 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="w-16 h-3 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="w-6 h-3 bg-gray-200 dark:bg-gray-700 rounded-sm" />
               </div>
             ))}
           </div>
@@ -62,7 +62,7 @@ export function DashboardTopCities({ cities, loading }: DashboardTopCitiesProps)
                 <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 w-4 text-right">
                   {i + 1}.
                 </span>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-28 flex-shrink-0 truncate capitalize">
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-28 shrink-0 truncate capitalize">
                   {item.city.toLowerCase()}
                 </span>
                 <div className="flex-1 h-3.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">

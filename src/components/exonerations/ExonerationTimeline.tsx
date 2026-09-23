@@ -145,14 +145,14 @@ function SliceBar({ slice, isSelected, savedResult, onClick }: SliceBarProps) {
         />
         {slice.isCurrent && !isSelected && (
           <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-            <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 whitespace-nowrap bg-teal-50 dark:bg-teal-900/40 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 whitespace-nowrap bg-teal-50 dark:bg-teal-900/40 px-1.5 py-0.5 rounded-sm">
               Aujourd'hui
             </span>
           </div>
         )}
         {isSelected && (
           <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm border border-gray-200 dark:border-gray-600">
+            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 whitespace-nowrap bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded-sm shadow-sm border border-gray-200 dark:border-gray-600">
               {slice.calendarYear}
             </span>
           </div>
@@ -547,7 +547,7 @@ export function ExonerationTimeline({ item, savedResults: propResults, onResults
 
         {item.justificatif_url ? (
           <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
-            <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <FileText className="w-5 h-5 text-red-500 shrink-0" />
             <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
               {item.justificatif_url.split('/').pop() || 'rescrit-fiscal.pdf'}
             </span>
@@ -581,9 +581,9 @@ export function ExonerationTimeline({ item, savedResults: propResults, onResults
         ) : (
           <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 px-4 py-3 hover:border-teal-400 hover:bg-teal-50/30 dark:hover:border-teal-600 dark:hover:bg-teal-900/10 transition-colors">
             {uploading ? (
-              <Loader2 className="w-5 h-5 text-teal-500 animate-spin flex-shrink-0" />
+              <Loader2 className="w-5 h-5 text-teal-500 animate-spin shrink-0" />
             ) : (
-              <Paperclip className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <Paperclip className="w-5 h-5 text-gray-400 shrink-0" />
             )}
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {uploading ? 'Envoi en cours...' : 'Joindre le rescrit fiscal (PDF, 10 Mo max)'}

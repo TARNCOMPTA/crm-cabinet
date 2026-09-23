@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
+import { cx } from '../../lib/cx';
 
 interface SortableRowProps {
   id: string;
@@ -47,7 +48,7 @@ export function SortableRow({ id, children, className = '', disabled = false }: 
         <td className="w-8 px-1 py-0">
           <button
             {...listeners}
-            className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
+            className="p-1 rounded-sm text-gray-300 hover:text-gray-500 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
             tabIndex={-1}
           >
             <GripVertical className="w-4 h-4" />
@@ -83,10 +84,10 @@ export function SortableCardRow({ id, children, className = '' }: SortableCardRo
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={`relative ${className}`} {...attributes}>
+    <div ref={setNodeRef} style={style} className={cx(`relative ${className}`)} {...attributes}>
       <div
         {...listeners}
-        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
+        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-sm text-gray-300 hover:text-gray-500 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors"
       >
         <GripVertical className="w-4 h-4" />
       </div>
@@ -123,7 +124,7 @@ export function SortableListItem({ id, children, className = '' }: SortableListI
       <div className="flex items-center gap-3">
         <button
           {...listeners}
-          className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors flex-shrink-0"
+          className="p-1 rounded-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-grab active:cursor-grabbing transition-colors shrink-0"
           tabIndex={-1}
         >
           <GripVertical className="w-4 h-4" />

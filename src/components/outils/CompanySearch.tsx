@@ -315,12 +315,12 @@ export function CompanySearch() {
   }, [results, sortBy, hideCessees, departmentFilter, query]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
       <div className="space-y-4">
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-950 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-950 flex items-center justify-center shrink-0">
                 <Building2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               </div>
               <div>
@@ -365,7 +365,7 @@ export function CompanySearch() {
 
             {error && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-300">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <p className="text-sm">{error}</p>
               </div>
             )}
@@ -400,7 +400,7 @@ export function CompanySearch() {
                     type="checkbox"
                     checked={hideCessees}
                     onChange={(e) => setHideCessees(e.target.checked)}
-                    className="rounded"
+                    className="rounded-sm"
                   />
                   Masquer les cessees
                 </label>
@@ -443,7 +443,7 @@ export function CompanySearch() {
                         {!name.isFallback && (
                           <button
                             onClick={() => copyToClipboard(name.label, 'Nom')}
-                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06] flex-shrink-0"
+                            className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6 shrink-0"
                             title="Copier le nom"
                           >
                             <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -476,7 +476,7 @@ export function CompanySearch() {
                         </div>
                         <button
                           onClick={() => copyToClipboard(r.siren, 'SIREN')}
-                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+                          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6"
                           title="Copier le SIREN"
                         >
                           <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -492,7 +492,7 @@ export function CompanySearch() {
                           </div>
                           <button
                             onClick={() => copyToClipboard(r.siret, 'SIRET')}
-                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06]"
+                            className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6"
                             title="Copier le SIRET"
                           >
                             <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -509,7 +509,7 @@ export function CompanySearch() {
                               Code NAF / APE
                             </span>
                             <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                              <Tag className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                              <Tag className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                               <span className="font-mono">{r.codeNaf}</span>
                               {r.libelleNaf && (
                                 <span className="text-gray-600 dark:text-gray-400 truncate">- {r.libelleNaf}</span>
@@ -518,7 +518,7 @@ export function CompanySearch() {
                           </div>
                           <button
                             onClick={() => copyToClipboard(r.codeNaf, 'Code NAF')}
-                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06] flex-shrink-0"
+                            className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6 shrink-0"
                             title="Copier le code NAF"
                           >
                             <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -530,13 +530,13 @@ export function CompanySearch() {
                           <div className="min-w-0">
                             <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">Adresse</span>
                             <p className="text-gray-900 dark:text-gray-100 flex items-start gap-2">
-                              <MapPin className="w-3.5 h-3.5 mt-0.5 text-gray-500 flex-shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 mt-0.5 text-gray-500 shrink-0" />
                               <span>{fullAddress(r.adresse)}</span>
                             </p>
                           </div>
                           <button
                             onClick={() => copyToClipboard(fullAddress(r.adresse), 'Adresse')}
-                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06] flex-shrink-0"
+                            className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6 shrink-0"
                             title="Copier l'adresse"
                           >
                             <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -553,7 +553,7 @@ export function CompanySearch() {
                           </div>
                           <button
                             onClick={() => copyToClipboard(r.adresse.codeInsee!, 'Code INSEE')}
-                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06] flex-shrink-0"
+                            className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6 shrink-0"
                             title="Copier le code INSEE"
                           >
                             <Copy className="w-3.5 h-3.5 text-gray-500" />
@@ -588,7 +588,7 @@ export function CompanySearch() {
                   <li key={h.id} className="flex items-center gap-2 group">
                     <button
                       onClick={() => runSearch(h.query)}
-                      className="flex-1 text-left px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                      className="flex-1 text-left px-2 py-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/6 transition-colors"
                     >
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {h.query}
@@ -599,7 +599,7 @@ export function CompanySearch() {
                     </button>
                     <button
                       onClick={() => deleteHistoryEntry(h.id)}
-                      className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/40 transition-opacity"
+                      className="p-1.5 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-950/40 transition-opacity"
                       title="Supprimer"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-red-500" />

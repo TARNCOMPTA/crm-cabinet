@@ -43,7 +43,7 @@ export function TaskListView({
               {filteredTasks.map((task) => (
                 <tr
                   key={task.id}
-                  className="border-b border-gray-100 dark:border-white/[0.06] hover:bg-gray-50 dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
+                  className="border-b border-gray-100 dark:border-white/6 hover:bg-gray-50 dark:hover:bg-white/4 cursor-pointer transition-colors"
                   onClick={() => onTaskClick(task)}
                 >
                   <td className="py-3 px-4">

@@ -93,7 +93,7 @@ function SyncConfigForm({ settings, onSave, saving }: {
           type="checkbox"
           checked={isEnabled}
           onChange={e => setIsEnabled(e.target.checked)}
-          className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+          className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
         />
         <span className="text-sm text-gray-700 dark:text-gray-300">Activer la synchronisation automatique</span>
       </label>
@@ -104,7 +104,7 @@ function SyncConfigForm({ settings, onSave, saving }: {
           <select
             value={frequency}
             onChange={e => setFrequency(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
           >
             <option value="daily">Quotidien (1 cycle/jour)</option>
             <option value="weekly">Hebdomadaire</option>
@@ -116,7 +116,7 @@ function SyncConfigForm({ settings, onSave, saving }: {
           <select
             value={batchSize}
             onChange={e => setBatchSize(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
           >
             <option value={25}>25 clients/heure</option>
             <option value={50}>50 clients/heure (recommande)</option>
@@ -321,7 +321,7 @@ export function SyncSettingsPanel() {
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
               currentSettings?.is_enabled ? 'bg-green-100 dark:bg-green-900/40' : 'bg-gray-100 dark:bg-gray-700'
             }`}>
               {activeTab === 'full'
@@ -375,7 +375,7 @@ export function SyncSettingsPanel() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {activeTab === 'full' && (
               <button
                 onClick={handleTriggerNow}

@@ -41,6 +41,7 @@ import {
   type ReactNode,
 } from 'react';
 import { geometrieAscenseur, type Mesures } from './ascenseur';
+import { cx } from '../../lib/cx';
 
 const VIDE: Mesures = { visible: 0, total: 0, position: 0 };
 
@@ -155,14 +156,14 @@ export function DefilementHorizontal({ children, className = '' }: Props) {
       <div
         ref={contenu}
         onScroll={mesurer}
-        className={`overflow-x-auto ${debordement ? 'sans-ascenseur' : ''} ${className}`}
+        className={cx(`overflow-x-auto ${debordement ? 'sans-ascenseur' : ''} ${className}`)}
       >
         {children}
       </div>
 
       {debordement > 0 && (
         <div
-          className="sticky bottom-0 z-20 rounded-b-xl border-t border-gray-200/80 bg-white/85 px-1 py-1.5 backdrop-blur-sm dark:border-white/[0.07] dark:bg-ink-900/85"
+          className="sticky bottom-0 z-20 rounded-b-xl border-t border-gray-200/80 bg-white/85 px-1 py-1.5 backdrop-blur-xs dark:border-white/[0.07] dark:bg-ink-900/85"
           /*
             `aria-hidden` : ce rail ne dit rien qu'un lecteur d'écran doive
             entendre. La zone de défilement qui compte reste le conteneur du
@@ -177,7 +178,7 @@ export function DefilementHorizontal({ children, className = '' }: Props) {
             /* Repere stable pour les tests : une classe utilitaire changerait
                au premier ajustement de style, et le test partirait avec. */
             data-ascenseur="horizontal"
-            className="relative h-2.5 cursor-pointer rounded-full bg-gray-200/70 dark:bg-white/[0.08]"
+            className="relative h-2.5 cursor-pointer rounded-full bg-gray-200/70 dark:bg-white/8"
           >
             <div
               onPointerDown={saisir}

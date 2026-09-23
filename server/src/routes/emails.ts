@@ -15,6 +15,20 @@ import { exigerAdmin, exigerSession } from '../gardes.js';
 import { viderFile } from '../file-emails.js';
 import { envoyer, lireReglages, tester } from '../mail.js';
 
+/**
+ * Jusqu'où remonte le renvoi des courriels en erreur.
+ *
+ * ⚠️ UNE SEULE CONSTANTE POUR LE DÉCOMPTE ET POUR LE RENVOI. L'écran annonce
+ * « renvoyer les N courriels » avant qu'on clique ; si le compte et le renvoi
+ * lisaient deux fenêtres différentes, le bouton promettrait un nombre et en
+ * renverrait un autre.
+ *
+ * Sept jours, parce qu'au-delà une notification ne sert plus : « une tâche
+ * vous a été assignée » reçu trois semaines après n'informe personne, il
+ * inquiète.
+ */
+const FENETRE_REESSAI = "7 days";
+
 export function enregistrerRoutesEmails(app: FastifyInstance): void {
   /** Vidage à la demande. Utile après avoir corrigé un réglage SMTP. */
   app.post('/api/send-emails', async (request, reply) => {
@@ -43,11 +57,15 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
       en_attente: string;
       envoyes: string;
       en_erreur: string;
+      reessayables: string;
     }>(
       `SELECT count(*) FILTER (WHERE status = 'pending')::text AS en_attente,
               count(*) FILTER (WHERE status = 'sent')::text    AS envoyes,
-              count(*) FILTER (WHERE status = 'error')::text   AS en_erreur
-         FROM email_queue`
+              count(*) FILTER (WHERE status = 'error')::text   AS en_erreur,
+              count(*) FILTER (WHERE status = 'error'
+                                 AND created_at > now() - $1::interval)::text AS reessayables
+         FROM email_queue`,
+      [FENETRE_REESSAI]
     );
 
     /**
@@ -96,6 +114,8 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
         enAttente: Number(compteurs?.en_attente ?? 0),
         envoyes: Number(compteurs?.envoyes ?? 0),
         enErreur: Number(compteurs?.en_erreur ?? 0),
+        // Ceux que `POST /api/emails/reessayer` reprendrait, a l'unite pres.
+        reessayables: Number(compteurs?.reessayables ?? 0),
       },
       panne: {
         enEchec: Number(panne?.en_echec ?? 0),
@@ -143,6 +163,13 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
    * Sans cela, un incident SMTP d'une heure laisse définitivement de côté les
    * notifications de la période : les lignes sont en `error`, et rien ne les
    * reprend.
+   *
+   * ⚠️ CETTE ROUTE N'AVAIT AUCUN APPELANT jusqu'au 2026-09-23 : elle existait,
+   * rien ne permettait de la déclencher. Pendant la panne Office 365 de
+   * septembre, c'était exactement le recours qu'il fallait — et il était
+   * introuvable. Son bouton vit dans « Paramètres ▸ Emails », section « File
+   * d'envoi » (`FileEnvoiEmails.tsx`) : PAS dans le bandeau du tableau de bord,
+   * qui s'efface au premier envoi réussi et emporterait le bouton avec lui.
    */
   app.post('/api/emails/reessayer', async (request, reply) => {
     const session = await exigerAdmin(request, reply);
@@ -153,10 +180,11 @@ export function enregistrerRoutesEmails(app: FastifyInstance): void {
          UPDATE email_queue
             SET status = 'pending', retry_count = 0, error_message = NULL
           WHERE status = 'error'
-            AND created_at > now() - interval '7 days'
+            AND created_at > now() - $1::interval
           RETURNING 1
        )
-       SELECT count(*)::text AS n FROM s`
+       SELECT count(*)::text AS n FROM s`,
+      [FENETRE_REESSAI]
     );
     const remis = Number(r[0]?.n ?? 0);
     const b = remis > 0 ? await viderFile() : { envoyes: 0, echecs: 0, total: 0, interrompu: false };

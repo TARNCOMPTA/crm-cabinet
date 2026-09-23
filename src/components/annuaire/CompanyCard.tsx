@@ -34,14 +34,14 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
             type="checkbox"
             checked={!!selected}
             onChange={onToggleSelect}
-            className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700 shadow-sm"
+            className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700 shadow-sm"
           />
         </div>
       )}
       <div onClick={onClick} className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+            <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
               isClient
                 ? 'bg-teal-50 dark:bg-teal-950/50'
                 : 'bg-blue-50 dark:bg-blue-950/50'
@@ -54,7 +54,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
                   {company.name}
                 </h3>
                 {isClient && (
-                  <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 uppercase tracking-wide">
+                  <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 uppercase tracking-wide">
                     Client
                   </span>
                 )}
@@ -85,7 +85,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
         <div className="space-y-1.5">
           {(company.address || company.city) && (
             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <MapPin className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <span className="truncate">
                 {[company.address, company.postal_code, company.city].filter(Boolean).join(', ')}
               </span>
@@ -96,7 +96,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
               className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
               onClick={(e) => e.stopPropagation()}
             >
-              <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <a
                 href={`tel:${company.phone}`}
                 className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
@@ -110,7 +110,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
               className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
               onClick={(e) => e.stopPropagation()}
             >
-              <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
               <a
                 href={`mailto:${company.email}`}
                 className="truncate hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
@@ -162,7 +162,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
         {contactCount > 0 && (
           <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 flex-shrink-0" />
+              <User className="w-3.5 h-3.5 shrink-0" />
               <span>{contactCount} contact{contactCount > 1 ? 's' : ''}</span>
             </div>
             {company.directory_contact_companies.slice(0, 2).map((l) => {
@@ -171,14 +171,14 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick, onEdit,
               const tel = c.mobile || c.phone;
               return (
                 <div key={l.id} className="flex items-center gap-1.5 pl-5 text-gray-500 dark:text-gray-400">
-                  <User className="w-3 h-3 flex-shrink-0" />
+                  <User className="w-3 h-3 shrink-0" />
                   <span className="truncate">{c.first_name} {c.last_name}</span>
                   {tel && (
                     <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5">
                       <span className="text-gray-300 dark:text-gray-600">-</span>
                       <a
                         href={`tel:${tel}`}
-                        className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors flex-shrink-0"
+                        className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors shrink-0"
                       >
                         <Phone className="w-3 h-3" />
                         {tel}

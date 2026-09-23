@@ -1,4 +1,5 @@
 import { ReactNode, memo } from 'react';
+import { cx } from '../../lib/cx';
 
 export interface BadgeProps {
   children: ReactNode;
@@ -24,7 +25,7 @@ const variants = {
 export const Badge = memo(function Badge({ children, variant = 'default', className = '', title, style }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
+      className={cx(`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`)}
       title={title}
       style={style}
     >

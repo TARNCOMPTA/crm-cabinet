@@ -210,7 +210,7 @@ export function OfficerFormModal({ isOpen, onClose, onSave, officer, relation, c
             id="isActive"
             checked={form.isActive}
             onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-            className="rounded border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
+            className="rounded-sm border-gray-300 dark:border-gray-600 text-teal-600 focus:ring-teal-500 dark:bg-gray-700"
           />
           <label htmlFor="isActive" className="text-sm text-gray-700 dark:text-gray-300">Mandat actif</label>
         </div>

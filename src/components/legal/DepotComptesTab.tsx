@@ -238,7 +238,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
 
       {clientsWithoutSiren.length > 0 && (
         <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
             {clientsWithoutSiren.length} client(s) sans SIREN ne peuvent pas etre interroges sur BODACC.
           </p>
@@ -280,12 +280,12 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
 
             return (
               <SortableCardRow key={client.id} id={client.id}>
-              <Card className={`overflow-hidden pl-8 ${isExcluded ? '!bg-red-50 dark:!bg-red-900/20 !border-red-300 dark:!border-red-800' : ''}`}>
+              <Card className={`overflow-hidden pl-8 ${isExcluded ? 'bg-red-50! dark:bg-red-900/20! border-red-300! dark:border-red-800!' : ''}`}>
                 <button
                   onClick={() => toggleClient(client.id)}
                   className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
-                  <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                  <div className="shrink-0 text-gray-400 dark:text-gray-500">
                     {isExpanded ? (
                       <ChevronDown className="w-4 h-4" />
                     ) : (
@@ -317,7 +317,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -351,7 +351,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
                               <tr key={depot.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td className="px-4 py-2.5">
                                   <div className="flex items-center gap-2">
-                                    <Calendar className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+                                    <Calendar className="w-3.5 h-3.5 text-teal-500 shrink-0" />
                                     <span className="font-medium text-gray-900 dark:text-gray-100">
                                       {formatDate(depot.date_cloture)}
                                     </span>
@@ -367,7 +367,7 @@ export function DepotComptesTab({ clients, depotComptes, onReload, showToast, ex
                                 </td>
                                 <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 hidden lg:table-cell">
                                   <div className="flex items-center gap-1.5">
-                                    <Building2 className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                                    <Building2 className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
                                     <span className="truncate max-w-[180px]">
                                       {depot.tribunal || '-'}
                                     </span>

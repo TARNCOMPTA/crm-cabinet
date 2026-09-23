@@ -11,8 +11,12 @@
     <!-- connect-src : les deux seules API appelees par le navigateur. Le reste
          (INPI, mails, PDF) passe par le serveur de l'instance, donc par 'self'.
          Pas de font-src distant : Hanken Grotesk est auto-hebergee (@fontsource/hanken-grotesk),
-         un CDN de polices voyant l'adresse IP de chaque visiteur. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+         un CDN de polices voyant l'adresse IP de chaque visiteur.
+         PAS DE frame-ancestors ICI : le navigateur l'ignore dans une balise
+         <meta> (et le signale en console). L'interdiction d'encadrer vient de
+         l'EN-TETE HTTP pose par Caddy (Caddyfile), seul endroit ou elle agit :
+         la laisser ici faisait croire a une seconde barriere qui n'existait pas. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://geo.api.gouv.fr https://bodacc-datadila.opendatasoft.com; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; object-src 'none'" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="robots" content="noindex, nofollow" />

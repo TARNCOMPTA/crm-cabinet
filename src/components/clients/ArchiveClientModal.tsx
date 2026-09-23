@@ -34,7 +34,7 @@ export default function ArchiveClientModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Archiver le client">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <Archive className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <Archive className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
           <div className="flex-1 text-sm text-orange-800">
             <p className="font-medium mb-1">Le client sera archivé</p>
             <p>

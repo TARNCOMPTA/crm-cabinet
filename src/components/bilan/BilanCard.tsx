@@ -97,7 +97,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
             {card.clients?.nom_entreprise}
           </h4>
           {isInactive && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 shrink-0">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm text-[10px] font-medium bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 shrink-0">
               <AlertCircle className="w-3 h-3" />
               Inactif
             </span>
@@ -109,7 +109,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
             {moisTraites.map((m) => (
               <span
                 key={m}
-                className="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 leading-none"
+                className="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 leading-none"
               >
                 {MOIS_LABELS_SHORT[m - 1]}
               </span>
@@ -176,7 +176,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
                     <button
                       type="button"
                       onClick={() => onChecklistToggle?.(item.id, !item.is_checked)}
-                      className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                      className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
                         item.is_checked
                           ? 'bg-teal-600 border-teal-600'
                           : 'border-gray-300 dark:border-gray-600 group-hover:border-teal-400'
@@ -213,7 +213,7 @@ export const BilanCard = memo(function BilanCard({ card, onClick, onChecklistTog
                   onChange={(e) => handleNotesChange(e.target.value)}
                   placeholder="Ajouter un commentaire..."
                   rows={2}
-                  className="w-full text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 transition-shadow"
+                  className="w-full text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 resize-none focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400 transition-shadow"
                 />
               </div>
             </div>

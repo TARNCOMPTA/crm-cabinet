@@ -714,7 +714,7 @@ function LigneChecklist({
         <button
           type="button"
           onClick={onBasculer}
-          className={`mt-0.5 w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+          className={`mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all ${
             coche
               ? 'bg-teal-600 border-teal-600 scale-95'
               : 'border-gray-300 dark:border-gray-600 group-hover:border-teal-400'

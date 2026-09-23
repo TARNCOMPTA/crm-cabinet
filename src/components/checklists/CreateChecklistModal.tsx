@@ -83,7 +83,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -107,7 +107,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={selectedTemplate ? selectedTemplate.title : 'Ex: Cloture annuelle, Onboarding client...'}
-              className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
               autoFocus
             />
             {selectedTemplate && !title.trim() && (
@@ -137,7 +137,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                   <button
                     type="button"
                     onClick={() => setSelectedTemplate(null)}
-                    className="p-0.5 rounded hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-500"
+                    className="p-0.5 rounded-sm hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-500"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -146,7 +146,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                   <ul className="mt-2 space-y-0.5 max-h-32 overflow-y-auto">
                     {selectedTemplate.items.map((item) => (
                       <li key={item.id} className="flex items-center gap-2 text-xs text-teal-600 dark:text-teal-400">
-                        <Square className="w-3 h-3 flex-shrink-0" />
+                        <Square className="w-3 h-3 shrink-0" />
                         <span className="truncate">{item.label}</span>
                       </li>
                     ))}
@@ -165,7 +165,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                   }}
                   onFocus={() => setShowTemplateDropdown(true)}
                   placeholder="Rechercher un modele..."
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
                 />
                 {showTemplateDropdown && (
                   <>
@@ -188,7 +188,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
-                            <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <FileText className="w-4 h-4 text-gray-400 shrink-0" />
                             <span className="flex-1 truncate">{t.title}</span>
                             <span className="text-xs text-gray-600 dark:text-gray-400">{t.items.length} el.</span>
                           </button>
@@ -215,7 +215,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                 <button
                   type="button"
                   onClick={() => setSelectedClient(null)}
-                  className="p-0.5 rounded hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-500"
+                  className="p-0.5 rounded-sm hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-500"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -231,7 +231,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                     if (clientResults.length > 0) setShowClientDropdown(true);
                   }}
                   placeholder="Rechercher un client..."
-                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden"
                 />
                 {loadingClients && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -254,7 +254,7 @@ export function CreateChecklistModal({ userId, onClose, onCreate }: Props) {
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                          <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                           <span className="flex-1 truncate">{cl.nom_entreprise}</span>
                           {cl.numero_dossier && (
                             <span className="text-xs text-gray-600 dark:text-gray-400">#{cl.numero_dossier}</span>

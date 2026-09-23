@@ -311,7 +311,7 @@ export function SettingsRegimesFiscaux() {
               id="regime_is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+              className="w-4 h-4 text-teal-600 border-gray-300 rounded-sm focus:ring-teal-500"
             />
             <label htmlFor="regime_is_active" className="text-sm text-gray-700">
               Regime actif

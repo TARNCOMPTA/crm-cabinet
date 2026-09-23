@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Eye, Mail, Paperclip, Send, Trash2, Users, X } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { Card, CardContent } from '../components/ui/Card';
@@ -9,6 +10,8 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { supabase } from '../lib/supabase';
 import { libelleSection, optionsNaf, type CodeNafPresent } from '../lib/naf';
+import { insererAuCurseur } from '../lib/insererAuCurseur';
+import { VariablesCampagne } from '../components/campagnes/VariablesCampagne';
 
 /**
  * Campagnes — écrire à une liste de clients.
@@ -52,8 +55,11 @@ interface Apercu {
   retenus: number;
   destinataires: Destinataire[];
   exclus: Exclu[];
-  variables: string[];
-  apercu: { client: string | null; email: string | null; html: string } | null;
+  /**
+   * `sujet` est facultatif : le service worker de la PWA peut servir une reponse
+   * mise en cache par la version precedente, qui ne le portait pas.
+   */
+  apercu: { client: string | null; email: string | null; sujet?: string; html: string } | null;
 }
 
 /**
@@ -131,6 +137,10 @@ export function Campagnes() {
 
   const [sujet, setSujet] = useState('');
   const [corps, setCorps] = useState('');
+  // Le champ ou ira la prochaine variable : le dernier qui a eu le focus.
+  const [champVariables, setChampVariables] = useState<'sujet' | 'corps'>('corps');
+  const refSujet = useRef<HTMLInputElement>(null);
+  const refCorps = useRef<HTMLTextAreaElement>(null);
 
   const [apercu, setApercu] = useState<Apercu | null>(null);
   const [chargement, setChargement] = useState(false);
@@ -303,6 +313,38 @@ export function Campagnes() {
    * disponible pour sa jumelle, qui doit alors réapparaître dans la liste. Un
    * filtrage local ne le verrait pas, et l'écran mentirait sur ce qui sera envoyé.
    */
+  /**
+   * Insere `{{nom}}` a l'endroit du curseur du dernier champ utilise.
+   *
+   * Avant, le marqueur s'ajoutait en fin de corps, ou qu'on ecrive — et jamais
+   * dans le sujet, qui accepte pourtant les variables.
+   */
+  function insererVariable(nom: string) {
+    const marqueur = `{{${nom}}}`;
+    const champ = champVariables === 'sujet' ? refSujet.current : refCorps.current;
+    const valeur = champVariables === 'sujet' ? sujet : corps;
+    const { texte, curseur } = insererAuCurseur(
+      valeur,
+      champ?.selectionStart,
+      champ?.selectionEnd,
+      marqueur
+    );
+    /*
+     * ⚠️ `flushSync`, ET NON `requestAnimationFrame`. React reecrit la valeur du
+     * champ au rendu, et le navigateur pose alors le curseur EN FIN DE TEXTE.
+     * Remis en place a l'image suivante, il laissait une fenetre ou la frappe
+     * partait au bout du message : la sonde du 2026-09-23 a retrouve ses
+     * virgules deplacees apres `{{adresse}}`. Rendre de facon synchrone, puis
+     * poser le curseur, ferme cette fenetre au lieu de la raccourcir.
+     */
+    flushSync(() => {
+      if (champVariables === 'sujet') setSujet(texte);
+      else setCorps(texte);
+    });
+    champ?.focus();
+    champ?.setSelectionRange(curseur, curseur);
+  }
+
   async function verifier(retraits: Set<string> = retires) {
     setChargement(true);
     setConfirme(false);
@@ -310,7 +352,7 @@ export function Campagnes() {
       const r = await fetch('/api/campagnes/apercu', {
         method: 'POST',
         ...OPTIONS_API,
-        body: JSON.stringify({ filtres, corps, retires: [...retraits] }),
+        body: JSON.stringify({ filtres, sujet, corps, retires: [...retraits] }),
       });
       if (!r.ok) throw new Error('Apercu impossible');
       setApercu(await r.json());
@@ -471,7 +513,7 @@ export function Campagnes() {
                   <button
                     type="button"
                     onClick={() => setCodesNaf((p) => p.filter((c) => c !== prefixe))}
-                    className="p-0.5 rounded hover:bg-teal-100 dark:hover:bg-teal-800/60 transition-colors"
+                    className="p-0.5 rounded-sm hover:bg-teal-100 dark:hover:bg-teal-800/60 transition-colors"
                     title={`Ne plus viser ${prefixe}`}
                   >
                     <X className="w-3 h-3" />
@@ -510,36 +552,31 @@ export function Campagnes() {
       <Card>
         <CardContent className="p-4 space-y-3">
           <h2 className="text-sm font-medium text-gray-900 dark:text-white">2. Le message</h2>
-          <Input label="Sujet" value={sujet} onChange={(e) => setSujet(e.target.value)} />
+          <Input
+            ref={refSujet}
+            label="Sujet"
+            value={sujet}
+            onChange={(e) => setSujet(e.target.value)}
+            onFocus={() => setChampVariables('sujet')}
+          />
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Corps
             </label>
             <textarea
+              ref={refCorps}
               value={corps}
               onChange={(e) => setCorps(e.target.value)}
+              onFocus={() => setChampVariables('corps')}
               rows={10}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none font-mono"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-hidden font-mono"
               placeholder={'Bonjour {{dirigeant}},\n\nVotre declaration de TVA...'}
             />
             <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
               Texte simple : les sauts de ligne sont respectes, la mise en forme est celle du
-              cabinet. Variables disponibles, a cliquer pour inserer :
+              cabinet.
             </p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {['nom_entreprise', 'dirigeant', 'numero_dossier', 'date_cloture', 'regime_fiscal'].map(
-                (v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setCorps((c) => `${c}{{${v}}}`)}
-                    className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-teal-700 dark:text-teal-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-mono"
-                  >
-                    {`{{${v}}}`}
-                  </button>
-                )
-              )}
-            </div>
+            <VariablesCampagne onInserer={insererVariable} cible={champVariables} />
           </div>
 
           {/* Les pieces jointes */}
@@ -606,7 +643,7 @@ export function Campagnes() {
                       onClick={() => setPieceASupprimer(p)}
                       aria-label={`Retirer la piece jointe ${p.nom}`}
                       title={`Retirer ${p.nom}`}
-                      className="shrink-0 p-1 rounded text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                      className="shrink-0 p-1 rounded-sm text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" aria-hidden="true" />
                     </button>
@@ -702,7 +739,7 @@ export function Campagnes() {
                           type="button"
                           onClick={() => void retirer(d.id)}
                           disabled={chargement}
-                          className="shrink-0 text-xs px-2 py-1 rounded text-gray-600 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+                          className="shrink-0 text-xs px-2 py-1 rounded-sm text-gray-600 dark:text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
                           title={`Retirer ${d.nom ?? ''} de cet envoi`}
                         >
                           Retirer
@@ -740,6 +777,12 @@ export function Campagnes() {
                     Apercu reel, tel que <strong>{apercu.apercu.client}</strong> le recevra sur{' '}
                     {apercu.apercu.email} :
                   </p>
+                  {apercu.apercu.sujet !== undefined && (
+                    <p className="text-sm mb-2 text-gray-900 dark:text-white">
+                      <span className="text-gray-600 dark:text-gray-400">Objet : </span>
+                      {apercu.apercu.sujet || <em className="text-gray-600 dark:text-gray-400">(vide)</em>}
+                    </p>
+                  )}
                   {/* `sandbox` sans `allow-scripts` : le HTML vient de notre serveur, mais
                       il porte des valeurs de fiches clients. On ne lui donne pas les
                       moyens d'executer quoi que ce soit dans l'application. */}
@@ -759,7 +802,7 @@ export function Campagnes() {
                       type="checkbox"
                       checked={confirme}
                       onChange={(e) => setConfirme(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                      className="mt-0.5 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded-sm"
                     />
                     <span>
                       J'ai relu l'apercu et je confirme l'envoi a {apercu.retenus} destinataire(s).
