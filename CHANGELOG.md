@@ -7,6 +7,27 @@ signale un changement qui demande une action de votre part.
 
 ## À venir
 
+### Sauvegarde chiffrée sur un autre serveur
+
+Chaque nuit, la base, les fichiers déposés et le `.env` partent vers un second
+serveur, **chiffrés avant de quitter celui du CRM** (`age`). La clé de
+déchiffrement n'est gardée sur aucun des deux serveurs. Le compte ouvert sur le
+serveur de sauvegarde ne peut qu'ajouter une copie : ni la lire, ni l'effacer,
+ni l'écraser, si bien qu'une intrusion sur le serveur du CRM ne détruit pas les
+copies déjà faites. Il refuse aussi tout fichier non chiffré, et fait lui-même
+le ménage (35 jours, puis une copie par mois pendant un an). Mise en place :
+`installation/NOTICE-INSTALLATION.md`, rubrique « Copie chiffrée sur un autre
+serveur ».
+
+### Campagnes : filtre « Mes dossiers »
+
+Une case à cocher « Mes dossiers » restreint les destinataires d'une campagne
+aux clients dont on est collaborateur (même règle que la liste Clients).
+Elle est **décochée par défaut** : ici elle borne à qui l'on écrit, et un filtre
+oublié réduirait un envoi sans que personne ne s'en aperçoive. Le serveur ne
+reçoit qu'un booléen : c'est la session qui dit qui est « moi », jamais le
+navigateur.
+
 ### Mises à jour de fond : Node 26, TypeScript 7, Tailwind 4, React 19
 
 Les dix propositions de mise à jour en attente sont intégrées, dont les trois

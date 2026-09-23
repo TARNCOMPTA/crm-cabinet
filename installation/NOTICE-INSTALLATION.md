@@ -186,6 +186,57 @@ Une sauvegarde qui reste **sur le même serveur** ne protège ni d'une panne de
 disque ni d'une intrusion : recopiez-la ailleurs (un autre serveur, un stockage
 externe), et chiffrez-la si cet ailleurs n'est pas à vous.
 
+### Copie chiffrée sur un autre serveur
+
+Deux scripts s'en chargent : `sauvegarde-distante.sh` sur le serveur du CRM,
+`recepteur-sauvegarde.sh` sur le serveur de sauvegarde (un petit VPS suffit).
+Chaque nuit à 3 h 15, la base, le dossier `data/` et le `.env` partent en une
+archive **chiffrée avant de quitter le serveur** : l'hébergeur de la copie ne
+voit jamais les fiches clients en clair.
+
+Le compte créé sur le serveur de sauvegarde **ne sait qu'ajouter** : ni lire,
+ni effacer, ni écraser. Un serveur du CRM piraté ne peut donc pas détruire les
+copies déjà faites. Le récepteur refuse aussi tout fichier non chiffré. Il garde
+tout ce qui a moins de 35 jours, puis la première copie de chaque mois pendant
+un an.
+
+**1. Sur le serveur du CRM** (l'adresse est celle du serveur de sauvegarde) :
+
+```sh
+sudo sh /opt/crmcabinet/installation/sauvegarde-distante.sh preparer 203.0.113.10
+```
+
+Le script affiche la commande à lancer à l'étape 2, et l'emplacement de la
+**clé de restauration**.
+
+⚠️ **Recopiez la clé de restauration dans votre gestionnaire de mots de passe,
+puis effacez-la du serveur** (`sudo shred -u /root/CLE-RESTAURATION-CRM.txt`).
+Sans elle, aucune copie ne pourra jamais être relue — par personne.
+
+**2. Sur le serveur de sauvegarde**, collez les deux lignes affichées à
+l'étape 1 (`curl …` puis `sudo sh recepteur-sauvegarde.sh installer '…'`).
+
+**3. De retour sur le serveur du CRM**, vérifiez la liaison, puis faites une
+première copie sans attendre la nuit :
+
+```sh
+sudo sh /opt/crmcabinet/installation/sauvegarde-distante.sh essai
+sudo sh /opt/crmcabinet/installation/sauvegarde-distante.sh
+```
+
+Le résultat de la dernière copie est dans `data/sauvegarde-distante.json`, le
+détail dans `/var/log/crm-sauvegarde-distante.log`.
+
+**Relire une copie** — sur la machine où vous avez la clé de restauration,
+avec [age](https://github.com/FiloSottile/age) installé :
+
+```sh
+age -d -i CLE-RESTAURATION-CRM.txt crm_2026-09-24_011500.tar.age | tar -xf -
+```
+
+On obtient `.env`, `data/` et `base.sql.gz`, cette dernière se restaurant comme
+indiqué ci-dessous.
+
 ### Restauration
 
 ```sh

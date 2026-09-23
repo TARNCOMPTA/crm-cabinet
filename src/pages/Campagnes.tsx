@@ -130,6 +130,12 @@ export function Campagnes() {
   const [recherche, setRecherche] = useState('');
   /** Les prefixes de code NAF retenus : `6201Z` une classe, `62` toute sa division. */
   const [codesNaf, setCodesNaf] = useState<string[]>([]);
+  // ⚠️ DECOCHEE PAR DEFAUT, a l'inverse de la liste des clients. La-bas elle
+  // borne ce qu'on REGARDE ; ici elle borne a qui l'on ECRIT. Cochee d'office,
+  // un administrateur qui prepare un rappel pour tout le portefeuille
+  // l'enverrait a ses seuls dossiers sans l'avoir choisi — et l'apercu
+  // l'annoncerait, mais en chiffres, pas en toutes lettres.
+  const [mesDossiers, setMesDossiers] = useState(false);
   /** Les codes du portefeuille, avec leur effectif — la liste vient du serveur. */
   const [nafPresents, setNafPresents] = useState<CodeNafPresent[]>([]);
   /** Les fiches sans code NAF : filtrer par metier les ecarte, il faut le dire. */
@@ -156,8 +162,8 @@ export function Campagnes() {
   const [plafonds, setPlafonds] = useState(PLAFONDS_DEFAUT);
 
   const filtres = useMemo(
-    () => ({ statut, regime, cloture, recherche, codesNaf }),
-    [statut, regime, cloture, recherche, codesNaf]
+    () => ({ statut, regime, cloture, recherche, codesNaf, mesDossiers }),
+    [statut, regime, cloture, recherche, codesNaf, mesDossiers]
   );
 
   /**
@@ -495,6 +501,18 @@ export function Campagnes() {
                 disabled={nafPresents.length === 0}
               />
             </div>
+            {/* La meme regle que « Mes dossiers » de la liste des clients : les
+                fiches dont on est collaborateur. C'est le SERVEUR qui sait qui
+                est « moi » (la session) — l'ecran n'envoie qu'un oui ou un non. */}
+            <label className="flex items-center gap-2 h-[42px] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={mesDossiers}
+                onChange={(e) => setMesDossiers(e.target.checked)}
+                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded-sm"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Mes dossiers</span>
+            </label>
           </div>
 
           {codesNaf.length > 0 && (

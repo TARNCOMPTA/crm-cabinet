@@ -291,6 +291,10 @@ jobs:
         working-directory: server
         run: npm run build
 
+      # `tests/sauvegarde-distante.test.ts` chiffre et dechiffre une vraie
+      # archive : sans `age`, il echouerait au lieu de prouver quelque chose.
+      - name: age (chiffrement des sauvegardes distantes)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
       - run: npm test
 
       - run: npm run build

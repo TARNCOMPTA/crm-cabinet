@@ -89,6 +89,19 @@ interface Filtres {
   recherche?: string;
   /** Préfixes de code NAF : `6201Z` pour une classe, `62` pour toute sa division. */
   codesNaf?: string[];
+  /**
+   * Seuls les dossiers dont la personne connectée est collaboratrice — la même
+   * règle que la case « Mes dossiers » de la liste des clients
+   * (`clients/requeteListe.ts`).
+   *
+   * ⚠️ UN BOOLÉEN, PAS UN IDENTIFIANT. L'écran dit « les miens », et c'est la
+   * SESSION qui dit qui est « moi » : `clientsVises` le reçoit du serveur. Un
+   * identifiant envoyé par le navigateur se remplacerait par celui d'un collègue
+   * — sans enjeu de droits ici, tout collaborateur voit tout le portefeuille,
+   * mais la campagne partirait vers les dossiers d'un autre en s'annonçant comme
+   * « les miens ».
+   */
+  mesDossiers?: boolean;
 }
 
 /**
@@ -148,9 +161,16 @@ const NAF_COMPARABLE = `upper(regexp_replace(coalesce(code_ape, ''), '[^a-zA-Z0-
  * peut porter 649 clients, et le résultat sert deux fois — l'aperçu et l'envoi.
  * Les deux doivent viser exactement la même population, donc partager ce code.
  */
-async function clientsVises(f: Filtres): Promise<ClientDestinataire[]> {
+async function clientsVises(f: Filtres, moi: string): Promise<ClientDestinataire[]> {
   const conditions: string[] = [];
   const valeurs: unknown[] = [];
+
+  if (f.mesDossiers === true) {
+    valeurs.push(moi);
+    conditions.push(
+      `id IN (SELECT client_id FROM client_collaborators WHERE user_id = $${valeurs.length}::uuid)`
+    );
+  }
 
   // Par défaut on écarte les archivés : écrire à un client sorti du cabinet est
   // au mieux inutile, au pire embarrassant.
@@ -312,7 +332,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
 
       const { filtres = {}, sujet = '', corps = '', retires = [] } = request.body ?? {};
       const contexte = await contexteVariables();
-      const clients = await clientsVises(filtres);
+      const clients = await clientsVises(filtres, session.sub);
       const { retenus, exclus } = resoudreDestinataires(
         clients,
         await desinscrits(),
@@ -395,7 +415,7 @@ export function enregistrerRoutesCampagnes(app: FastifyInstance): void {
       }
       const pieces = validation.pieces;
 
-      const clients = await clientsVises(filtres);
+      const clients = await clientsVises(filtres, session.sub);
       const { retenus, exclus } = resoudreDestinataires(
         clients,
         await desinscrits(),
